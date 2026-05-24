@@ -30,11 +30,6 @@ html, body {
   font-weight: 800;
 }
 
-.logo-badge,
-.app-header p {
-  display: none;
-}
-
 .control-card {
   position: absolute;
   z-index: 900;
