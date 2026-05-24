@@ -10,6 +10,10 @@ L.control.zoom({
 
 let baseLayer = null;
 let radarLayer = null;
+let radarFrames = [];
+let radarHost = "";
+let radarIndex = 0;
+let radarTimer = null;
 let alertLayer = null;
 let qpfLayer = null;
 let spcLayer = null;
@@ -92,6 +96,167 @@ function updatePanel(title, html) {
   status.innerHTML = `<strong>${title}</strong><br><br>${html}`;
 }
 
+
+function firstValue(properties, keys, fallback = "") {
+  for (const key of keys) {
+    const value = properties?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+  return fallback;
+}
+
+function formatDateValue(value) {
+  if (value === undefined || value === null || value === "") return "";
+
+  if (typeof value === "number") {
+    return new Date(value).toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  const text = String(value).trim();
+  const parsed = Date.parse(text);
+  if (!Number.isNaN(parsed) && /\d/.test(text)) {
+    return new Date(parsed).toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  return text;
+}
+
+function localRadarTime(unixSeconds) {
+  return new Date(unixSeconds * 1000).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function sanitizeForPanel(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function riskLabelFromDn(dn, source) {
+  const n = Number(dn);
+
+  if (source === "WPC") {
+    if (n === 1) return "Marginal — at least 5% chance of flash flooding";
+    if (n === 2) return "Slight — at least 15% chance of flash flooding";
+    if (n === 3) return "Moderate — at least 40% chance of flash flooding";
+    if (n === 4) return "High — at least 70% chance of flash flooding";
+  }
+
+  if (source === "SPC") {
+    if (n === 2) return "Thunderstorm";
+    if (n === 3) return "Marginal";
+    if (n === 4) return "Slight";
+    if (n === 5) return "Enhanced";
+    if (n === 6) return "Moderate";
+    if (n === 8) return "High";
+  }
+
+  return "";
+}
+
+function hazardPanelHtml(source, properties = {}, extra = {}) {
+  const product = firstValue(properties, [
+    "event", "headline", "product", "outlook", "label", "label2", "valid", "phenomena", "name", "title"
+  ], `${source} Hazard`);
+
+  const risk = firstValue(properties, ["outlook", "label", "label2", "risk", "category"], "") || riskLabelFromDn(properties.dn, source);
+  const issued = formatDateValue(firstValue(properties, ["issue", "issue_time", "sent", "effective", "onset"], ""));
+  const valid = formatDateValue(firstValue(properties, ["valid", "valid_time", "start_time"], ""));
+  const expires = formatDateValue(firstValue(properties, ["expire", "expires", "end_time", "ends"], ""));
+  const area = firstValue(properties, ["areaDesc", "area", "location", "states"], "");
+  const severity = firstValue(properties, ["severity"], "");
+  const urgency = firstValue(properties, ["urgency"], "");
+  const certainty = firstValue(properties, ["certainty"], "");
+  const description = firstValue(properties, ["description", "snippet", "summary", "discussion", "text"], "");
+  const instruction = firstValue(properties, ["instruction"], "");
+
+  const rows = [];
+  if (extra.layerName) rows.push(["Layer", extra.layerName]);
+  if (risk && risk !== product) rows.push(["Risk / Category", risk]);
+  if (severity) rows.push(["Severity", severity]);
+  if (urgency) rows.push(["Urgency", urgency]);
+  if (certainty) rows.push(["Certainty", certainty]);
+  if (area) rows.push(["Area", area]);
+  if (issued) rows.push(["Issued", issued]);
+  if (valid) rows.push(["Valid / Starts", valid]);
+  if (expires) rows.push(["Expires / Ends", expires]);
+  if (description) rows.push(["Details", description]);
+  if (instruction) rows.push(["Action", instruction]);
+
+  const detailRows = rows.map(([label, value]) => `
+    <div class="hazard-detail-row"><span>${sanitizeForPanel(label)}:</span> ${sanitizeForPanel(value)}</div>
+  `).join("");
+
+  return {
+    title: `${source}: ${sanitizeForPanel(product)}`,
+    html: detailRows || "No detailed properties were returned for this polygon."
+  };
+}
+
+function bindHazardFeature(layer, source, feature, extra = {}) {
+  const properties = feature?.properties || {};
+  const details = hazardPanelHtml(source, properties, extra);
+
+  layer.on("click", () => {
+    updatePanel(details.title, details.html);
+  });
+
+  layer.bindPopup(`<strong>${details.title}</strong><br>${details.html}`);
+
+  layer.bindTooltip(details.title, {
+    sticky: true,
+    direction: "top",
+    className: "hazard-tooltip"
+  });
+
+  layer.on("mouseover", function () {
+    if (layer.setStyle) {
+      layer.setStyle({ weight: 5, opacity: 1 });
+    }
+  });
+
+  layer.on("mouseout", function () {
+    if (layer.setStyle) {
+      layer.setStyle({ weight: 3, opacity: 1 });
+    }
+  });
+}
+
+function setGroupStyle(groupLayer, style) {
+  if (!groupLayer) return;
+
+  if (groupLayer.setStyle) {
+    groupLayer.setStyle(style);
+    return;
+  }
+
+  if (groupLayer.eachLayer) {
+    groupLayer.eachLayer(layer => {
+      if (layer.setStyle) layer.setStyle(style);
+      if (layer.eachLayer) setGroupStyle(layer, style);
+    });
+  }
+}
+
 function setCheck(id, checked) {
   const el = document.getElementById(id);
   if (el) el.checked = checked;
@@ -171,7 +336,11 @@ function setLayerOpacity(type) {
   }
 
   if (type === "wpc" && wpcLayer) {
-    wpcLayer.setOpacity(Math.max(Number(document.getElementById("wpcOpacity").value), 0.75));
+    const opacity = Number(document.getElementById("wpcOpacity").value);
+    setGroupStyle(wpcLayer, {
+      opacity: 1,
+      fillOpacity: opacity
+    });
   }
 
   if (type === "hrrr" && hrrrLayer) {
@@ -185,7 +354,6 @@ function setLayerOpacity(type) {
     });
   }
 }
-
 async function getNwsPointData() {
   const response = await fetch(
     `https://api.weather.gov/points/${RBRTW_AREA[0]},${RBRTW_AREA[1]}`,
@@ -206,31 +374,130 @@ async function loadNwsPointData() {
   }
 }
 
-function toggleRadar() {
+async function loadRadarFrames() {
+  const response = await fetch("https://api.rainviewer.com/public/weather-maps.json?cache=" + Date.now());
+  if (!response.ok) throw new Error("Radar timeline request failed");
+
+  const data = await response.json();
+  radarHost = data.host;
+  radarFrames = data?.radar?.past || [];
+
+  if (!radarFrames.length) {
+    throw new Error("No radar frames returned.");
+  }
+
+  radarIndex = radarFrames.length - 1;
+
+  const slider = document.getElementById("radarFrameSlider");
+  if (slider) {
+    slider.max = radarFrames.length - 1;
+    slider.value = radarIndex;
+  }
+}
+
+function showRadarFrame(index) {
+  if (!radarFrames.length || !radarHost) return;
+
+  radarIndex = index;
+  if (radarIndex < 0) radarIndex = radarFrames.length - 1;
+  if (radarIndex >= radarFrames.length) radarIndex = 0;
+
   if (radarLayer) {
     map.removeLayer(radarLayer);
+  }
+
+  const frame = radarFrames[radarIndex];
+  const tileUrl = `${radarHost}${frame.path}/512/{z}/{x}/{y}/4/1_1.png`;
+
+  radarLayer = L.tileLayer(tileUrl, {
+    opacity: Number(document.getElementById("radarOpacity").value),
+    attribution: "Radar: RainViewer"
+  }).addTo(map);
+
+  const slider = document.getElementById("radarFrameSlider");
+  const label = document.getElementById("radarFrameLabel");
+
+  if (slider) slider.value = radarIndex;
+  if (label) label.textContent = localRadarTime(frame.time);
+}
+
+async function toggleRadar() {
+  if (radarLayer || radarFrames.length) {
+    stopRadarAnimation();
+    if (radarLayer) map.removeLayer(radarLayer);
     radarLayer = null;
+    radarFrames = [];
+    radarHost = "";
+    document.getElementById("radarTimeline").classList.add("hidden");
     setCheck("radarCheck", false);
     updatePanel("Radar", "Radar layer turned off.");
     return;
   }
 
-  radarLayer = L.tileLayer.wms(
-    "https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows",
-    {
-      layers: "conus_bref_qcd",
-      format: "image/png",
-      transparent: true,
-      opacity: Number(document.getElementById("radarOpacity").value),
-      attribution: "NOAA/NWS/NCEP MRMS Radar"
-    }
-  ).addTo(map);
+  try {
+    await loadRadarFrames();
+    document.getElementById("radarTimeline").classList.remove("hidden");
+    showRadarFrame(radarIndex);
 
-  setCheck("radarCheck", true);
-  updateLegend("radar");
-  updatePanel("Radar", `Radar layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
+    setCheck("radarCheck", true);
+    updateLegend("radar");
+    updatePanel("Radar Playback", `
+      Radar timeline loaded.<br>
+      Frames: ${radarFrames.length}<br>
+      Current frame: ${localRadarTime(radarFrames[radarIndex].time)}
+    `);
+  } catch (error) {
+    setCheck("radarCheck", false);
+    updatePanel("Radar", "Could not load radar timeline.");
+    console.error(error);
+  }
 }
 
+function setRadarFrameFromSlider() {
+  stopRadarAnimation();
+  const slider = document.getElementById("radarFrameSlider");
+  showRadarFrame(Number(slider.value));
+}
+
+function nextRadarFrame() {
+  showRadarFrame(radarIndex + 1);
+}
+
+function previousRadarFrame() {
+  showRadarFrame(radarIndex - 1);
+}
+
+function toggleRadarAnimation() {
+  const playBtn = document.getElementById("radarPlayBtn");
+  const loopText = document.getElementById("radarLoopText");
+
+  if (radarTimer) {
+    stopRadarAnimation();
+    return;
+  }
+
+  if (!radarFrames.length) return;
+
+  radarTimer = setInterval(() => {
+    showRadarFrame(radarIndex + 1);
+  }, 700);
+
+  if (playBtn) playBtn.textContent = "Pause";
+  if (loopText) loopText.textContent = "Loop playing";
+}
+
+function stopRadarAnimation() {
+  const playBtn = document.getElementById("radarPlayBtn");
+  const loopText = document.getElementById("radarLoopText");
+
+  if (radarTimer) {
+    clearInterval(radarTimer);
+    radarTimer = null;
+  }
+
+  if (playBtn) playBtn.textContent = "Play";
+  if (loopText) loopText.textContent = "Loop paused";
+}
 async function toggleAlerts() {
   if (alertLayer) {
     map.removeLayer(alertLayer);
@@ -255,8 +522,7 @@ async function toggleAlerts() {
         fillOpacity: 0.2
       },
       onEachFeature: function (feature, layer) {
-        const p = feature.properties;
-        layer.bindPopup(`<strong>${p.event}</strong><br>${p.headline || ""}`);
+        bindHazardFeature(layer, "NWS Alert", feature);
       }
     }).addTo(map);
 
@@ -275,7 +541,6 @@ async function toggleAlerts() {
     console.error(error);
   }
 }
-
 function toggleQpf() {
   if (qpfLayer) {
     map.removeLayer(qpfLayer);
@@ -336,19 +601,38 @@ async function toggleSpc() {
         };
       },
       onEachFeature: function (feature, layer) {
-        const p = feature.properties;
-        layer.bindPopup(`<strong>SPC Outlook</strong><br>Risk: ${p.label || p.label2 || "Outlook Area"}`);
+        bindHazardFeature(layer, "SPC", feature, { layerName: "Day 1 Categorical Outlook" });
       }
     }).addTo(map);
 
     setCheck("spcCheck", true);
     updateLegend("spc");
-    updatePanel("SPC Outlook", `SPC outlook layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
+
+    const hazards = data.features.map(feature => {
+      const p = feature.properties || {};
+      return p.label || p.label2 || riskLabelFromDn(p.dn, "SPC") || "SPC Outlook Area";
+    });
+
+    const uniqueHazards = [...new Set(hazards)].join(", ");
+
+    updatePanel("SPC Outlook", `
+      Active SPC Day 1 categorical outlook polygons loaded.<br>
+      Hazards: ${uniqueHazards || "None returned"}<br>
+      Click a polygon for the exact outlook details.
+    `);
   } catch (error) {
     setCheck("spcCheck", false);
     updatePanel("SPC Outlook", "Could not load SPC outlook.");
     console.error(error);
   }
+}
+function wpcColor(outlook, dn) {
+  const value = String(outlook || dn || "").toLowerCase();
+  if (value.includes("high") || dn === 4) return "#ee99ee";
+  if (value.includes("moderate") || dn === 3) return "#e06666";
+  if (value.includes("slight") || dn === 2) return "#ffe066";
+  if (value.includes("marginal") || dn === 1) return "#66a366";
+  return "#9254de";
 }
 
 function toggleWpc() {
@@ -360,16 +644,48 @@ function toggleWpc() {
     return;
   }
 
-  wpcLayer = L.esri.dynamicMapLayer({
-    url: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer",
-    opacity: Math.max(Number(document.getElementById("wpcOpacity").value), 0.75)
-  }).addTo(map);
+  const opacity = Number(document.getElementById("wpcOpacity").value);
+  const serviceUrl = "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer";
+  const wpcDayLayers = [
+    { id: 0, name: "Excessive Rainfall Day 1" },
+    { id: 1, name: "Excessive Rainfall Day 2" },
+    { id: 2, name: "Excessive Rainfall Day 3" },
+    { id: 3, name: "Excessive Rainfall Day 4" },
+    { id: 4, name: "Excessive Rainfall Day 5" }
+  ];
+
+  const layers = wpcDayLayers.map(day => {
+    return L.esri.featureLayer({
+      url: `${serviceUrl}/${day.id}`,
+      where: "1=1",
+      simplifyFactor: 0.35,
+      precision: 5,
+      style: function (feature) {
+        const p = feature.properties || {};
+        return {
+          color: "#00ffff",
+          weight: 3,
+          opacity: 1,
+          fillColor: wpcColor(p.outlook, p.dn),
+          fillOpacity: opacity
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        bindHazardFeature(layer, "WPC", feature, { layerName: day.name });
+      }
+    });
+  });
+
+  wpcLayer = L.layerGroup(layers).addTo(map);
 
   setCheck("wpcCheck", true);
   updateLegend("wpc");
-  updatePanel("WPC Outlook", `WPC precipitation hazard layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
+  updatePanel("WPC Outlook", `
+    WPC Excessive Rainfall Outlook polygons loaded.<br>
+    Days: 1–5<br>
+    Click a WPC polygon for product, risk category, valid time, and issue time.
+  `);
 }
-
 async function toggleCountyLines() {
   if (countyLayer) {
     map.removeLayer(countyLayer);
