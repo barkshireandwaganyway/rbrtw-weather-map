@@ -364,3 +364,87 @@ input[type="checkbox"] {
     flex-wrap: wrap;
   }
 }
+
+.radar-timeline {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 118px;
+  width: min(640px, calc(100vw - 40px));
+  padding: 12px 14px;
+}
+
+.radar-top-row,
+.radar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#radarFrameLabel {
+  background: #0bb84f;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+#radarFrameSlider {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.radar-controls button {
+  width: auto;
+  text-align: center;
+  padding: 8px 12px;
+}
+
+#radarLoopText {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.hazard-detail-row {
+  margin: 0 0 7px;
+  line-height: 1.35;
+}
+
+.hazard-detail-row span {
+  font-weight: 800;
+  color: #f5b301;
+}
+
+.hazard-tooltip {
+  background: rgba(7, 17, 31, 0.94);
+  color: #ffffff;
+  border: 1px solid #00ffff;
+  border-radius: 7px;
+  font-weight: 800;
+  padding: 6px 8px;
+  box-shadow: 0 0 12px rgba(0,255,255,0.7);
+}
+
+
+@media (max-width: 760px) {
+  .radar-timeline {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: 112px;
+    width: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .radar-timeline {
+    bottom: 112px;
+  }
+
+  .radar-top-row {
+    font-size: 13px;
+  }
+
+  .radar-controls {
+    flex-wrap: wrap;
+  }
+}
