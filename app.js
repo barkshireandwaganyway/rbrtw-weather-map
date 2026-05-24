@@ -872,11 +872,11 @@ async function toggleCountyLines() {
       features: texasCountyFeatures
     }, {
       style: {
-        color: "#00ff88",
-        weight: 2,
-        opacity: Number(document.getElementById("countyOpacity").value),
-        fillOpacity: 0
-      },
+  color: "#1f2933",
+  weight: 1.4,
+  opacity: Number(document.getElementById("countyOpacity").value),
+  fillOpacity: 0
+    },
       onEachFeature: function (feature, layer) {
         const name = feature.properties.NAME || "County";
         layer.bindPopup(`<strong>${name} County</strong>`);
