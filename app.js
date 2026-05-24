@@ -407,10 +407,14 @@ function showRadarFrame(index) {
   }
 
   const frame = radarFrames[radarIndex];
-  const tileUrl = `${radarHost}${frame.path}/512/{z}/{x}/{y}/4/1_1.png`;
+  const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/4/1_1.png`;
 
   radarLayer = L.tileLayer(tileUrl, {
     opacity: Number(document.getElementById("radarOpacity").value),
+    tileSize: 256,
+    maxZoom: 19,
+    maxNativeZoom: 10,
+    errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
     attribution: "Radar: RainViewer"
   }).addTo(map);
 
