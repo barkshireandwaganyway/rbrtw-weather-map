@@ -18,23 +18,27 @@ const locations = {
   atascosa: { name: "Atascosa County", coords: [28.8936, -98.5273], zoom: 9 }
 };
 
-L.marker(RBRTW_AREA)
+const rbrtwMarker = L.marker(RBRTW_AREA)
   .addTo(map)
   .bindPopup("<strong>RBRTW AREA</strong>")
   .openPopup();
 
-function togglePanel(panelId) {
-  const panel = document.getElementById(panelId);
-  panel.classList.toggle("hidden");
+L.circle(RBRTW_AREA, {
+  radius: 9000,
+  color: "#ff3b3b",
+  weight: 1,
+  fillColor: "#ff3b3b",
+  fillOpacity: 0.12
+}).addTo(map);
+
+function toggleCard(id) {
+  const body = document.getElementById(id);
+  body.classList.toggle("collapsed");
 }
 
 function focusArea() {
   map.setView(RBRTW_AREA, 11);
-
-  L.popup()
-    .setLatLng(RBRTW_AREA)
-    .setContent("<strong>RBRTW AREA</strong>")
-    .openOn(map);
+  rbrtwMarker.openPopup();
 }
 
 function focusCounty(county) {
@@ -50,11 +54,9 @@ function focusCounty(county) {
 }
 
 function updatePanel(title, html) {
-  const status = document.getElementById("status");
-  if (!status) return;
-
-  status.innerHTML = `
-    <strong>${title}</strong><br><br>
+  document.getElementById("status").innerHTML = `
+    <strong>${title}</strong>
+    <br><br>
     ${html}
   `;
 }
@@ -62,17 +64,10 @@ function updatePanel(title, html) {
 async function getNwsPointData() {
   const response = await fetch(
     `https://api.weather.gov/points/${RBRTW_AREA[0]},${RBRTW_AREA[1]}`,
-    {
-      headers: {
-        Accept: "application/geo+json"
-      }
-    }
+    { headers: { Accept: "application/geo+json" } }
   );
 
-  if (!response.ok) {
-    throw new Error("NWS point request failed");
-  }
-
+  if (!response.ok) throw new Error("NWS point request failed");
   return await response.json();
 }
 
@@ -80,12 +75,9 @@ async function loadNwsPointData() {
   try {
     const data = await getNwsPointData();
 
-    updatePanel("NWS Point Data", `
-      <strong>Area:</strong> RBRTW AREA<br>
-      <strong>Office:</strong> ${data.properties.cwa}<br>
-      <strong>Grid:</strong> ${data.properties.gridId} ${data.properties.gridX},${data.properties.gridY}<br>
-      <strong>Forecast URL:</strong><br>
-      <small>${data.properties.forecast}</small>
+    updatePanel("RBRTW AREA", `
+      Office: ${data.properties.cwa}<br>
+      Grid: ${data.properties.gridId} ${data.properties.gridX},${data.properties.gridY}
     `);
   } catch (error) {
     updatePanel("Error", "Could not load RBRTW AREA data.");
@@ -94,10 +86,12 @@ async function loadNwsPointData() {
 }
 
 function toggleRadar() {
+  const checkbox = document.getElementById("radarCheck");
+
   if (radarLayer) {
     map.removeLayer(radarLayer);
     radarLayer = null;
-    updatePanel("Radar Overlay", "Radar overlay turned off.");
+    if (checkbox) checkbox.checked = false;
     return;
   }
 
@@ -112,30 +106,27 @@ function toggleRadar() {
     }
   ).addTo(map);
 
-  updatePanel("Radar Overlay", "NOAA MRMS composite radar layer is turned on.");
+  if (checkbox) checkbox.checked = true;
 }
 
-async function loadAlerts() {
-  try {
-    if (alertLayer) {
-      map.removeLayer(alertLayer);
-      alertLayer = null;
-      updatePanel("NWS Alerts", "Alert layer turned off.");
-      return;
-    }
+async function toggleAlerts() {
+  const checkbox = document.getElementById("alertsCheck");
 
+  if (alertLayer) {
+    map.removeLayer(alertLayer);
+    alertLayer = null;
+    if (checkbox) checkbox.checked = false;
+    updatePanel("NWS Alerts", "Alert layer turned off.");
+    return;
+  }
+
+  try {
     const response = await fetch(
       `https://api.weather.gov/alerts/active?point=${RBRTW_AREA[0]},${RBRTW_AREA[1]}`,
-      {
-        headers: {
-          Accept: "application/geo+json"
-        }
-      }
+      { headers: { Accept: "application/geo+json" } }
     );
 
-    if (!response.ok) {
-      throw new Error("Alerts request failed");
-    }
+    if (!response.ok) throw new Error("Alerts request failed");
 
     const data = await response.json();
 
@@ -144,23 +135,22 @@ async function loadAlerts() {
         color: "#ff0033",
         weight: 2,
         fillColor: "#ff0033",
-        fillOpacity: 0.18
+        fillOpacity: 0.2
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
-
         layer.bindPopup(`
           <strong>${p.event}</strong><br>
-          <strong>Severity:</strong> ${p.severity}<br>
-          <strong>Area:</strong> ${p.areaDesc}<br><br>
+          Severity: ${p.severity}<br>
           ${p.headline || ""}
         `);
       }
     }).addTo(map);
 
-    const alertList = data.features.slice(0, 5).map(feature => {
-      const p = feature.properties;
+    if (checkbox) checkbox.checked = true;
 
+    const alertList = data.features.map(feature => {
+      const p = feature.properties;
       return `
         <div style="margin-bottom:10px;">
           <strong>${p.event}</strong><br>
@@ -171,6 +161,7 @@ async function loadAlerts() {
 
     updatePanel("Active NWS Alerts", alertList || "No active alerts for RBRTW AREA.");
   } catch (error) {
+    if (checkbox) checkbox.checked = false;
     updatePanel("NWS Alerts", "Could not load alerts.");
     console.error(error);
   }
@@ -180,10 +171,7 @@ async function loadForecast() {
   try {
     const point = await getNwsPointData();
     const response = await fetch(point.properties.forecast);
-
-    if (!response.ok) {
-      throw new Error("Forecast request failed");
-    }
+    if (!response.ok) throw new Error("Forecast request failed");
 
     const data = await response.json();
 
@@ -207,18 +195,13 @@ async function loadHourlyForecast() {
   try {
     const point = await getNwsPointData();
     const response = await fetch(point.properties.forecastHourly);
-
-    if (!response.ok) {
-      throw new Error("Hourly forecast request failed");
-    }
+    if (!response.ok) throw new Error("Hourly forecast request failed");
 
     const data = await response.json();
 
     const hourlyHtml = data.properties.periods.slice(0, 12).map(period => `
       <div style="margin-bottom:10px;">
-        <strong>${new Date(period.startTime).toLocaleTimeString([], {
-          hour: "numeric"
-        })}</strong>
+        <strong>${new Date(period.startTime).toLocaleTimeString([], { hour: "numeric" })}</strong>
         — ${period.temperature}°${period.temperatureUnit},
         ${period.shortForecast}
       </div>
@@ -235,23 +218,13 @@ async function loadCurrentConditions() {
   try {
     const point = await getNwsPointData();
     const stationsResponse = await fetch(point.properties.observationStations);
-
-    if (!stationsResponse.ok) {
-      throw new Error("Observation station request failed");
-    }
+    if (!stationsResponse.ok) throw new Error("Stations request failed");
 
     const stationsData = await stationsResponse.json();
-
-    if (!stationsData.features || stationsData.features.length === 0) {
-      throw new Error("No observation stations found.");
-    }
-
     const stationUrl = `${stationsData.features[0].id}/observations/latest`;
-    const obsResponse = await fetch(stationUrl);
 
-    if (!obsResponse.ok) {
-      throw new Error("Observation request failed");
-    }
+    const obsResponse = await fetch(stationUrl);
+    if (!obsResponse.ok) throw new Error("Observation request failed");
 
     const obsData = await obsResponse.json();
     const p = obsData.properties;
@@ -260,23 +233,22 @@ async function loadCurrentConditions() {
     const dewC = p.dewpoint.value;
     const windMps = p.windSpeed.value;
     const gustMps = p.windGust.value;
-    const pressurePa = p.barometricPressure.value;
+    const humidity = p.relativeHumidity.value;
 
     const tempF = tempC !== null ? Math.round((tempC * 9) / 5 + 32) : "N/A";
     const dewF = dewC !== null ? Math.round((dewC * 9) / 5 + 32) : "N/A";
     const windMph = windMps !== null ? Math.round(windMps * 2.23694) : "N/A";
     const gustMph = gustMps !== null ? Math.round(gustMps * 2.23694) : "N/A";
-    const pressureInHg = pressurePa !== null ? (pressurePa * 0.0002953).toFixed(2) : "N/A";
+    const humidityText = humidity !== null ? `${Math.round(humidity)}%` : "N/A";
 
     updatePanel("Current Conditions", `
-      <strong>Area:</strong> RBRTW AREA<br>
-      <strong>Temperature:</strong> ${tempF}°F<br>
-      <strong>Dew Point:</strong> ${dewF}°F<br>
-      <strong>Wind:</strong> ${windMph} mph<br>
-      <strong>Wind Gust:</strong> ${gustMph} mph<br>
-      <strong>Pressure:</strong> ${pressureInHg} inHg<br>
-      <strong>Description:</strong> ${p.textDescription || "N/A"}<br>
-      <strong>Updated:</strong> ${new Date(p.timestamp).toLocaleString()}
+      <div class="big-temp">${tempF}°F</div>
+      ${p.textDescription || "Current conditions"}<br><br>
+      Dew Point: ${dewF}°F<br>
+      Humidity: ${humidityText}<br>
+      Wind: ${windMph} mph<br>
+      Wind Gust: ${gustMph} mph<br>
+      Updated: ${new Date(p.timestamp).toLocaleTimeString()}
     `);
   } catch (error) {
     updatePanel("Current Conditions", "Could not load current conditions.");
