@@ -435,10 +435,12 @@ function setLayerOpacity(type) {
   }
 
   if (type === "county" && countyLayer) {
-    countyLayer.setStyle({
-      opacity: Number(document.getElementById("countyOpacity").value),
-      fillOpacity: 0
-    });
+  countyLayer.setStyle({
+    color: "#1f2933",
+    weight: 1.4,
+    opacity: Number(document.getElementById("countyOpacity").value),
+    fillOpacity: 0
+  });
   }
 
   if (type === "rainfall" && rainfallLayer) {
