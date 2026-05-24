@@ -436,7 +436,7 @@ function setLayerOpacity(type) {
 
   if (type === "county" && countyLayer) {
   countyLayer.setStyle({
-    color: "#1f2933",
+    color: "#374151",
     weight: 1.4,
     opacity: Number(document.getElementById("countyOpacity").value),
     fillOpacity: 0
