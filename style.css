@@ -1,0 +1,90 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #07111f;
+  color: white;
+}
+
+header {
+  height: 80px;
+  background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
+  border-bottom: 3px solid #f5b301;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 1px;
+}
+
+header p {
+  margin: 4px 0 0;
+  color: #d9e8ff;
+  font-size: 14px;
+}
+
+main {
+  display: flex;
+  height: calc(100vh - 80px);
+}
+
+#sidebar {
+  width: 320px;
+  background: #0b1b2e;
+  border-right: 2px solid #18395c;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#sidebar h2 {
+  font-size: 16px;
+  margin: 18px 0 10px;
+  color: #f5b301;
+  text-transform: uppercase;
+}
+
+button {
+  width: 100%;
+  padding: 11px;
+  margin: 5px 0;
+  border: 1px solid #315b85;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #102d4c, #1b4f80);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #1b4f80, #800d5c);
+}
+
+#weatherInfo {
+  margin-top: 18px;
+  padding: 12px;
+  background: #07111f;
+  border: 1px solid #315b85;
+  border-radius: 10px;
+}
+
+#weatherInfo p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#map {
+  flex: 1;
+  height: 100%;
+}
+
+.leaflet-popup-content {
+  color: #111;
+}

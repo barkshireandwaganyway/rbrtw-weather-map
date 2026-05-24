@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RBRTW Weather Map</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>RBRTW Weather Map</h1>
+      <p>South Central Texas Weather Command Center</p>
+    </div>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <h2>Weather Layers</h2>
+
+      <button>Radar</button>
+      <button>Alerts</button>
+      <button>Current Conditions</button>
+      <button>Forecast</button>
+      <button>Rainfall / QPF</button>
+      <button>SPC Outlook</button>
+      <button>WPC Outlook</button>
+      <button>HRRR Future Radar</button>
+
+      <h2>County Focus</h2>
+      <button onclick="focusCounty('bexar')">Bexar</button>
+      <button onclick="focusCounty('medina')">Medina</button>
+      <button onclick="focusCounty('atascosa')">Atascosa</button>
+
+      <div id="weatherInfo">
+        <h2>NWS Test Data</h2>
+        <p id="status">Loading NWS point data...</p>
+      </div>
+    </aside>
+
+    <section id="map"></section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
