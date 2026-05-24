@@ -42,6 +42,10 @@ html, body {
   border: 1px solid rgba(255,255,255,0.16);
 }
 
+.hidden {
+  display: none;
+}
+
 .layers-card {
   top: 78px;
   left: 10px;
@@ -55,7 +59,7 @@ html, body {
 
 .focus-card {
   left: 10px;
-  bottom: 24px;
+  bottom: 64px;
 }
 
 .data-card {
@@ -67,8 +71,47 @@ html, body {
 
 .legend-card {
   right: 10px;
-  bottom: 24px;
+  bottom: 18px;
   width: clamp(230px, 22vw, 285px);
+}
+
+.hrrr-timeline {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  width: min(640px, calc(100vw - 40px));
+  padding: 12px 14px;
+}
+
+.hrrr-top-row,
+.hrrr-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#hrrrFrameLabel {
+  background: #1c88ff;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+#hrrrFrameSlider {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.hrrr-controls button {
+  width: auto;
+  text-align: center;
+  padding: 8px 12px;
+}
+
+#hrrrLoopText {
+  font-size: 12px;
+  opacity: 0.85;
 }
 
 .card-header {
@@ -128,16 +171,22 @@ input[type="checkbox"] {
 .yellow { background: #f5c542; }
 .purple { background: #9254de; }
 .cyan { background: #15d5ff; }
+.white { background: #ffffff; border: 1px solid #555; }
 
 .card-body button,
-.tab-row button {
+.tab-row button,
+.hrrr-controls button {
   border: none;
   border-radius: 5px;
   background: rgba(255,255,255,0.08);
   color: white;
-  padding: 8px 9px;
   cursor: pointer;
   font-size: 13px;
+}
+
+.card-body button,
+.tab-row button {
+  padding: 8px 9px;
 }
 
 .card-body button {
@@ -147,7 +196,8 @@ input[type="checkbox"] {
 }
 
 .card-body button:hover,
-.tab-row button:hover {
+.tab-row button:hover,
+.hrrr-controls button:hover {
   background: #1c88ff;
 }
 
@@ -216,11 +266,19 @@ input[type="checkbox"] {
   font-weight: bold;
 }
 
+.leaflet-control-zoom {
+  margin-bottom: 58px !important;
+}
+
 @media (max-width: 900px) {
   .basemap-card {
-    left: 10px;
-    top: auto;
-    bottom: 165px;
+    left: auto;
+    right: 10px;
+    top: 78px;
+  }
+
+  .data-card {
+    top: 126px;
   }
 }
 
@@ -237,39 +295,72 @@ input[type="checkbox"] {
   .layers-card {
     top: 64px;
     left: 8px;
+    width: min(225px, calc(100vw - 16px));
+  }
+
+  .basemap-card,
+  .focus-card {
+    display: none;
   }
 
   .data-card {
-    top: 64px;
+    top: auto;
     right: 8px;
-    width: min(265px, calc(100vw - 16px));
+    bottom: 220px;
+    width: min(280px, calc(100vw - 16px));
+    max-height: 30vh;
   }
 
   .legend-card {
     right: 8px;
-    bottom: 8px;
-    width: min(265px, calc(100vw - 16px));
+    bottom: 78px;
+    width: min(280px, calc(100vw - 16px));
   }
 
-  .focus-card,
-  .basemap-card {
-    display: none;
+  .hrrr-timeline {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: 8px;
+    width: auto;
+  }
+
+  .card-body {
+    max-height: 28vh;
+  }
+
+  .leaflet-control-zoom {
+    margin-bottom: 180px !important;
+  }
+
+  .home-btn {
+    bottom: 188px;
   }
 }
 
 @media (max-width: 520px) {
   .layers-card {
-    width: 190px;
+    width: 220px;
   }
 
   .data-card {
-    top: auto;
-    bottom: 135px;
-    right: 8px;
-    max-height: 38vh;
+    display: none;
   }
 
-  .card-body {
-    max-height: 32vh;
+  .legend-card {
+    bottom: 122px;
+    width: min(270px, calc(100vw - 16px));
+  }
+
+  .hrrr-timeline {
+    bottom: 8px;
+  }
+
+  .hrrr-top-row {
+    font-size: 13px;
+  }
+
+  .hrrr-controls {
+    flex-wrap: wrap;
   }
 }
