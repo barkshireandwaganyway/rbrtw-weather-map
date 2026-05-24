@@ -63,16 +63,17 @@ def try_download_latest():
 
         if len(downloaded) >= 3:
             latest_path = os.path.join(OUT_DIR, "latest.json")
+
+            latest = {
+                "status": "downloaded",
+                "model": "HRRR",
+                "product": "Composite Reflectivity",
+                "cycle": f"{date.strftime('%Y%m%d')} {cycle:02d}z",
+                "files": downloaded
+            }
+
             with open(latest_path, "w") as f:
-                f.write(
-                    "{\n"
-                    '  "status": "downloaded",\n'
-                    f'  "model": "HRRR",\n'
-                    f'  "product": "Composite Reflectivity",\n'
-                    f'  "cycle": "{date.strftime("%Y%m%d")} {cycle:02d}z",\n'
-                    f'  "files": {downloaded}\n'
-                    "}\n"
-                )
+                json.dump(latest, f, indent=2)
 
             print("Success")
             return
