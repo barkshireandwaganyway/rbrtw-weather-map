@@ -1,8 +1,12 @@
 const RBRTW_AREA = [29.46899, -98.78885];
 
 const map = L.map("map", {
-  zoomControl: true
+  zoomControl: false
 }).setView(RBRTW_AREA, 10);
+
+L.control.zoom({
+  position: "bottomleft"
+}).addTo(map);
 
 let baseLayer = null;
 let radarLayer = null;
@@ -10,6 +14,7 @@ let alertLayer = null;
 let qpfLayer = null;
 let spcLayer = null;
 let wpcLayer = null;
+let countyLayer = null;
 
 let hrrrLayer = null;
 let hrrrFrames = [];
@@ -82,14 +87,20 @@ function focusCounty(county) {
 }
 
 function updatePanel(title, html) {
-  document.getElementById("status").innerHTML = `
-    <strong>${title}</strong><br><br>${html}
-  `;
+  const status = document.getElementById("status");
+  if (!status) return;
+  status.innerHTML = `<strong>${title}</strong><br><br>${html}`;
 }
 
 function setCheck(id, checked) {
   const el = document.getElementById(id);
   if (el) el.checked = checked;
+}
+
+function assetPath(path) {
+  if (!path) return "";
+  if (path.startsWith("/")) return path;
+  return `/${path}`;
 }
 
 function updateLegend(type) {
@@ -103,10 +114,11 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
     `,
     hrrr: `
-      <div class="legend-row"><span class="legend-swatch" style="background:#00cc33"></span>Light simulated reflectivity</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#ffff00"></span>Moderate simulated reflectivity</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#ff5500"></span>Heavy simulated reflectivity</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>Very strong storm core</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:linear-gradient(90deg,#00cc33,#ffff00,#ff5500,#ff0000,#ff00ff)"></span>Simulated reflectivity</div>
+      <div class="legend-row">5 / 20 / 35 / 50 / 65+ dBZ</div>
+    `,
+    county: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>County boundary lines</div>
     `,
     qpf: `
       <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light rainfall</div>
@@ -156,7 +168,14 @@ function setLayerOpacity(type) {
   }
 
   if (type === "hrrr" && hrrrLayer) {
-    hrrrLayer.setOpacity(Number(document.getElementById("hrrrOpacity")?.value || 0.72));
+    hrrrLayer.setOpacity(Number(document.getElementById("hrrrOpacity").value));
+  }
+
+  if (type === "county" && countyLayer) {
+    countyLayer.setStyle({
+      opacity: Number(document.getElementById("countyOpacity").value),
+      fillOpacity: 0
+    });
   }
 }
 
@@ -342,18 +361,67 @@ function toggleWpc() {
   updatePanel("WPC Outlook", `WPC precipitation hazard layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
 }
 
+async function toggleCountyLines() {
+  if (countyLayer) {
+    map.removeLayer(countyLayer);
+    countyLayer = null;
+    setCheck("countyCheck", false);
+    updatePanel("County Lines", "County line layer turned off.");
+    return;
+  }
+
+  try {
+    const url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json";
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("County GeoJSON request failed");
+
+    const data = await response.json();
+
+    const texasCountyFeatures = data.features.filter(feature => {
+      const fips = String(feature.id || feature.properties.GEO_ID || "");
+      return fips.startsWith("48");
+    });
+
+    countyLayer = L.geoJSON({
+      type: "FeatureCollection",
+      features: texasCountyFeatures
+    }, {
+      style: {
+        color: "#0b7a2a",
+        weight: 1.4,
+        opacity: Number(document.getElementById("countyOpacity").value),
+        fillOpacity: 0
+      },
+      onEachFeature: function (feature, layer) {
+        const name = feature.properties.NAME || "County";
+        layer.bindPopup(`<strong>${name} County</strong>`);
+      }
+    }).addTo(map);
+
+    setCheck("countyCheck", true);
+    updateLegend("county");
+    updatePanel("County Lines", "Texas county boundary layer turned on.");
+  } catch (error) {
+    setCheck("countyCheck", false);
+    updatePanel("County Lines", "Could not load county lines.");
+    console.error(error);
+  }
+}
+
 async function toggleHrrr() {
   if (hrrrLayer) {
     stopHrrrAnimation();
     map.removeLayer(hrrrLayer);
     hrrrLayer = null;
+    hrrrFrames = [];
+    document.getElementById("hrrrTimeline").classList.add("hidden");
     setCheck("hrrrCheck", false);
     updatePanel("HRRR Future Radar", "HRRR layer turned off.");
     return;
   }
 
   try {
-    const response = await fetch("public/data/model/hrrr/latest.json");
+    const response = await fetch(`/public/data/model/hrrr/latest.json?cache=${Date.now()}`);
     if (!response.ok) throw new Error("Could not load HRRR latest.json");
 
     const data = await response.json();
@@ -369,6 +437,12 @@ async function toggleHrrr() {
     ];
     hrrrIndex = 0;
 
+    const slider = document.getElementById("hrrrFrameSlider");
+    slider.max = hrrrFrames.length - 1;
+    slider.value = 0;
+
+    document.getElementById("hrrrTimeline").classList.remove("hidden");
+
     showHrrrFrame(0);
     setCheck("hrrrCheck", true);
     updateLegend("hrrr");
@@ -376,10 +450,7 @@ async function toggleHrrr() {
     updatePanel("HRRR Future Radar", `
       HRRR simulated reflectivity loaded.<br>
       Frames: ${hrrrFrames.length}<br>
-      Current frame: ${hrrrFrames[0].label}<br><br>
-      <button onclick="previousHrrrFrame()">Previous</button>
-      <button onclick="nextHrrrFrame()">Next</button>
-      <button onclick="toggleHrrrAnimation()">Play / Pause</button>
+      Current: ${hrrrFrames[0].label}
     `);
   } catch (error) {
     setCheck("hrrrCheck", false);
@@ -402,35 +473,35 @@ function showHrrrFrame(index) {
 
   const frame = hrrrFrames[hrrrIndex];
 
-  hrrrLayer = L.imageOverlay(frame.file, hrrrBounds, {
-    opacity: Number(document.getElementById("hrrrOpacity")?.value || 0.72),
+  hrrrLayer = L.imageOverlay(assetPath(frame.file), hrrrBounds, {
+    opacity: Number(document.getElementById("hrrrOpacity").value),
     interactive: false
   }).addTo(map);
 
-  updateLegend("hrrr");
+  const slider = document.getElementById("hrrrFrameSlider");
+  const label = document.getElementById("hrrrFrameLabel");
+
+  if (slider) slider.value = hrrrIndex;
+  if (label) label.textContent = frame.label || `F${String(hrrrIndex + 1).padStart(2, "0")}`;
+}
+
+function setHrrrFrameFromSlider() {
+  const slider = document.getElementById("hrrrFrameSlider");
+  showHrrrFrame(Number(slider.value));
 }
 
 function nextHrrrFrame() {
   showHrrrFrame(hrrrIndex + 1);
-  updatePanel("HRRR Future Radar", `
-    Frame: ${hrrrFrames[hrrrIndex].label}<br><br>
-    <button onclick="previousHrrrFrame()">Previous</button>
-    <button onclick="nextHrrrFrame()">Next</button>
-    <button onclick="toggleHrrrAnimation()">Play / Pause</button>
-  `);
 }
 
 function previousHrrrFrame() {
   showHrrrFrame(hrrrIndex - 1);
-  updatePanel("HRRR Future Radar", `
-    Frame: ${hrrrFrames[hrrrIndex].label}<br><br>
-    <button onclick="previousHrrrFrame()">Previous</button>
-    <button onclick="nextHrrrFrame()">Next</button>
-    <button onclick="toggleHrrrAnimation()">Play / Pause</button>
-  `);
 }
 
 function toggleHrrrAnimation() {
+  const playBtn = document.getElementById("hrrrPlayBtn");
+  const loopText = document.getElementById("hrrrLoopText");
+
   if (hrrrTimer) {
     stopHrrrAnimation();
     return;
@@ -438,20 +509,23 @@ function toggleHrrrAnimation() {
 
   hrrrTimer = setInterval(() => {
     showHrrrFrame(hrrrIndex + 1);
-    updatePanel("HRRR Future Radar", `
-      Playing frame: ${hrrrFrames[hrrrIndex].label}<br><br>
-      <button onclick="previousHrrrFrame()">Previous</button>
-      <button onclick="nextHrrrFrame()">Next</button>
-      <button onclick="toggleHrrrAnimation()">Play / Pause</button>
-    `);
   }, 900);
+
+  if (playBtn) playBtn.textContent = "Pause";
+  if (loopText) loopText.textContent = "Loop playing";
 }
 
 function stopHrrrAnimation() {
+  const playBtn = document.getElementById("hrrrPlayBtn");
+  const loopText = document.getElementById("hrrrLoopText");
+
   if (hrrrTimer) {
     clearInterval(hrrrTimer);
     hrrrTimer = null;
   }
+
+  if (playBtn) playBtn.textContent = "Play";
+  if (loopText) loopText.textContent = "Loop paused";
 }
 
 function refreshActiveLayers() {
@@ -460,6 +534,7 @@ function refreshActiveLayers() {
   const qpfWasOn = !!qpfLayer;
   const spcWasOn = !!spcLayer;
   const wpcWasOn = !!wpcLayer;
+  const countyWasOn = !!countyLayer;
   const hrrrWasOn = !!hrrrLayer;
 
   if (radarWasOn) toggleRadar();
@@ -467,6 +542,7 @@ function refreshActiveLayers() {
   if (qpfWasOn) toggleQpf();
   if (spcWasOn) toggleSpc();
   if (wpcWasOn) toggleWpc();
+  if (countyWasOn) toggleCountyLines();
   if (hrrrWasOn) toggleHrrr();
 
   setTimeout(() => {
@@ -475,8 +551,9 @@ function refreshActiveLayers() {
     if (qpfWasOn) toggleQpf();
     if (spcWasOn) toggleSpc();
     if (wpcWasOn) toggleWpc();
+    if (countyWasOn) toggleCountyLines();
     if (hrrrWasOn) toggleHrrr();
-  }, 300);
+  }, 500);
 
   updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
 }
@@ -533,6 +610,7 @@ async function loadCurrentConditions() {
 
     const stationsData = await stationsResponse.json();
     const stationUrl = `${stationsData.features[0].id}/observations/latest`;
+
     const obsResponse = await fetch(stationUrl);
     if (!obsResponse.ok) throw new Error("Observation request failed");
 
