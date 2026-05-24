@@ -1,1 +1,7 @@
 requests
+numpy
+xarray
+cfgrib
+eccodes
+matplotlib
+pillow
