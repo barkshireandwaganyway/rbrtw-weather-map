@@ -11,6 +11,12 @@ let qpfLayer = null;
 let spcLayer = null;
 let wpcLayer = null;
 
+let hrrrLayer = null;
+let hrrrFrames = [];
+let hrrrBounds = null;
+let hrrrIndex = 0;
+let hrrrTimer = null;
+
 const basemaps = {
   standard: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -81,6 +87,11 @@ function updatePanel(title, html) {
   `;
 }
 
+function setCheck(id, checked) {
+  const el = document.getElementById(id);
+  if (el) el.checked = checked;
+}
+
 function updateLegend(type) {
   const box = document.getElementById("legendContent");
 
@@ -90,6 +101,12 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+    `,
+    hrrr: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#00cc33"></span>Light simulated reflectivity</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff00"></span>Moderate simulated reflectivity</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff5500"></span>Heavy simulated reflectivity</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>Very strong storm core</div>
     `,
     qpf: `
       <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light rainfall</div>
@@ -119,11 +136,6 @@ function updateLegend(type) {
   box.innerHTML = legends[type] || "Turn on a layer to view its legend.";
 }
 
-function setCheck(id, checked) {
-  const el = document.getElementById(id);
-  if (el) el.checked = checked;
-}
-
 function setLayerOpacity(type) {
   if (type === "radar" && radarLayer) {
     radarLayer.setOpacity(Number(document.getElementById("radarOpacity").value));
@@ -141,6 +153,10 @@ function setLayerOpacity(type) {
 
   if (type === "wpc" && wpcLayer) {
     wpcLayer.setOpacity(Number(document.getElementById("wpcOpacity").value));
+  }
+
+  if (type === "hrrr" && hrrrLayer) {
+    hrrrLayer.setOpacity(Number(document.getElementById("hrrrOpacity")?.value || 0.72));
   }
 }
 
@@ -326,9 +342,116 @@ function toggleWpc() {
   updatePanel("WPC Outlook", `WPC precipitation hazard layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
 }
 
-function toggleHrrr() {
-  setCheck("hrrrCheck", false);
-  updatePanel("HRRR Future Radar", "HRRR requires the GRIB2 backend step. This comes next.");
+async function toggleHrrr() {
+  if (hrrrLayer) {
+    stopHrrrAnimation();
+    map.removeLayer(hrrrLayer);
+    hrrrLayer = null;
+    setCheck("hrrrCheck", false);
+    updatePanel("HRRR Future Radar", "HRRR layer turned off.");
+    return;
+  }
+
+  try {
+    const response = await fetch("public/data/model/hrrr/latest.json");
+    if (!response.ok) throw new Error("Could not load HRRR latest.json");
+
+    const data = await response.json();
+
+    if (!data.frames || data.frames.length === 0) {
+      throw new Error("No HRRR PNG frames found.");
+    }
+
+    hrrrFrames = data.frames;
+    hrrrBounds = [
+      [data.bounds.south, data.bounds.west],
+      [data.bounds.north, data.bounds.east]
+    ];
+    hrrrIndex = 0;
+
+    showHrrrFrame(0);
+    setCheck("hrrrCheck", true);
+    updateLegend("hrrr");
+
+    updatePanel("HRRR Future Radar", `
+      HRRR simulated reflectivity loaded.<br>
+      Frames: ${hrrrFrames.length}<br>
+      Current frame: ${hrrrFrames[0].label}<br><br>
+      <button onclick="previousHrrrFrame()">Previous</button>
+      <button onclick="nextHrrrFrame()">Next</button>
+      <button onclick="toggleHrrrAnimation()">Play / Pause</button>
+    `);
+  } catch (error) {
+    setCheck("hrrrCheck", false);
+    updatePanel("HRRR Future Radar", "Could not load HRRR processed frames. Check latest.json and PNG files.");
+    console.error(error);
+  }
+}
+
+function showHrrrFrame(index) {
+  if (!hrrrFrames.length || !hrrrBounds) return;
+
+  hrrrIndex = index;
+
+  if (hrrrIndex < 0) hrrrIndex = hrrrFrames.length - 1;
+  if (hrrrIndex >= hrrrFrames.length) hrrrIndex = 0;
+
+  if (hrrrLayer) {
+    map.removeLayer(hrrrLayer);
+  }
+
+  const frame = hrrrFrames[hrrrIndex];
+
+  hrrrLayer = L.imageOverlay(frame.file, hrrrBounds, {
+    opacity: Number(document.getElementById("hrrrOpacity")?.value || 0.72),
+    interactive: false
+  }).addTo(map);
+
+  updateLegend("hrrr");
+}
+
+function nextHrrrFrame() {
+  showHrrrFrame(hrrrIndex + 1);
+  updatePanel("HRRR Future Radar", `
+    Frame: ${hrrrFrames[hrrrIndex].label}<br><br>
+    <button onclick="previousHrrrFrame()">Previous</button>
+    <button onclick="nextHrrrFrame()">Next</button>
+    <button onclick="toggleHrrrAnimation()">Play / Pause</button>
+  `);
+}
+
+function previousHrrrFrame() {
+  showHrrrFrame(hrrrIndex - 1);
+  updatePanel("HRRR Future Radar", `
+    Frame: ${hrrrFrames[hrrrIndex].label}<br><br>
+    <button onclick="previousHrrrFrame()">Previous</button>
+    <button onclick="nextHrrrFrame()">Next</button>
+    <button onclick="toggleHrrrAnimation()">Play / Pause</button>
+  `);
+}
+
+function toggleHrrrAnimation() {
+  if (hrrrTimer) {
+    stopHrrrAnimation();
+    return;
+  }
+
+  hrrrTimer = setInterval(() => {
+    showHrrrFrame(hrrrIndex + 1);
+    updatePanel("HRRR Future Radar", `
+      Playing frame: ${hrrrFrames[hrrrIndex].label}<br><br>
+      <button onclick="previousHrrrFrame()">Previous</button>
+      <button onclick="nextHrrrFrame()">Next</button>
+      <button onclick="toggleHrrrAnimation()">Play / Pause</button>
+    `);
+  }, 900);
+}
+
+function stopHrrrAnimation() {
+  if (hrrrTimer) {
+    clearInterval(hrrrTimer);
+    hrrrTimer = null;
+  }
 }
 
 function refreshActiveLayers() {
@@ -337,12 +460,14 @@ function refreshActiveLayers() {
   const qpfWasOn = !!qpfLayer;
   const spcWasOn = !!spcLayer;
   const wpcWasOn = !!wpcLayer;
+  const hrrrWasOn = !!hrrrLayer;
 
   if (radarWasOn) toggleRadar();
   if (alertsWasOn) toggleAlerts();
   if (qpfWasOn) toggleQpf();
   if (spcWasOn) toggleSpc();
   if (wpcWasOn) toggleWpc();
+  if (hrrrWasOn) toggleHrrr();
 
   setTimeout(() => {
     if (radarWasOn) toggleRadar();
@@ -350,6 +475,7 @@ function refreshActiveLayers() {
     if (qpfWasOn) toggleQpf();
     if (spcWasOn) toggleSpc();
     if (wpcWasOn) toggleWpc();
+    if (hrrrWasOn) toggleHrrr();
   }, 300);
 
   updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
