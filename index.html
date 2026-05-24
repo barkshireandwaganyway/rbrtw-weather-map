@@ -21,6 +21,7 @@
 
     <div id="layersBody" class="card-body">
       <label><input id="radarCheck" type="checkbox" onchange="toggleRadar()" /><span class="dot green"></span>Radar</label>
+      <label><input id="pastRadarCheck" type="checkbox" onchange="togglePastRadar()" /><span class="dot green"></span>Past Radar Playback</label>
       <input id="radarOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.7" oninput="setLayerOpacity('radar')" />
 
       <label><input id="alertsCheck" type="checkbox" onchange="toggleAlerts()" /><span class="dot red"></span>NWS Alerts</label>
