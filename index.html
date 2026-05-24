@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RBRTW Weather Map</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -22,11 +21,34 @@
 
     <div id="layersBody" class="card-body">
       <label><input id="radarCheck" type="checkbox" onchange="toggleRadar()" /><span class="dot green"></span>Radar</label>
+      <input id="radarOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.7" oninput="setLayerOpacity('radar')" />
+
       <label><input id="alertsCheck" type="checkbox" onchange="toggleAlerts()" /><span class="dot red"></span>NWS Alerts</label>
+
       <label><input id="qpfCheck" type="checkbox" onchange="toggleQpf()" /><span class="dot blue"></span>Rainfall / QPF</label>
+      <input id="qpfOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.65" oninput="setLayerOpacity('qpf')" />
+
       <label><input id="spcCheck" type="checkbox" onchange="toggleSpc()" /><span class="dot yellow"></span>SPC Outlook</label>
+      <input id="spcOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.35" oninput="setLayerOpacity('spc')" />
+
       <label><input id="wpcCheck" type="checkbox" onchange="toggleWpc()" /><span class="dot purple"></span>WPC Outlook</label>
+      <input id="wpcOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.6" oninput="setLayerOpacity('wpc')" />
+
       <label><input id="hrrrCheck" type="checkbox" onchange="toggleHrrr()" /><span class="dot cyan"></span>HRRR Future Radar</label>
+
+      <div class="divider"></div>
+      <button onclick="refreshActiveLayers()">Refresh Active Layers</button>
+    </div>
+  </section>
+
+  <section class="control-card basemap-card">
+    <div class="card-header" onclick="toggleCard('basemapBody')">
+      <span>BASEMAP</span><span>⌃</span>
+    </div>
+    <div id="basemapBody" class="card-body">
+      <button onclick="setBasemap('standard')">Standard</button>
+      <button onclick="setBasemap('dark')">Dark</button>
+      <button onclick="setBasemap('satellite')">Satellite</button>
     </div>
   </section>
 
@@ -34,7 +56,6 @@
     <div class="card-header" onclick="toggleCard('focusBody')">
       <span>FOCUS</span><span>⌃</span>
     </div>
-
     <div id="focusBody" class="card-body">
       <button onclick="focusArea()">RBRTW AREA</button>
       <button onclick="focusCounty('bexar')">Bexar County</button>
@@ -54,10 +75,18 @@
         <button onclick="loadForecast()">Forecast</button>
         <button onclick="loadHourlyForecast()">Hourly</button>
       </div>
-
       <div id="weatherInfo">
         <p id="status">Loading RBRTW AREA data...</p>
       </div>
+    </div>
+  </section>
+
+  <section class="control-card legend-card">
+    <div class="card-header" onclick="toggleCard('legendBody')">
+      <span>LEGEND</span><span>⌃</span>
+    </div>
+    <div id="legendBody" class="card-body">
+      <div id="legendContent">Turn on a layer to view its legend.</div>
     </div>
   </section>
 
