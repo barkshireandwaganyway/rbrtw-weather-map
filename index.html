@@ -17,9 +17,10 @@
   </header>
 
   <main>
-    <aside id="leftPanel" class="side-panel">
-      <button class="collapseBtn" onclick="togglePanel('leftPanel')">Map Layers</button>
+    <section id="map"></section>
 
+    <aside id="leftPanel" class="map-control">
+      <button class="controlHeader" onclick="togglePanel('leftPanel')">Map Layers</button>
       <div class="panelContent">
         <h2>Map Layers</h2>
         <button onclick="toggleRadar()">Radar Overlay</button>
@@ -37,11 +38,8 @@
       </div>
     </aside>
 
-    <section id="map"></section>
-
-    <aside id="rightPanel" class="side-panel">
-      <button class="collapseBtn" onclick="togglePanel('rightPanel')">Weather Data</button>
-
+    <aside id="rightPanel" class="map-control collapsed">
+      <button class="controlHeader" onclick="togglePanel('rightPanel')">Weather Data</button>
       <div class="panelContent">
         <h2>Weather Data</h2>
         <button onclick="loadCurrentConditions()">Current Conditions</button>
