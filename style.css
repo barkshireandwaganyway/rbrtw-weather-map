@@ -33,7 +33,7 @@ html, body {
 .control-card {
   position: absolute;
   z-index: 900;
-  width: clamp(185px, 16vw, 235px);
+  width: clamp(190px, 17vw, 245px);
   background: rgba(7, 17, 31, 0.93);
   color: white;
   border-radius: 6px;
@@ -47,8 +47,13 @@ html, body {
   left: 10px;
 }
 
+.basemap-card {
+  top: 78px;
+  left: 265px;
+  width: 170px;
+}
+
 .focus-card {
-  top: auto;
   left: 10px;
   bottom: 24px;
 }
@@ -58,6 +63,12 @@ html, body {
   right: 10px;
   width: clamp(230px, 22vw, 285px);
   max-height: calc(100vh - 98px);
+}
+
+.legend-card {
+  right: 10px;
+  bottom: 24px;
+  width: clamp(230px, 22vw, 285px);
 }
 
 .card-header {
@@ -87,7 +98,7 @@ label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 0;
+  padding: 7px 0 4px;
   font-size: 14px;
 }
 
@@ -96,6 +107,11 @@ input[type="checkbox"] {
   height: 15px;
   accent-color: #1c88ff;
   flex: 0 0 auto;
+}
+
+.opacity-slider {
+  width: 100%;
+  margin: 0 0 8px 0;
 }
 
 .dot {
@@ -124,7 +140,7 @@ input[type="checkbox"] {
   font-size: 13px;
 }
 
-.focus-card button {
+.card-body button {
   width: 100%;
   text-align: left;
   margin: 3px 0;
@@ -143,6 +159,7 @@ input[type="checkbox"] {
 
 .tab-row button {
   flex: 1;
+  text-align: center;
 }
 
 #weatherInfo {
@@ -173,9 +190,38 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.legend-swatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 8px 0;
+}
+
 .leaflet-popup-content {
   color: #111;
   font-weight: bold;
+}
+
+@media (max-width: 900px) {
+  .basemap-card {
+    left: 10px;
+    top: auto;
+    bottom: 165px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -199,7 +245,14 @@ input[type="checkbox"] {
     width: min(265px, calc(100vw - 16px));
   }
 
-  .focus-card {
+  .legend-card {
+    right: 8px;
+    bottom: 8px;
+    width: min(265px, calc(100vw - 16px));
+  }
+
+  .focus-card,
+  .basemap-card {
     display: none;
   }
 }
@@ -211,13 +264,12 @@ input[type="checkbox"] {
 
   .data-card {
     top: auto;
-    bottom: 10px;
+    bottom: 135px;
     right: 8px;
-    width: min(300px, calc(100vw - 16px));
-    max-height: 45vh;
+    max-height: 38vh;
   }
 
   .card-body {
-    max-height: 35vh;
+    max-height: 32vh;
   }
 }
