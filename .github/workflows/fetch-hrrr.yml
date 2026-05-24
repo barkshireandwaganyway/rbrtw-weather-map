@@ -38,11 +38,11 @@ jobs:
         run: |
           python backend/process_grib.py
 
-      - name: Commit updated model data
+           - name: Commit updated model data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git pull --rebase origin main
           git add public/data/model/hrrr
           git commit -m "Update HRRR reflectivity frames" || echo "No changes to commit"
+          git pull --rebase origin main
           git push
