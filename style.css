@@ -1,56 +1,45 @@
 html, body {
   margin: 0;
   height: 100%;
+  width: 100%;
   font-family: Arial, Helvetica, sans-serif;
   overflow: hidden;
 }
 
 #map {
   position: absolute;
-  inset: 84px 0 0 0;
+  inset: 58px 0 0 0;
   z-index: 1;
 }
 
 .app-header {
-  height: 84px;
+  height: 58px;
   background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
   border-bottom: 3px solid #f5b301;
   color: white;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 24px;
+  padding: 0 18px;
   position: relative;
   z-index: 1000;
 }
 
-.logo-badge {
-  width: 54px;
-  height: 54px;
-  border: 3px solid #f5b301;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: bold;
-  font-size: 12px;
-  background: #102d4c;
-}
-
 .app-header h1 {
   margin: 0;
-  font-size: 25px;
+  font-size: clamp(18px, 2.2vw, 26px);
+  font-weight: 800;
 }
 
+.logo-badge,
 .app-header p {
-  margin: 4px 0 0;
-  font-size: 14px;
+  display: none;
 }
 
 .control-card {
   position: absolute;
   z-index: 900;
-  width: 235px;
-  background: rgba(7, 17, 31, 0.92);
+  width: clamp(185px, 16vw, 235px);
+  background: rgba(7, 17, 31, 0.93);
   color: white;
   border-radius: 6px;
   overflow: hidden;
@@ -59,35 +48,40 @@ html, body {
 }
 
 .layers-card {
-  top: 112px;
-  left: 14px;
+  top: 78px;
+  left: 10px;
 }
 
 .focus-card {
-  top: 420px;
-  left: 14px;
+  top: auto;
+  left: 10px;
+  bottom: 24px;
 }
 
 .data-card {
-  top: 112px;
-  right: 14px;
-  width: 275px;
+  top: 78px;
+  right: 10px;
+  width: clamp(230px, 22vw, 285px);
+  max-height: calc(100vh - 98px);
 }
 
 .card-header {
-  height: 44px;
+  height: 36px;
   background: rgba(10, 31, 52, 0.96);
   border-bottom: 1px solid rgba(255,255,255,0.14);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 12px;
   font-weight: bold;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .card-body {
-  padding: 10px 14px 12px;
+  padding: 9px 12px 10px;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
 }
 
 .card-body.collapsed {
@@ -97,22 +91,24 @@ html, body {
 label {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 0;
-  font-size: 15px;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 14px;
 }
 
 input[type="checkbox"] {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   accent-color: #1c88ff;
+  flex: 0 0 auto;
 }
 
 .dot {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   display: inline-block;
+  flex: 0 0 auto;
 }
 
 .green { background: #35d04f; }
@@ -128,15 +124,15 @@ input[type="checkbox"] {
   border-radius: 5px;
   background: rgba(255,255,255,0.08);
   color: white;
-  padding: 9px 10px;
+  padding: 8px 9px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .focus-card button {
   width: 100%;
   text-align: left;
-  margin: 4px 0;
+  margin: 3px 0;
 }
 
 .card-body button:hover,
@@ -147,7 +143,7 @@ input[type="checkbox"] {
 .tab-row {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .tab-row button {
@@ -156,13 +152,13 @@ input[type="checkbox"] {
 
 #weatherInfo {
   border-top: 1px solid rgba(255,255,255,0.14);
-  padding-top: 12px;
-  font-size: 14px;
-  line-height: 1.45;
+  padding-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .big-temp {
-  font-size: 44px;
+  font-size: clamp(32px, 4vw, 44px);
   font-weight: bold;
   margin: 6px 0;
 }
@@ -170,15 +166,15 @@ input[type="checkbox"] {
 .home-btn {
   position: absolute;
   z-index: 900;
-  left: 14px;
-  bottom: 44px;
-  width: 44px;
-  height: 44px;
+  left: 10px;
+  bottom: 10px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 6px;
   background: rgba(7, 17, 31, 0.92);
   color: white;
-  font-size: 24px;
+  font-size: 21px;
   cursor: pointer;
 }
 
@@ -187,18 +183,46 @@ input[type="checkbox"] {
   font-weight: bold;
 }
 
-@media (max-width: 850px) {
-  .control-card {
-    width: 215px;
+@media (max-width: 760px) {
+  #map {
+    inset: 52px 0 0 0;
+  }
+
+  .app-header {
+    height: 52px;
+    padding: 0 12px;
+  }
+
+  .layers-card {
+    top: 64px;
+    left: 8px;
   }
 
   .data-card {
+    top: 64px;
     right: 8px;
-    width: 245px;
+    width: min(265px, calc(100vw - 16px));
   }
 
-  .layers-card,
   .focus-card {
-    left: 8px;
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .layers-card {
+    width: 190px;
+  }
+
+  .data-card {
+    top: auto;
+    bottom: 10px;
+    right: 8px;
+    width: min(300px, calc(100vw - 16px));
+    max-height: 45vh;
+  }
+
+  .card-body {
+    max-height: 35vh;
   }
 }
