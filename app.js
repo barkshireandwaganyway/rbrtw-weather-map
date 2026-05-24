@@ -11,6 +11,9 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 let radarLayer = null;
 let alertLayer = null;
+let qpfLayer = null;
+let spcLayer = null;
+let wpcLayer = null;
 
 const locations = {
   bexar: { name: "Bexar County", coords: [29.4241, -98.4936], zoom: 9 },
@@ -32,8 +35,7 @@ L.circle(RBRTW_AREA, {
 }).addTo(map);
 
 function toggleCard(id) {
-  const body = document.getElementById(id);
-  body.classList.toggle("collapsed");
+  document.getElementById(id).classList.toggle("collapsed");
 }
 
 function focusArea() {
@@ -61,6 +63,11 @@ function updatePanel(title, html) {
   `;
 }
 
+function setCheck(id, checked) {
+  const el = document.getElementById(id);
+  if (el) el.checked = checked;
+}
+
 async function getNwsPointData() {
   const response = await fetch(
     `https://api.weather.gov/points/${RBRTW_AREA[0]},${RBRTW_AREA[1]}`,
@@ -86,12 +93,11 @@ async function loadNwsPointData() {
 }
 
 function toggleRadar() {
-  const checkbox = document.getElementById("radarCheck");
-
   if (radarLayer) {
     map.removeLayer(radarLayer);
     radarLayer = null;
-    if (checkbox) checkbox.checked = false;
+    setCheck("radarCheck", false);
+    updatePanel("Radar", "Radar layer turned off.");
     return;
   }
 
@@ -101,21 +107,20 @@ function toggleRadar() {
       layers: "conus_bref_qcd",
       format: "image/png",
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.7,
       attribution: "NOAA/NWS/NCEP MRMS Radar"
     }
   ).addTo(map);
 
-  if (checkbox) checkbox.checked = true;
+  setCheck("radarCheck", true);
+  updatePanel("Radar", "NOAA MRMS composite radar layer turned on.");
 }
 
 async function toggleAlerts() {
-  const checkbox = document.getElementById("alertsCheck");
-
   if (alertLayer) {
     map.removeLayer(alertLayer);
     alertLayer = null;
-    if (checkbox) checkbox.checked = false;
+    setCheck("alertsCheck", false);
     updatePanel("NWS Alerts", "Alert layer turned off.");
     return;
   }
@@ -147,7 +152,7 @@ async function toggleAlerts() {
       }
     }).addTo(map);
 
-    if (checkbox) checkbox.checked = true;
+    setCheck("alertsCheck", true);
 
     const alertList = data.features.map(feature => {
       const p = feature.properties;
@@ -161,10 +166,121 @@ async function toggleAlerts() {
 
     updatePanel("Active NWS Alerts", alertList || "No active alerts for RBRTW AREA.");
   } catch (error) {
-    if (checkbox) checkbox.checked = false;
+    setCheck("alertsCheck", false);
     updatePanel("NWS Alerts", "Could not load alerts.");
     console.error(error);
   }
+}
+
+function toggleQpf() {
+  if (qpfLayer) {
+    map.removeLayer(qpfLayer);
+    qpfLayer = null;
+    setCheck("qpfCheck", false);
+    updatePanel("Rainfall / QPF", "QPF layer turned off.");
+    return;
+  }
+
+  qpfLayer = L.esri.dynamicMapLayer({
+    url: "https://mapservices.weather.noaa.gov/vector/rest/services/precip/wpc_qpf/MapServer",
+    layers: [9],
+    opacity: 0.65
+  }).addTo(map);
+
+  setCheck("qpfCheck", true);
+  updatePanel("Rainfall / QPF", "WPC 72-hour precipitation forecast layer turned on.");
+}
+
+function spcColor(label, dn) {
+  const value = String(label || dn || "").toLowerCase();
+
+  if (value.includes("high") || dn === 8) return "#ee99ee";
+  if (value.includes("moderate") || dn === 6) return "#e06666";
+  if (value.includes("enhanced") || dn === 5) return "#ffa366";
+  if (value.includes("slight") || dn === 4) return "#ffe066";
+  if (value.includes("marginal") || dn === 3) return "#66a366";
+  if (value.includes("thunder") || dn === 2) return "#c1e9c1";
+
+  return "#f5c542";
+}
+
+async function toggleSpc() {
+  if (spcLayer) {
+    map.removeLayer(spcLayer);
+    spcLayer = null;
+    setCheck("spcCheck", false);
+    updatePanel("SPC Outlook", "SPC outlook layer turned off.");
+    return;
+  }
+
+  try {
+    const url =
+      "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer/1/query" +
+      "?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("SPC request failed");
+
+    const data = await response.json();
+
+    spcLayer = L.geoJSON(data, {
+      style: function (feature) {
+        const p = feature.properties;
+        const color = spcColor(p.label, p.dn);
+
+        return {
+          color,
+          fillColor: color,
+          weight: 2,
+          fillOpacity: 0.32
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        const p = feature.properties;
+        layer.bindPopup(`
+          <strong>SPC Day 1 Outlook</strong><br>
+          Risk: ${p.label || p.label2 || "Outlook Area"}<br>
+          Valid: ${p.valid || "N/A"}<br>
+          Expires: ${p.expire || "N/A"}
+        `);
+      }
+    }).addTo(map);
+
+    setCheck("spcCheck", true);
+    updatePanel("SPC Outlook", "SPC Day 1 categorical outlook layer turned on.");
+  } catch (error) {
+    setCheck("spcCheck", false);
+    updatePanel("SPC Outlook", "Could not load SPC outlook.");
+    console.error(error);
+  }
+}
+
+function toggleWpc() {
+  if (wpcLayer) {
+    map.removeLayer(wpcLayer);
+    wpcLayer = null;
+    setCheck("wpcCheck", false);
+    updatePanel("WPC Outlook", "WPC outlook layer turned off.");
+    return;
+  }
+
+  wpcLayer = L.esri.dynamicMapLayer({
+    url: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer",
+    opacity: 0.6
+  }).addTo(map);
+
+  setCheck("wpcCheck", true);
+  updatePanel("WPC Outlook", "WPC precipitation hazard / excessive rainfall outlook layer turned on.");
+}
+
+function toggleHrrr() {
+  setCheck("hrrrCheck", false);
+
+  updatePanel("HRRR Future Radar", `
+    HRRR future radar needs the GRIB2 processing backend.
+    <br><br>
+    This will be added in the next build step using NOAA/NCEP model data, Python, and generated map tiles.
+  `);
 }
 
 async function loadForecast() {
