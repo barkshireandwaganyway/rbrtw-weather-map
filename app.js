@@ -10,6 +10,7 @@ L.control.zoom({
 
 let baseLayer = null;
 let radarLayer = null;
+let pastRadarLayer = null;
 let radarFrames = [];
 let radarHost = "";
 let radarIndex = 0;
@@ -277,6 +278,14 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Source: NOAA/NWS MRMS</div>
+    `,
+    pastRadar: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>Light precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Source: RainViewer past radar</div>
     `,
     hrrr: `
       <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>5–20 dBZ Light</div>
@@ -320,8 +329,10 @@ function updateLegend(type) {
 }
 
 function setLayerOpacity(type) {
-  if (type === "radar" && radarLayer) {
-    radarLayer.setOpacity(Number(document.getElementById("radarOpacity").value));
+  if (type === "radar") {
+    const opacity = Number(document.getElementById("radarOpacity").value);
+    if (radarLayer) radarLayer.setOpacity(opacity);
+    if (pastRadarLayer) pastRadarLayer.setOpacity(opacity);
   }
 
   if (type === "qpf" && qpfLayer) {
@@ -376,14 +387,14 @@ async function loadNwsPointData() {
 
 async function loadRadarFrames() {
   const response = await fetch("https://api.rainviewer.com/public/weather-maps.json?cache=" + Date.now());
-  if (!response.ok) throw new Error("Radar timeline request failed");
+  if (!response.ok) throw new Error("Past radar timeline request failed");
 
   const data = await response.json();
   radarHost = data.host;
   radarFrames = data?.radar?.past || [];
 
   if (!radarFrames.length) {
-    throw new Error("No radar frames returned.");
+    throw new Error("No past radar frames returned.");
   }
 
   radarIndex = radarFrames.length - 1;
@@ -402,14 +413,18 @@ function showRadarFrame(index) {
   if (radarIndex < 0) radarIndex = radarFrames.length - 1;
   if (radarIndex >= radarFrames.length) radarIndex = 0;
 
-  if (radarLayer) {
-    map.removeLayer(radarLayer);
+  if (pastRadarLayer) {
+    map.removeLayer(pastRadarLayer);
   }
 
   const frame = radarFrames[radarIndex];
-  const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 
-  radarLayer = L.tileLayer(tileUrl, {
+  // RainViewer past radar only supports tile zooms up to z7. Leaflet will stretch
+  // the z7 tile when the map is zoomed closer, which prevents gray unsupported tiles.
+  // Color scheme 2 is the only public color scheme currently documented by RainViewer.
+  const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/0_0.png`;
+
+  pastRadarLayer = L.tileLayer(tileUrl, {
     opacity: Number(document.getElementById("radarOpacity").value),
     tileSize: 256,
     maxZoom: 19,
@@ -417,7 +432,7 @@ function showRadarFrame(index) {
     maxNativeZoom: 7,
     keepBuffer: 2,
     errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
-    attribution: "Radar: RainViewer"
+    attribution: "Past Radar: RainViewer"
   }).addTo(map);
 
   const slider = document.getElementById("radarFrameSlider");
@@ -427,34 +442,78 @@ function showRadarFrame(index) {
   if (label) label.textContent = localRadarTime(frame.time);
 }
 
-async function toggleRadar() {
-  if (radarLayer || radarFrames.length) {
-    stopRadarAnimation();
-    if (radarLayer) map.removeLayer(radarLayer);
+function toggleRadar() {
+  if (radarLayer) {
+    map.removeLayer(radarLayer);
     radarLayer = null;
-    radarFrames = [];
-    radarHost = "";
-    document.getElementById("radarTimeline").classList.add("hidden");
     setCheck("radarCheck", false);
-    updatePanel("Radar", "Radar layer turned off.");
+    updatePanel("Radar", "NOAA/NWS MRMS radar layer turned off.");
+    return;
+  }
+
+  if (pastRadarLayer || radarFrames.length) {
+    turnOffPastRadar(false);
+  }
+
+  radarLayer = L.tileLayer.wms(
+    "https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows",
+    {
+      layers: "conus_bref_qcd",
+      format: "image/png",
+      transparent: true,
+      opacity: Number(document.getElementById("radarOpacity").value),
+      attribution: "NOAA/NWS/NCEP MRMS Radar"
+    }
+  ).addTo(map);
+
+  setCheck("radarCheck", true);
+  setCheck("pastRadarCheck", false);
+  updateLegend("radar");
+  updatePanel("Radar", `NOAA/NWS MRMS radar layer on.<br>Source: Original radar source.<br>Updated: ${new Date().toLocaleTimeString()}`);
+}
+
+function turnOffPastRadar(updateMessage = true) {
+  stopRadarAnimation();
+  if (pastRadarLayer) map.removeLayer(pastRadarLayer);
+  pastRadarLayer = null;
+  radarFrames = [];
+  radarHost = "";
+  const timeline = document.getElementById("radarTimeline");
+  if (timeline) timeline.classList.add("hidden");
+  setCheck("pastRadarCheck", false);
+  if (updateMessage) updatePanel("Past Radar", "Past radar playback turned off.");
+}
+
+async function togglePastRadar() {
+  if (pastRadarLayer || radarFrames.length) {
+    turnOffPastRadar(true);
     return;
   }
 
   try {
+    if (radarLayer) {
+      map.removeLayer(radarLayer);
+      radarLayer = null;
+      setCheck("radarCheck", false);
+    }
+
     await loadRadarFrames();
-    document.getElementById("radarTimeline").classList.remove("hidden");
+    const timeline = document.getElementById("radarTimeline");
+    if (timeline) timeline.classList.remove("hidden");
     showRadarFrame(radarIndex);
 
-    setCheck("radarCheck", true);
-    updateLegend("radar");
-    updatePanel("Radar Playback", `
-      Radar timeline loaded.<br>
+    setCheck("pastRadarCheck", true);
+    updateLegend("pastRadar");
+    updatePanel("Past Radar Playback", `
+      Past radar timeline loaded.<br>
       Frames: ${radarFrames.length}<br>
-      Current frame: ${localRadarTime(radarFrames[radarIndex].time)}
+      Current frame: ${localRadarTime(radarFrames[radarIndex].time)}<br><br>
+      Source: RainViewer public past radar feed.<br>
+      Note: this source is lower-resolution than the live NOAA/NWS MRMS layer.
     `);
   } catch (error) {
-    setCheck("radarCheck", false);
-    updatePanel("Radar", "Could not load radar timeline.");
+    setCheck("pastRadarCheck", false);
+    updatePanel("Past Radar", "Could not load past radar timeline.");
     console.error(error);
   }
 }
@@ -861,6 +920,7 @@ function stopHrrrAnimation() {
 
 function refreshActiveLayers() {
   const radarWasOn = !!radarLayer;
+  const pastRadarWasOn = !!pastRadarLayer || radarFrames.length > 0;
   const alertsWasOn = !!alertLayer;
   const qpfWasOn = !!qpfLayer;
   const spcWasOn = !!spcLayer;
@@ -869,6 +929,7 @@ function refreshActiveLayers() {
   const hrrrWasOn = !!hrrrLayer;
 
   if (radarWasOn) toggleRadar();
+  if (pastRadarWasOn) turnOffPastRadar(false);
   if (alertsWasOn) toggleAlerts();
   if (qpfWasOn) toggleQpf();
   if (spcWasOn) toggleSpc();
@@ -878,6 +939,7 @@ function refreshActiveLayers() {
 
   setTimeout(() => {
     if (radarWasOn) toggleRadar();
+    if (pastRadarWasOn) togglePastRadar();
     if (alertsWasOn) toggleAlerts();
     if (qpfWasOn) toggleQpf();
     if (spcWasOn) toggleSpc();
