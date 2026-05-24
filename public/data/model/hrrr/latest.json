@@ -1,7 +1,103 @@
 {
-  "status": "downloaded",
+  "status": "processed",
   "model": "HRRR",
   "product": "Composite Reflectivity",
-  "cycle": "20260524 19z",
-  "files": ['hrrr_refc_f01.grib2', 'hrrr_refc_f02.grib2', 'hrrr_refc_f03.grib2', 'hrrr_refc_f04.grib2', 'hrrr_refc_f05.grib2', 'hrrr_refc_f06.grib2', 'hrrr_refc_f07.grib2', 'hrrr_refc_f08.grib2', 'hrrr_refc_f09.grib2', 'hrrr_refc_f10.grib2', 'hrrr_refc_f11.grib2', 'hrrr_refc_f12.grib2', 'hrrr_refc_f13.grib2', 'hrrr_refc_f14.grib2', 'hrrr_refc_f15.grib2', 'hrrr_refc_f16.grib2', 'hrrr_refc_f17.grib2', 'hrrr_refc_f18.grib2']
+  "bounds": {
+    "south": 27.5,
+    "west": -101.5,
+    "north": 31.0,
+    "east": -96.5
+  },
+  "frames": [
+    {
+      "hour": 1,
+      "file": "public/data/model/hrrr/hrrr_refc_f01.png",
+      "label": "F01"
+    },
+    {
+      "hour": 2,
+      "file": "public/data/model/hrrr/hrrr_refc_f02.png",
+      "label": "F02"
+    },
+    {
+      "hour": 3,
+      "file": "public/data/model/hrrr/hrrr_refc_f03.png",
+      "label": "F03"
+    },
+    {
+      "hour": 4,
+      "file": "public/data/model/hrrr/hrrr_refc_f04.png",
+      "label": "F04"
+    },
+    {
+      "hour": 5,
+      "file": "public/data/model/hrrr/hrrr_refc_f05.png",
+      "label": "F05"
+    },
+    {
+      "hour": 6,
+      "file": "public/data/model/hrrr/hrrr_refc_f06.png",
+      "label": "F06"
+    },
+    {
+      "hour": 7,
+      "file": "public/data/model/hrrr/hrrr_refc_f07.png",
+      "label": "F07"
+    },
+    {
+      "hour": 8,
+      "file": "public/data/model/hrrr/hrrr_refc_f08.png",
+      "label": "F08"
+    },
+    {
+      "hour": 9,
+      "file": "public/data/model/hrrr/hrrr_refc_f09.png",
+      "label": "F09"
+    },
+    {
+      "hour": 10,
+      "file": "public/data/model/hrrr/hrrr_refc_f10.png",
+      "label": "F10"
+    },
+    {
+      "hour": 11,
+      "file": "public/data/model/hrrr/hrrr_refc_f11.png",
+      "label": "F11"
+    },
+    {
+      "hour": 12,
+      "file": "public/data/model/hrrr/hrrr_refc_f12.png",
+      "label": "F12"
+    },
+    {
+      "hour": 13,
+      "file": "public/data/model/hrrr/hrrr_refc_f13.png",
+      "label": "F13"
+    },
+    {
+      "hour": 14,
+      "file": "public/data/model/hrrr/hrrr_refc_f14.png",
+      "label": "F14"
+    },
+    {
+      "hour": 15,
+      "file": "public/data/model/hrrr/hrrr_refc_f15.png",
+      "label": "F15"
+    },
+    {
+      "hour": 16,
+      "file": "public/data/model/hrrr/hrrr_refc_f16.png",
+      "label": "F16"
+    },
+    {
+      "hour": 17,
+      "file": "public/data/model/hrrr/hrrr_refc_f17.png",
+      "label": "F17"
+    },
+    {
+      "hour": 18,
+      "file": "public/data/model/hrrr/hrrr_refc_f18.png",
+      "label": "F18"
+    }
+  ]
 }
