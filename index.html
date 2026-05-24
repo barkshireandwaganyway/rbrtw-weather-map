@@ -36,6 +36,10 @@
 
       <label><input id="hrrrCheck" type="checkbox" onchange="toggleHrrr()" /><span class="dot cyan"></span>HRRR Future Radar</label>
       <input id="hrrrOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.72" oninput="setLayerOpacity('hrrr')" />
+
+      <label><input id="countyCheck" type="checkbox" onchange="toggleCountyLines()" /><span class="dot white"></span>County Lines</label>
+      <input id="countyOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.75" oninput="setLayerOpacity('county')" />
+
       <div class="divider"></div>
       <button onclick="refreshActiveLayers()">Refresh Active Layers</button>
     </div>
@@ -68,7 +72,6 @@
     <div class="card-header" onclick="toggleCard('dataBody')">
       <span>DATA</span><span>⌃</span>
     </div>
-
     <div id="dataBody" class="card-body">
       <div class="tab-row">
         <button onclick="loadCurrentConditions()">Current</button>
@@ -78,6 +81,20 @@
       <div id="weatherInfo">
         <p id="status">Loading RBRTW AREA data...</p>
       </div>
+    </div>
+  </section>
+
+  <section id="hrrrTimeline" class="control-card hrrr-timeline hidden">
+    <div class="hrrr-top-row">
+      <strong>HRRR Future Radar</strong>
+      <span id="hrrrFrameLabel">F01</span>
+    </div>
+    <input id="hrrrFrameSlider" type="range" min="0" max="0" step="1" value="0" oninput="setHrrrFrameFromSlider()" />
+    <div class="hrrr-controls">
+      <button onclick="previousHrrrFrame()">◀</button>
+      <button onclick="toggleHrrrAnimation()" id="hrrrPlayBtn">Play</button>
+      <button onclick="nextHrrrFrame()">▶</button>
+      <span id="hrrrLoopText">Loop ready</span>
     </div>
   </section>
 
