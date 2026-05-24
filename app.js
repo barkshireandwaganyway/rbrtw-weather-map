@@ -4,16 +4,36 @@ const map = L.map("map", {
   zoomControl: true
 }).setView(RBRTW_AREA, 10);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors"
-}).addTo(map);
-
+let baseLayer = null;
 let radarLayer = null;
 let alertLayer = null;
 let qpfLayer = null;
 let spcLayer = null;
 let wpcLayer = null;
+
+const basemaps = {
+  standard: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors"
+  }),
+  dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap & CARTO"
+  }),
+  satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Tiles &copy; Esri"
+  })
+};
+
+function setBasemap(type) {
+  if (baseLayer) map.removeLayer(baseLayer);
+  baseLayer = basemaps[type] || basemaps.standard;
+  baseLayer.addTo(map);
+  updatePanel("Basemap", `${type.charAt(0).toUpperCase() + type.slice(1)} basemap selected.`);
+}
+
+setBasemap("standard");
 
 const locations = {
   bexar: { name: "Bexar County", coords: [29.4241, -98.4936], zoom: 9 },
@@ -57,15 +77,71 @@ function focusCounty(county) {
 
 function updatePanel(title, html) {
   document.getElementById("status").innerHTML = `
-    <strong>${title}</strong>
-    <br><br>
-    ${html}
+    <strong>${title}</strong><br><br>${html}
   `;
+}
+
+function updateLegend(type) {
+  const box = document.getElementById("legendContent");
+
+  const legends = {
+    radar: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>Light precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+    `,
+    qpf: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#52b788"></span>Moderate rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#2d6a4f"></span>Heavy rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7209b7"></span>Extreme rainfall</div>
+    `,
+    spc: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#c1e9c1"></span>General Thunder</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#66a366"></span>Marginal</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffe066"></span>Slight</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffa366"></span>Enhanced</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High</div>
+    `,
+    wpc: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#66a366"></span>Marginal Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffe066"></span>Slight Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High Excessive Rainfall</div>
+    `,
+    alerts: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0033"></span>Active NWS Alert Polygon</div>
+    `
+  };
+
+  box.innerHTML = legends[type] || "Turn on a layer to view its legend.";
 }
 
 function setCheck(id, checked) {
   const el = document.getElementById(id);
   if (el) el.checked = checked;
+}
+
+function setLayerOpacity(type) {
+  if (type === "radar" && radarLayer) {
+    radarLayer.setOpacity(Number(document.getElementById("radarOpacity").value));
+  }
+
+  if (type === "qpf" && qpfLayer) {
+    qpfLayer.setOpacity(Number(document.getElementById("qpfOpacity").value));
+  }
+
+  if (type === "spc" && spcLayer) {
+    spcLayer.setStyle({
+      fillOpacity: Number(document.getElementById("spcOpacity").value)
+    });
+  }
+
+  if (type === "wpc" && wpcLayer) {
+    wpcLayer.setOpacity(Number(document.getElementById("wpcOpacity").value));
+  }
 }
 
 async function getNwsPointData() {
@@ -81,11 +157,7 @@ async function getNwsPointData() {
 async function loadNwsPointData() {
   try {
     const data = await getNwsPointData();
-
-    updatePanel("RBRTW AREA", `
-      Office: ${data.properties.cwa}<br>
-      Grid: ${data.properties.gridId} ${data.properties.gridX},${data.properties.gridY}
-    `);
+    updatePanel("RBRTW AREA", `Office: ${data.properties.cwa}<br>Grid: ${data.properties.gridId} ${data.properties.gridX},${data.properties.gridY}`);
   } catch (error) {
     updatePanel("Error", "Could not load RBRTW AREA data.");
     console.error(error);
@@ -107,13 +179,14 @@ function toggleRadar() {
       layers: "conus_bref_qcd",
       format: "image/png",
       transparent: true,
-      opacity: 0.7,
+      opacity: Number(document.getElementById("radarOpacity").value),
       attribution: "NOAA/NWS/NCEP MRMS Radar"
     }
   ).addTo(map);
 
   setCheck("radarCheck", true);
-  updatePanel("Radar", "NOAA MRMS composite radar layer turned on.");
+  updateLegend("radar");
+  updatePanel("Radar", `Radar layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
 }
 
 async function toggleAlerts() {
@@ -126,11 +199,7 @@ async function toggleAlerts() {
   }
 
   try {
-    const response = await fetch(
-      `https://api.weather.gov/alerts/active?point=${RBRTW_AREA[0]},${RBRTW_AREA[1]}`,
-      { headers: { Accept: "application/geo+json" } }
-    );
-
+    const response = await fetch(`https://api.weather.gov/alerts/active?point=${RBRTW_AREA[0]},${RBRTW_AREA[1]}`);
     if (!response.ok) throw new Error("Alerts request failed");
 
     const data = await response.json();
@@ -144,27 +213,19 @@ async function toggleAlerts() {
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
-        layer.bindPopup(`
-          <strong>${p.event}</strong><br>
-          Severity: ${p.severity}<br>
-          ${p.headline || ""}
-        `);
+        layer.bindPopup(`<strong>${p.event}</strong><br>${p.headline || ""}`);
       }
     }).addTo(map);
 
     setCheck("alertsCheck", true);
+    updateLegend("alerts");
 
     const alertList = data.features.map(feature => {
       const p = feature.properties;
-      return `
-        <div style="margin-bottom:10px;">
-          <strong>${p.event}</strong><br>
-          <small>${p.areaDesc}</small>
-        </div>
-      `;
+      return `<div style="margin-bottom:10px;"><strong>${p.event}</strong><br><small>${p.areaDesc}</small></div>`;
     }).join("");
 
-    updatePanel("Active NWS Alerts", alertList || "No active alerts for RBRTW AREA.");
+    updatePanel("Active NWS Alerts", `${alertList || "No active alerts for RBRTW AREA."}<br><br>Updated: ${new Date().toLocaleTimeString()}`);
   } catch (error) {
     setCheck("alertsCheck", false);
     updatePanel("NWS Alerts", "Could not load alerts.");
@@ -184,23 +245,22 @@ function toggleQpf() {
   qpfLayer = L.esri.dynamicMapLayer({
     url: "https://mapservices.weather.noaa.gov/vector/rest/services/precip/wpc_qpf/MapServer",
     layers: [9],
-    opacity: 0.65
+    opacity: Number(document.getElementById("qpfOpacity").value)
   }).addTo(map);
 
   setCheck("qpfCheck", true);
-  updatePanel("Rainfall / QPF", "WPC 72-hour precipitation forecast layer turned on.");
+  updateLegend("qpf");
+  updatePanel("Rainfall / QPF", `WPC QPF layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
 }
 
 function spcColor(label, dn) {
   const value = String(label || dn || "").toLowerCase();
-
   if (value.includes("high") || dn === 8) return "#ee99ee";
   if (value.includes("moderate") || dn === 6) return "#e06666";
   if (value.includes("enhanced") || dn === 5) return "#ffa366";
   if (value.includes("slight") || dn === 4) return "#ffe066";
   if (value.includes("marginal") || dn === 3) return "#66a366";
   if (value.includes("thunder") || dn === 2) return "#c1e9c1";
-
   return "#f5c542";
 }
 
@@ -214,10 +274,7 @@ async function toggleSpc() {
   }
 
   try {
-    const url =
-      "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer/1/query" +
-      "?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
-
+    const url = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer/1/query?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
     const response = await fetch(url);
     if (!response.ok) throw new Error("SPC request failed");
 
@@ -227,27 +284,22 @@ async function toggleSpc() {
       style: function (feature) {
         const p = feature.properties;
         const color = spcColor(p.label, p.dn);
-
         return {
           color,
           fillColor: color,
           weight: 2,
-          fillOpacity: 0.32
+          fillOpacity: Number(document.getElementById("spcOpacity").value)
         };
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
-        layer.bindPopup(`
-          <strong>SPC Day 1 Outlook</strong><br>
-          Risk: ${p.label || p.label2 || "Outlook Area"}<br>
-          Valid: ${p.valid || "N/A"}<br>
-          Expires: ${p.expire || "N/A"}
-        `);
+        layer.bindPopup(`<strong>SPC Outlook</strong><br>Risk: ${p.label || p.label2 || "Outlook Area"}`);
       }
     }).addTo(map);
 
     setCheck("spcCheck", true);
-    updatePanel("SPC Outlook", "SPC Day 1 categorical outlook layer turned on.");
+    updateLegend("spc");
+    updatePanel("SPC Outlook", `SPC outlook layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
   } catch (error) {
     setCheck("spcCheck", false);
     updatePanel("SPC Outlook", "Could not load SPC outlook.");
@@ -266,21 +318,41 @@ function toggleWpc() {
 
   wpcLayer = L.esri.dynamicMapLayer({
     url: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer",
-    opacity: 0.6
+    opacity: Number(document.getElementById("wpcOpacity").value)
   }).addTo(map);
 
   setCheck("wpcCheck", true);
-  updatePanel("WPC Outlook", "WPC precipitation hazard / excessive rainfall outlook layer turned on.");
+  updateLegend("wpc");
+  updatePanel("WPC Outlook", `WPC precipitation hazard layer on.<br>Updated: ${new Date().toLocaleTimeString()}`);
 }
 
 function toggleHrrr() {
   setCheck("hrrrCheck", false);
+  updatePanel("HRRR Future Radar", "HRRR requires the GRIB2 backend step. This comes next.");
+}
 
-  updatePanel("HRRR Future Radar", `
-    HRRR future radar needs the GRIB2 processing backend.
-    <br><br>
-    This will be added in the next build step using NOAA/NCEP model data, Python, and generated map tiles.
-  `);
+function refreshActiveLayers() {
+  const radarWasOn = !!radarLayer;
+  const alertsWasOn = !!alertLayer;
+  const qpfWasOn = !!qpfLayer;
+  const spcWasOn = !!spcLayer;
+  const wpcWasOn = !!wpcLayer;
+
+  if (radarWasOn) toggleRadar();
+  if (alertsWasOn) toggleAlerts();
+  if (qpfWasOn) toggleQpf();
+  if (spcWasOn) toggleSpc();
+  if (wpcWasOn) toggleWpc();
+
+  setTimeout(() => {
+    if (radarWasOn) toggleRadar();
+    if (alertsWasOn) toggleAlerts();
+    if (qpfWasOn) toggleQpf();
+    if (spcWasOn) toggleSpc();
+    if (wpcWasOn) toggleWpc();
+  }, 300);
+
+  updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
 }
 
 async function loadForecast() {
@@ -288,7 +360,6 @@ async function loadForecast() {
     const point = await getNwsPointData();
     const response = await fetch(point.properties.forecast);
     if (!response.ok) throw new Error("Forecast request failed");
-
     const data = await response.json();
 
     const forecastHtml = data.properties.periods.slice(0, 7).map(period => `
@@ -312,14 +383,12 @@ async function loadHourlyForecast() {
     const point = await getNwsPointData();
     const response = await fetch(point.properties.forecastHourly);
     if (!response.ok) throw new Error("Hourly forecast request failed");
-
     const data = await response.json();
 
     const hourlyHtml = data.properties.periods.slice(0, 12).map(period => `
       <div style="margin-bottom:10px;">
         <strong>${new Date(period.startTime).toLocaleTimeString([], { hour: "numeric" })}</strong>
-        — ${period.temperature}°${period.temperatureUnit},
-        ${period.shortForecast}
+        — ${period.temperature}°${period.temperatureUnit}, ${period.shortForecast}
       </div>
     `).join("");
 
@@ -338,7 +407,6 @@ async function loadCurrentConditions() {
 
     const stationsData = await stationsResponse.json();
     const stationUrl = `${stationsData.features[0].id}/observations/latest`;
-
     const obsResponse = await fetch(stationUrl);
     if (!obsResponse.ok) throw new Error("Observation request failed");
 
