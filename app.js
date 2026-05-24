@@ -114,11 +114,14 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
     `,
     hrrr: `
-      <div class="legend-row"><span class="legend-swatch" style="background:linear-gradient(90deg,#00cc33,#ffff00,#ff5500,#ff0000,#ff00ff)"></span>Simulated reflectivity</div>
-      <div class="legend-row">5 / 20 / 35 / 50 / 65+ dBZ</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>5–20 dBZ Light</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>20–35 dBZ Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff5500"></span>35–50 dBZ Heavy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0000"></span>50–65 dBZ Strong</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>65+ dBZ Extreme / Hail Core</div>
     `,
     county: `
-      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>County boundary lines</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#00ff88"></span>County boundary lines</div>
     `,
     qpf: `
       <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light rainfall</div>
@@ -133,15 +136,18 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#ffa366"></span>Enhanced</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#00ffff"></span>Neon cyan outline</div>
     `,
     wpc: `
       <div class="legend-row"><span class="legend-swatch" style="background:#66a366"></span>Marginal Excessive Rainfall</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ffe066"></span>Slight Excessive Rainfall</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate Excessive Rainfall</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#00ffff"></span>Bright service outline</div>
     `,
     alerts: `
-      <div class="legend-row"><span class="legend-swatch" style="background:#ff0033"></span>Active NWS Alert Polygon</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0033"></span>Active NWS Alert Fill</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>Neon warning outline</div>
     `
   };
 
@@ -159,12 +165,13 @@ function setLayerOpacity(type) {
 
   if (type === "spc" && spcLayer) {
     spcLayer.setStyle({
-      fillOpacity: Number(document.getElementById("spcOpacity").value)
+      fillOpacity: Number(document.getElementById("spcOpacity").value),
+      opacity: 1
     });
   }
 
   if (type === "wpc" && wpcLayer) {
-    wpcLayer.setOpacity(Number(document.getElementById("wpcOpacity").value));
+    wpcLayer.setOpacity(Math.max(Number(document.getElementById("wpcOpacity").value), 0.75));
   }
 
   if (type === "hrrr" && hrrrLayer) {
@@ -241,8 +248,9 @@ async function toggleAlerts() {
 
     alertLayer = L.geoJSON(data, {
       style: {
-        color: "#ff0033",
-        weight: 2,
+        color: "#ff00ff",
+        weight: 3,
+        opacity: 1,
         fillColor: "#ff0033",
         fillOpacity: 0.2
       },
@@ -320,9 +328,10 @@ async function toggleSpc() {
         const p = feature.properties;
         const color = spcColor(p.label, p.dn);
         return {
-          color,
+          color: "#00ffff",
           fillColor: color,
-          weight: 2,
+          weight: 3,
+          opacity: 1,
           fillOpacity: Number(document.getElementById("spcOpacity").value)
         };
       },
@@ -353,7 +362,7 @@ function toggleWpc() {
 
   wpcLayer = L.esri.dynamicMapLayer({
     url: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer",
-    opacity: Number(document.getElementById("wpcOpacity").value)
+    opacity: Math.max(Number(document.getElementById("wpcOpacity").value), 0.75)
   }).addTo(map);
 
   setCheck("wpcCheck", true);
@@ -387,8 +396,8 @@ async function toggleCountyLines() {
       features: texasCountyFeatures
     }, {
       style: {
-        color: "#0b7a2a",
-        weight: 1.4,
+        color: "#00ff88",
+        weight: 2,
         opacity: Number(document.getElementById("countyOpacity").value),
         fillOpacity: 0
       },
