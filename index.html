@@ -4,39 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RBRTW Weather Map</title>
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="app-header">
-    <div class="logo-badge">RBRTW</div>
-    <div>
-      <h1>RBRTW Weather Map</h1>
-    </div>
+    <h1>RBRTW Weather Map</h1>
   </header>
 
   <div id="map"></div>
 
   <section class="control-card layers-card">
     <div class="card-header" onclick="toggleCard('layersBody')">
-      <span>LAYERS</span>
-      <span>⌃</span>
+      <span>LAYERS</span><span>⌃</span>
     </div>
+
     <div id="layersBody" class="card-body">
-      <label><input id="radarCheck" type="checkbox" onchange="toggleRadar()" /> <span class="dot green"></span> Radar</label>
-      <label><input id="alertsCheck" type="checkbox" onchange="toggleAlerts()" /> <span class="dot red"></span> NWS Alerts</label>
-      <label><input type="checkbox" disabled /> <span class="dot blue"></span> Rainfall / QPF</label>
-      <label><input type="checkbox" disabled /> <span class="dot yellow"></span> SPC Outlook</label>
-      <label><input type="checkbox" disabled /> <span class="dot purple"></span> WPC Outlook</label>
-      <label><input type="checkbox" disabled /> <span class="dot cyan"></span> HRRR Future Radar</label>
+      <label><input id="radarCheck" type="checkbox" onchange="toggleRadar()" /><span class="dot green"></span>Radar</label>
+      <label><input id="alertsCheck" type="checkbox" onchange="toggleAlerts()" /><span class="dot red"></span>NWS Alerts</label>
+      <label><input id="qpfCheck" type="checkbox" onchange="toggleQpf()" /><span class="dot blue"></span>Rainfall / QPF</label>
+      <label><input id="spcCheck" type="checkbox" onchange="toggleSpc()" /><span class="dot yellow"></span>SPC Outlook</label>
+      <label><input id="wpcCheck" type="checkbox" onchange="toggleWpc()" /><span class="dot purple"></span>WPC Outlook</label>
+      <label><input id="hrrrCheck" type="checkbox" onchange="toggleHrrr()" /><span class="dot cyan"></span>HRRR Future Radar</label>
     </div>
   </section>
 
   <section class="control-card focus-card">
     <div class="card-header" onclick="toggleCard('focusBody')">
-      <span>FOCUS</span>
-      <span>⌃</span>
+      <span>FOCUS</span><span>⌃</span>
     </div>
+
     <div id="focusBody" class="card-body">
       <button onclick="focusArea()">RBRTW AREA</button>
       <button onclick="focusCounty('bexar')">Bexar County</button>
@@ -47,15 +45,16 @@
 
   <section class="control-card data-card">
     <div class="card-header" onclick="toggleCard('dataBody')">
-      <span>DATA</span>
-      <span>⌃</span>
+      <span>DATA</span><span>⌃</span>
     </div>
+
     <div id="dataBody" class="card-body">
       <div class="tab-row">
         <button onclick="loadCurrentConditions()">Current</button>
         <button onclick="loadForecast()">Forecast</button>
         <button onclick="loadHourlyForecast()">Hourly</button>
       </div>
+
       <div id="weatherInfo">
         <p id="status">Loading RBRTW AREA data...</p>
       </div>
@@ -65,6 +64,7 @@
   <button class="home-btn" onclick="focusArea()">⌂</button>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
