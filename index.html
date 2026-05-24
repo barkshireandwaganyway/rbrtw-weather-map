@@ -4,55 +4,47 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RBRTW Weather Map</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <div>
-      <h1>RBRTW Weather Map</h1>
-      <p>South Central Texas Weather Command Center</p>
+  <div id="map"></div>
+
+  <div class="brand">RBRTW Weather Map</div>
+
+  <div class="topTools">
+    <button onclick="togglePanel('layersPanel')">LAYERS</button>
+    <button onclick="togglePanel('dataPanel')">DATA</button>
+  </div>
+
+  <div id="layersPanel" class="floatingPanel hidden">
+    <div class="panelTitle">Map Layers</div>
+
+    <label><input type="checkbox" onchange="toggleRadar()"> Weather Radar</label>
+    <label><input type="checkbox" onchange="loadAlerts()"> Active Alerts</label>
+    <label><input type="checkbox"> Rainfall / QPF</label>
+    <label><input type="checkbox"> SPC Outlook</label>
+    <label><input type="checkbox"> WPC Outlook</label>
+    <label><input type="checkbox"> HRRR Future Radar</label>
+
+    <div class="panelTitle small">Map Focus</div>
+    <button class="smallBtn" onclick="focusArea()">RBRTW AREA</button>
+    <button class="smallBtn" onclick="focusCounty('bexar')">Bexar</button>
+    <button class="smallBtn" onclick="focusCounty('medina')">Medina</button>
+    <button class="smallBtn" onclick="focusCounty('atascosa')">Atascosa</button>
+  </div>
+
+  <div id="dataPanel" class="floatingPanel hidden rightPanel">
+    <div class="panelTitle">Weather Data</div>
+
+    <button class="smallBtn" onclick="loadCurrentConditions()">Current Conditions</button>
+    <button class="smallBtn" onclick="loadForecast()">Official Forecast</button>
+    <button class="smallBtn" onclick="loadHourlyForecast()">Hourly Forecast</button>
+
+    <div id="weatherInfo">
+      <p id="status">Select a data option.</p>
     </div>
-  </header>
-
-  <main>
-    <section id="map"></section>
-
-    <aside id="leftPanel" class="map-control">
-      <button class="controlHeader" onclick="togglePanel('leftPanel')">Map Layers</button>
-      <div class="panelContent">
-        <h2>Map Layers</h2>
-        <button onclick="toggleRadar()">Radar Overlay</button>
-        <button onclick="loadAlerts()">NWS Alerts</button>
-        <button>Rainfall / QPF</button>
-        <button>SPC Outlook</button>
-        <button>WPC Outlook</button>
-        <button>HRRR Future Radar</button>
-
-        <h2>Map Focus</h2>
-        <button onclick="focusArea()">RBRTW AREA</button>
-        <button onclick="focusCounty('bexar')">Bexar County</button>
-        <button onclick="focusCounty('medina')">Medina County</button>
-        <button onclick="focusCounty('atascosa')">Atascosa County</button>
-      </div>
-    </aside>
-
-    <aside id="rightPanel" class="map-control collapsed">
-      <button class="controlHeader" onclick="togglePanel('rightPanel')">Weather Data</button>
-      <div class="panelContent">
-        <h2>Weather Data</h2>
-        <button onclick="loadCurrentConditions()">Current Conditions</button>
-        <button onclick="loadForecast()">Official Forecast</button>
-        <button onclick="loadHourlyForecast()">Hourly Forecast</button>
-
-        <div id="weatherInfo">
-          <h2>Data Panel</h2>
-          <p id="status">Loading RBRTW AREA data...</p>
-        </div>
-      </div>
-    </aside>
-  </main>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
