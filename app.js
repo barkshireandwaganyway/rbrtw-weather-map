@@ -20,6 +20,13 @@ let qpfLayer = null;
 let spcLayer = null;
 let wpcLayer = null;
 let countyLayer = null;
+let tempLayer = null;
+let rainfallLayer = null;
+let rainfallPeriod = "24";
+let rainfallProbeHandler = null;
+let rainfallMarker = null;
+let airQualityLayer = null;
+let surfaceLayer = null;
 
 let hrrrLayer = null;
 let hrrrFrames = [];
@@ -269,9 +276,9 @@ function assetPath(path) {
   return `/${path}`;
 }
 
-function updateLegend(type) {
-  const box = document.getElementById("legendContent");
+const activeLegendTypes = new Set();
 
+function legendHtml(type) {
   const legends = {
     radar: `
       <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>Light precip</div>
@@ -298,10 +305,10 @@ function updateLegend(type) {
       <div class="legend-row"><span class="legend-swatch" style="background:#00ff88"></span>County boundary lines</div>
     `,
     qpf: `
-      <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light rainfall</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#52b788"></span>Moderate rainfall</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#2d6a4f"></span>Heavy rainfall</div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#7209b7"></span>Extreme rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#52b788"></span>Moderate forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#2d6a4f"></span>Heavy forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7209b7"></span>Extreme forecast rainfall</div>
     `,
     spc: `
       <div class="legend-row"><span class="legend-swatch" style="background:#c1e9c1"></span>General Thunder</div>
@@ -322,10 +329,79 @@ function updateLegend(type) {
     alerts: `
       <div class="legend-row"><span class="legend-swatch" style="background:#ff0033"></span>Active NWS Alert Fill</div>
       <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>Neon warning outline</div>
+    `,
+    temp: `
+      <div class="legend-row"><span class="legend-swatch temp-swatch"></span>Station temperature</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff8c00"></span>Heat index shown only when applicable</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#66d9ff"></span>Wind chill shown only when applicable</div>
+    `,
+    rainfall: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#e8f7ff"></span>Trace–0.10 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#79c8ff"></span>0.10–0.50 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#0b72ff"></span>0.50–1.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#22c55e"></span>1.00–2.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#facc15"></span>2.00–4.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ef4444"></span>4.00+ in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Hover/tap map for pixel value</div>
+    `,
+    airQuality: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#00e400"></span>Good</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff00"></span>Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff7e00"></span>Unhealthy for Sensitive Groups</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0000"></span>Unhealthy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#8f3f97"></span>Very Unhealthy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7e0023"></span>Hazardous</div>
+    `,
+    surface: `
+      <div class="legend-row"><span class="legend-line blue-line"></span>Cold front</div>
+      <div class="legend-row"><span class="legend-line red-line"></span>Warm front</div>
+      <div class="legend-row"><span class="legend-line purple-line"></span>Occluded front</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Highs, lows, fronts, precip areas</div>
     `
   };
+  return legends[type] || "";
+}
 
-  box.innerHTML = legends[type] || "Turn on a layer to view its legend.";
+function renderLegends() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  if (!activeLegendTypes.size) {
+    box.innerHTML = "Turn on a layer to view its legend.";
+    return;
+  }
+
+  const titleMap = {
+    radar: "Radar",
+    pastRadar: "Past Radar",
+    hrrr: "HRRR Future Radar",
+    county: "County Lines",
+    qpf: "QPF Forecast",
+    spc: "SPC Outlook",
+    wpc: "WPC Outlook",
+    alerts: "NWS Alerts",
+    temp: "Temperatures",
+    rainfall: "Rainfall Totals",
+    airQuality: "Air Quality",
+    surface: "Surface Map"
+  };
+
+  box.innerHTML = [...activeLegendTypes].map(type => `
+    <div class="legend-section">
+      <div class="legend-section-title">${titleMap[type] || type}</div>
+      ${legendHtml(type)}
+    </div>
+  `).join("");
+}
+
+function updateLegend(type) {
+  activeLegendTypes.add(type);
+  renderLegends();
+}
+
+function clearLegend(type) {
+  activeLegendTypes.delete(type);
+  renderLegends();
 }
 
 function setLayerOpacity(type) {
@@ -363,6 +439,18 @@ function setLayerOpacity(type) {
       opacity: Number(document.getElementById("countyOpacity").value),
       fillOpacity: 0
     });
+  }
+
+  if (type === "rainfall" && rainfallLayer) {
+    rainfallLayer.setOpacity(Number(document.getElementById("rainfallOpacity")?.value || 0.68));
+  }
+
+  if (type === "airQuality" && airQualityLayer) {
+    airQualityLayer.setOpacity(Number(document.getElementById("airQualityOpacity")?.value || 0.62));
+  }
+
+  if (type === "surface" && surfaceLayer) {
+    surfaceLayer.setOpacity(Number(document.getElementById("surfaceOpacity")?.value || 0.78));
   }
 }
 async function getNwsPointData() {
@@ -447,6 +535,7 @@ function toggleRadar() {
     map.removeLayer(radarLayer);
     radarLayer = null;
     setCheck("radarCheck", false);
+    clearLegend("radar");
     updatePanel("Radar", "NOAA/NWS MRMS radar layer turned off.");
     return;
   }
@@ -481,6 +570,7 @@ function turnOffPastRadar(updateMessage = true) {
   const timeline = document.getElementById("radarTimeline");
   if (timeline) timeline.classList.add("hidden");
   setCheck("pastRadarCheck", false);
+  clearLegend("pastRadar");
   if (updateMessage) updatePanel("Past Radar", "Past radar playback turned off.");
 }
 
@@ -568,6 +658,7 @@ async function toggleAlerts() {
     map.removeLayer(alertLayer);
     alertLayer = null;
     setCheck("alertsCheck", false);
+    clearLegend("alerts");
     updatePanel("NWS Alerts", "Alert layer turned off.");
     return;
   }
@@ -611,6 +702,7 @@ function toggleQpf() {
     map.removeLayer(qpfLayer);
     qpfLayer = null;
     setCheck("qpfCheck", false);
+    clearLegend("qpf");
     updatePanel("Rainfall / QPF", "QPF layer turned off.");
     return;
   }
@@ -642,6 +734,7 @@ async function toggleSpc() {
     map.removeLayer(spcLayer);
     spcLayer = null;
     setCheck("spcCheck", false);
+    clearLegend("spc");
     updatePanel("SPC Outlook", "SPC outlook layer turned off.");
     return;
   }
@@ -705,6 +798,7 @@ function toggleWpc() {
     map.removeLayer(wpcLayer);
     wpcLayer = null;
     setCheck("wpcCheck", false);
+    clearLegend("wpc");
     updatePanel("WPC Outlook", "WPC outlook layer turned off.");
     return;
   }
@@ -756,6 +850,7 @@ async function toggleCountyLines() {
     map.removeLayer(countyLayer);
     countyLayer = null;
     setCheck("countyCheck", false);
+    clearLegend("county");
     updatePanel("County Lines", "County line layer turned off.");
     return;
   }
@@ -806,6 +901,7 @@ async function toggleHrrr() {
     hrrrFrames = [];
     document.getElementById("hrrrTimeline").classList.add("hidden");
     setCheck("hrrrCheck", false);
+    clearLegend("hrrr");
     updatePanel("HRRR Future Radar", "HRRR layer turned off.");
     return;
   }
@@ -918,6 +1014,305 @@ function stopHrrrAnimation() {
   if (loopText) loopText.textContent = "Loop paused";
 }
 
+function cToF(value) {
+  return value === null || value === undefined ? null : (value * 9) / 5 + 32;
+}
+
+function mpsToMph(value) {
+  return value === null || value === undefined ? null : value * 2.23694;
+}
+
+function heatIndexF(tempF, humidity) {
+  if (tempF === null || humidity === null || tempF < 80 || humidity < 40) return null;
+  const T = tempF;
+  const R = humidity;
+  return -42.379 + 2.04901523*T + 10.14333127*R - 0.22475541*T*R - 0.00683783*T*T - 0.05481717*R*R + 0.00122874*T*T*R + 0.00085282*T*R*R - 0.00000199*T*T*R*R;
+}
+
+function windChillF(tempF, windMph) {
+  if (tempF === null || windMph === null || tempF > 50 || windMph < 3) return null;
+  return 35.74 + 0.6215*tempF - 35.75*Math.pow(windMph, 0.16) + 0.4275*tempF*Math.pow(windMph, 0.16);
+}
+
+function tempMarkerClass(tempF) {
+  if (tempF >= 100) return "temp-hot";
+  if (tempF >= 90) return "temp-warm";
+  if (tempF >= 70) return "temp-mild";
+  if (tempF >= 50) return "temp-cool";
+  return "temp-cold";
+}
+
+async function toggleTemperatures() {
+  if (tempLayer) {
+    map.removeLayer(tempLayer);
+    tempLayer = null;
+    setCheck("tempCheck", false);
+    clearLegend("temp");
+    updatePanel("Temperatures", "Temperature layer turned off.");
+    return;
+  }
+
+  try {
+    tempLayer = L.layerGroup().addTo(map);
+    const point = await getNwsPointData();
+    const stationsResponse = await fetch(point.properties.observationStations);
+    if (!stationsResponse.ok) throw new Error("Observation stations request failed");
+    const stationsData = await stationsResponse.json();
+    const stations = (stationsData.features || []).slice(0, 14);
+
+    const obsResults = await Promise.allSettled(stations.map(async station => {
+      const obsResponse = await fetch(`${station.id}/observations/latest`);
+      if (!obsResponse.ok) throw new Error("Latest observation failed");
+      const obs = await obsResponse.json();
+      return { station, obs };
+    }));
+
+    let plotted = 0;
+    obsResults.forEach(result => {
+      if (result.status !== "fulfilled") return;
+      const { station, obs } = result.value;
+      const coords = station.geometry?.coordinates;
+      const p = obs.properties || {};
+      if (!coords || !p.temperature) return;
+
+      const tempF = cToF(p.temperature.value);
+      if (tempF === null || Number.isNaN(tempF)) return;
+
+      const humidity = p.relativeHumidity?.value ?? null;
+      const windMph = mpsToMph(p.windSpeed?.value ?? null);
+      const hi = p.heatIndex?.value !== null && p.heatIndex?.value !== undefined ? cToF(p.heatIndex.value) : heatIndexF(tempF, humidity);
+      const wc = p.windChill?.value !== null && p.windChill?.value !== undefined ? cToF(p.windChill.value) : windChillF(tempF, windMph);
+      const stationId = station.properties?.stationIdentifier || station.id.split("/").pop();
+
+      const lines = [
+        `<div class="big-temp">${Math.round(tempF)}°F</div>`,
+        `${sanitizeForPanel(p.textDescription || "Latest observation")}`,
+        humidity !== null ? `Humidity: ${Math.round(humidity)}%` : "",
+        windMph !== null ? `Wind: ${Math.round(windMph)} mph` : "",
+        hi !== null && hi >= 80 ? `<strong>Heat Index: ${Math.round(hi)}°F</strong>` : "",
+        wc !== null && wc <= 50 ? `<strong>Wind Chill: ${Math.round(wc)}°F</strong>` : "",
+        p.timestamp ? `Updated: ${new Date(p.timestamp).toLocaleTimeString()}` : ""
+      ].filter(Boolean).join("<br>");
+
+      const icon = L.divIcon({
+        className: "temp-div-icon",
+        html: `<div class="temp-badge ${tempMarkerClass(tempF)}">${Math.round(tempF)}°</div>`,
+        iconSize: [44, 28],
+        iconAnchor: [22, 14]
+      });
+
+      L.marker([coords[1], coords[0]], { icon })
+        .bindTooltip(`${stationId}: ${Math.round(tempF)}°F`, { sticky: true })
+        .on("click", () => updatePanel(`Temperature: ${sanitizeForPanel(stationId)}`, lines))
+        .addTo(tempLayer);
+      plotted++;
+    });
+
+    setCheck("tempCheck", true);
+    updateLegend("temp");
+    updatePanel("Temperatures", `Current temperature markers loaded.<br>Stations plotted: ${plotted}<br>Heat index and wind chill only display when applicable.`);
+  } catch (error) {
+    if (tempLayer) map.removeLayer(tempLayer);
+    tempLayer = null;
+    setCheck("tempCheck", false);
+    updatePanel("Temperatures", "Could not load temperature stations.");
+    console.error(error);
+  }
+}
+
+const rainfallServiceUrl = "https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer";
+const rainfallRules = {
+  "24": "rft_24hr",
+  "48": "rft_48hr",
+  "72": "rft_72hr"
+};
+
+function rainfallLabel(period = rainfallPeriod) {
+  return period === "24" ? "Past 24 Hours" : period === "48" ? "Past 48 Hours" : "Past 72 Hours";
+}
+
+function setExclusiveRainChecks(period) {
+  const ids = { "24": "rain24Check", "48": "rain48Check", "72": "rain72SubCheck" };
+  Object.entries(ids).forEach(([key, id]) => setCheck(id, key === period));
+}
+
+function rainfallRenderingRule(period = rainfallPeriod) {
+  return { rasterFunction: rainfallRules[period] || "rft_24hr" };
+}
+
+function createRainfallLayer(period = rainfallPeriod) {
+  return L.esri.imageMapLayer({
+    url: rainfallServiceUrl,
+    opacity: 0.68,
+    renderingRule: rainfallRenderingRule(period),
+    useCors: false,
+    attribution: "NOAA/NWS MRMS QPE"
+  });
+}
+
+function setRainfallPeriod(period) {
+  rainfallPeriod = period;
+  setExclusiveRainChecks(period);
+
+  if (!rainfallLayer) return;
+
+  map.removeLayer(rainfallLayer);
+  rainfallLayer = createRainfallLayer(period).addTo(map);
+  attachRainfallProbe();
+  updateLegend("rainfall");
+  updatePanel("Rainfall Rates / Totals", `${rainfallLabel(period)} MRMS QPE layer is on.<br>Hover or tap the map to estimate rainfall under the pointer.`);
+}
+
+function mapExtentParam() {
+  const b = map.getBounds();
+  const sw = L.CRS.EPSG3857.project(b.getSouthWest());
+  const ne = L.CRS.EPSG3857.project(b.getNorthEast());
+  return `${sw.x},${sw.y},${ne.x},${ne.y}`;
+}
+
+async function identifyRainfallAt(latlng) {
+  const point = L.CRS.EPSG3857.project(latlng);
+  const size = map.getSize();
+  const params = new URLSearchParams({
+    f: "json",
+    geometry: `${point.x},${point.y}`,
+    geometryType: "esriGeometryPoint",
+    returnGeometry: "false",
+    returnCatalogItems: "false",
+    pixelSize: "1000,1000",
+    mapExtent: mapExtentParam(),
+    imageDisplay: `${size.x},${size.y},96`,
+    renderingRule: JSON.stringify(rainfallRenderingRule())
+  });
+
+  const response = await fetch(`${rainfallServiceUrl}/identify?${params.toString()}`);
+  if (!response.ok) throw new Error("Rainfall identify failed");
+  const data = await response.json();
+  const raw = data.value ?? data.properties?.value ?? data.catalogItems?.features?.[0]?.attributes?.value;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+let rainfallProbeDebounce = null;
+
+function showRainfallMarker(latlng, text) {
+  if (rainfallMarker) map.removeLayer(rainfallMarker);
+  rainfallMarker = L.marker(latlng, {
+    icon: L.divIcon({
+      className: "rain-probe-icon",
+      html: `<div class="rain-plus">+</div><div class="rain-value">${sanitizeForPanel(text)}</div>`,
+      iconSize: [86, 48],
+      iconAnchor: [43, 24]
+    }),
+    interactive: false
+  }).addTo(map);
+}
+
+function attachRainfallProbe() {
+  if (rainfallProbeHandler) {
+    map.off("mousemove", rainfallProbeHandler);
+    map.off("click", rainfallProbeHandler);
+  }
+
+  rainfallProbeHandler = e => {
+    clearTimeout(rainfallProbeDebounce);
+    rainfallProbeDebounce = setTimeout(async () => {
+      if (!rainfallLayer) return;
+      showRainfallMarker(e.latlng, "+");
+      try {
+        const value = await identifyRainfallAt(e.latlng);
+        const text = value === null ? "No data" : `${value.toFixed(2)} in`;
+        showRainfallMarker(e.latlng, text);
+        updatePanel("Rainfall Probe", `${rainfallLabel()}<br>Estimated rainfall at pointer: <strong>${text}</strong>`);
+      } catch (error) {
+        showRainfallMarker(e.latlng, "No identify");
+      }
+    }, 160);
+  };
+
+  map.on("mousemove", rainfallProbeHandler);
+  map.on("click", rainfallProbeHandler);
+}
+
+function detachRainfallProbe() {
+  if (rainfallProbeHandler) {
+    map.off("mousemove", rainfallProbeHandler);
+    map.off("click", rainfallProbeHandler);
+    rainfallProbeHandler = null;
+  }
+  if (rainfallMarker) {
+    map.removeLayer(rainfallMarker);
+    rainfallMarker = null;
+  }
+}
+
+function toggleRainfall72() {
+  const subBox = document.getElementById("rainfallSubToggles");
+
+  if (rainfallLayer) {
+    map.removeLayer(rainfallLayer);
+    rainfallLayer = null;
+    detachRainfallProbe();
+    if (subBox) subBox.classList.add("hidden");
+    setCheck("rain72Check", false);
+    clearLegend("rainfall");
+    updatePanel("Rainfall Rates / Totals", "Rainfall layer turned off.");
+    return;
+  }
+
+  rainfallPeriod = "24";
+  setExclusiveRainChecks("24");
+  rainfallLayer = createRainfallLayer(rainfallPeriod).addTo(map);
+  attachRainfallProbe();
+  if (subBox) subBox.classList.remove("hidden");
+  setCheck("rain72Check", true);
+  updateLegend("rainfall");
+  updatePanel("Rainfall Rates / Totals", `${rainfallLabel()} MRMS QPE loaded.<br>Use the 24/48/72 hour sub toggles. Hover with mouse or tap on mobile to show the estimated rainfall amount under that point.`);
+}
+
+function toggleAirQuality() {
+  if (airQualityLayer) {
+    map.removeLayer(airQualityLayer);
+    airQualityLayer = null;
+    setCheck("airQualityCheck", false);
+    clearLegend("airQuality");
+    updatePanel("Air Quality", "Air quality layer turned off.");
+    return;
+  }
+
+  airQualityLayer = L.esri.imageMapLayer({
+    url: "https://mapservices.weather.noaa.gov/raster/rest/services/air_quality/ndgd_mpm25_hr01/ImageServer",
+    opacity: 0.62,
+    useCors: false,
+    attribution: "NOAA/NWS Air Quality Guidance"
+  }).addTo(map);
+
+  setCheck("airQualityCheck", true);
+  updateLegend("airQuality");
+  updatePanel("Air Quality", "Air quality PM2.5 guidance layer turned on.<br>Legend uses AQI-style categories for quick visual reference.");
+}
+
+function toggleSurfaceMap() {
+  if (surfaceLayer) {
+    map.removeLayer(surfaceLayer);
+    surfaceLayer = null;
+    setCheck("surfaceCheck", false);
+    clearLegend("surface");
+    updatePanel("Surface Map", "Surface map layer turned off.");
+    return;
+  }
+
+  surfaceLayer = L.esri.dynamicMapLayer({
+    url: "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/natl_fcst_wx_chart/MapServer",
+    layers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    opacity: 0.78
+  }).addTo(map);
+
+  setCheck("surfaceCheck", true);
+  updateLegend("surface");
+  updatePanel("Surface Map", "Current WPC Day 1 surface map information is on.<br>Includes highs/lows, fronts, and broad weather areas when available.");
+}
+
 function refreshActiveLayers() {
   const radarWasOn = !!radarLayer;
   const pastRadarWasOn = !!pastRadarLayer || radarFrames.length > 0;
@@ -927,6 +1322,10 @@ function refreshActiveLayers() {
   const wpcWasOn = !!wpcLayer;
   const countyWasOn = !!countyLayer;
   const hrrrWasOn = !!hrrrLayer;
+  const tempWasOn = !!tempLayer;
+  const rainfallWasOn = !!rainfallLayer;
+  const airQualityWasOn = !!airQualityLayer;
+  const surfaceWasOn = !!surfaceLayer;
 
   if (radarWasOn) toggleRadar();
   if (pastRadarWasOn) turnOffPastRadar(false);
@@ -936,6 +1335,10 @@ function refreshActiveLayers() {
   if (wpcWasOn) toggleWpc();
   if (countyWasOn) toggleCountyLines();
   if (hrrrWasOn) toggleHrrr();
+  if (tempWasOn) toggleTemperatures();
+  if (rainfallWasOn) toggleRainfall72();
+  if (airQualityWasOn) toggleAirQuality();
+  if (surfaceWasOn) toggleSurfaceMap();
 
   setTimeout(() => {
     if (radarWasOn) toggleRadar();
@@ -946,6 +1349,10 @@ function refreshActiveLayers() {
     if (wpcWasOn) toggleWpc();
     if (countyWasOn) toggleCountyLines();
     if (hrrrWasOn) toggleHrrr();
+    if (tempWasOn) toggleTemperatures();
+    if (rainfallWasOn) toggleRainfall72();
+    if (airQualityWasOn) toggleAirQuality();
+    if (surfaceWasOn) toggleSurfaceMap();
   }, 500);
 
   updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
