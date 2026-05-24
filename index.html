@@ -17,31 +17,43 @@
   </header>
 
   <main>
-    <aside id="sidebar">
-      <h2>Weather Layers</h2>
+    <aside id="leftPanel" class="side-panel">
+      <button class="collapseBtn" onclick="togglePanel('leftPanel')">Map Layers</button>
 
-      <<button onclick="toggleRadar()">Radar Overlay</button>
-      <button onclick="loadAlerts()">NWS Alerts</button>
-      <button onclick="loadForecast()">Official Forecast</button>
-      <button onclick="loadHourlyForecast()">Hourly Forecast</button>
-      <button onclick="loadCurrentConditions()">Current Conditions</button>
-      <button>Rainfall / QPF</button>
-      <button>SPC Outlook</button>
-      <button>WPC Outlook</button>
-      <button>HRRR Future Radar</button>
+      <div class="panelContent">
+        <h2>Map Layers</h2>
+        <button onclick="toggleRadar()">Radar Overlay</button>
+        <button onclick="loadAlerts()">NWS Alerts</button>
+        <button>Rainfall / QPF</button>
+        <button>SPC Outlook</button>
+        <button>WPC Outlook</button>
+        <button>HRRR Future Radar</button>
 
-      <h2>County Focus</h2>
-      <button onclick="focusCounty('bexar')">Bexar</button>
-      <button onclick="focusCounty('medina')">Medina</button>
-      <button onclick="focusCounty('atascosa')">Atascosa</button>
-
-      <div id="weatherInfo">
-        <h2>NWS Test Data</h2>
-        <p id="status">Loading NWS point data...</p>
+        <h2>Map Focus</h2>
+        <button onclick="focusArea()">RBRTW AREA</button>
+        <button onclick="focusCounty('bexar')">Bexar County</button>
+        <button onclick="focusCounty('medina')">Medina County</button>
+        <button onclick="focusCounty('atascosa')">Atascosa County</button>
       </div>
     </aside>
 
     <section id="map"></section>
+
+    <aside id="rightPanel" class="side-panel">
+      <button class="collapseBtn" onclick="togglePanel('rightPanel')">Weather Data</button>
+
+      <div class="panelContent">
+        <h2>Weather Data</h2>
+        <button onclick="loadCurrentConditions()">Current Conditions</button>
+        <button onclick="loadForecast()">Official Forecast</button>
+        <button onclick="loadHourlyForecast()">Hourly Forecast</button>
+
+        <div id="weatherInfo">
+          <h2>Data Panel</h2>
+          <p id="status">Loading RBRTW AREA data...</p>
+        </div>
+      </div>
+    </aside>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
