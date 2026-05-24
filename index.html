@@ -84,6 +84,20 @@
     </div>
   </section>
 
+  <section id="radarTimeline" class="control-card radar-timeline hidden">
+    <div class="radar-top-row">
+      <strong>Radar Playback</strong>
+      <span id="radarFrameLabel">Latest</span>
+    </div>
+    <input id="radarFrameSlider" type="range" min="0" max="0" step="1" value="0" oninput="setRadarFrameFromSlider()" />
+    <div class="radar-controls">
+      <button onclick="previousRadarFrame()">◀</button>
+      <button onclick="toggleRadarAnimation()" id="radarPlayBtn">Play</button>
+      <button onclick="nextRadarFrame()">▶</button>
+      <span id="radarLoopText">Timeline ready</span>
+    </div>
+  </section>
+
   <section id="hrrrTimeline" class="control-card hrrr-timeline hidden">
     <div class="hrrr-top-row">
       <strong>HRRR Future Radar</strong>
