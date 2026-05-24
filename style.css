@@ -2,119 +2,203 @@ html, body {
   margin: 0;
   height: 100%;
   font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
 }
 
 #map {
-  height: 100vh;
-  width: 100vw;
+  position: absolute;
+  inset: 84px 0 0 0;
+  z-index: 1;
 }
 
-.brand {
-  position: absolute;
-  top: 18px;
-  left: 64px;
-  z-index: 1000;
-  background: rgba(7, 17, 31, 0.85);
+.app-header {
+  height: 84px;
+  background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
+  border-bottom: 3px solid #f5b301;
   color: white;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 18px;
-  font-weight: bold;
-  border: 1px solid rgba(255,255,255,0.25);
-}
-
-.topTools {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 1000;
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1000;
 }
 
-.topTools button {
-  width: auto;
-  padding: 9px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.35);
-  background: rgba(7, 17, 31, 0.85);
+.logo-badge {
+  width: 54px;
+  height: 54px;
+  border: 3px solid #f5b301;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+  font-size: 12px;
+  background: #102d4c;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.control-card {
+  position: absolute;
+  z-index: 900;
+  width: 235px;
+  background: rgba(7, 17, 31, 0.92);
   color: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.16);
+}
+
+.layers-card {
+  top: 112px;
+  left: 14px;
+}
+
+.focus-card {
+  top: 420px;
+  left: 14px;
+}
+
+.data-card {
+  top: 112px;
+  right: 14px;
+  width: 275px;
+}
+
+.card-header {
+  height: 44px;
+  background: rgba(10, 31, 52, 0.96);
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
   font-weight: bold;
   cursor: pointer;
 }
 
-.floatingPanel {
-  position: absolute;
-  top: 68px;
-  right: 18px;
-  width: 300px;
-  max-height: 72vh;
-  overflow-y: auto;
-  z-index: 1000;
-  background: rgba(245, 250, 255, 0.94);
-  color: #102d4c;
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
-  padding: 12px;
+.card-body {
+  padding: 10px 14px 12px;
 }
 
-.rightPanel {
-  right: 18px;
-}
-
-.hidden {
+.card-body.collapsed {
   display: none;
-}
-
-.panelTitle {
-  font-weight: bold;
-  font-size: 18px;
-  color: #12345a;
-  margin-bottom: 10px;
-}
-
-.panelTitle.small {
-  font-size: 14px;
-  margin-top: 14px;
 }
 
 label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 4px;
-  border-bottom: 1px solid rgba(18,52,90,0.15);
+  gap: 9px;
+  padding: 9px 0;
   font-size: 15px;
 }
 
 input[type="checkbox"] {
-  transform: scale(1.2);
+  width: 17px;
+  height: 17px;
+  accent-color: #1c88ff;
 }
 
-.smallBtn {
-  width: 100%;
-  padding: 8px 10px;
-  margin: 4px 0;
-  border: 1px solid #aac1d8;
-  border-radius: 8px;
-  background: #eaf3fb;
-  color: #12345a;
-  font-weight: bold;
+.dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.green { background: #35d04f; }
+.red { background: #ff3b3b; }
+.blue { background: #258dff; }
+.yellow { background: #f5c542; }
+.purple { background: #9254de; }
+.cyan { background: #15d5ff; }
+
+.card-body button,
+.tab-row button {
+  border: none;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  padding: 9px 10px;
   cursor: pointer;
+  font-size: 14px;
+}
+
+.focus-card button {
+  width: 100%;
   text-align: left;
+  margin: 4px 0;
+}
+
+.card-body button:hover,
+.tab-row button:hover {
+  background: #1c88ff;
+}
+
+.tab-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tab-row button {
+  flex: 1;
 }
 
 #weatherInfo {
-  margin-top: 10px;
-  padding: 10px;
-  background: white;
-  color: #102d4c;
-  border: 1px solid #aac1d8;
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.35;
+  border-top: 1px solid rgba(255,255,255,0.14);
+  padding-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.big-temp {
+  font-size: 44px;
+  font-weight: bold;
+  margin: 6px 0;
+}
+
+.home-btn {
+  position: absolute;
+  z-index: 900;
+  left: 14px;
+  bottom: 44px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(7, 17, 31, 0.92);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
 }
 
 .leaflet-popup-content {
   color: #111;
+  font-weight: bold;
+}
+
+@media (max-width: 850px) {
+  .control-card {
+    width: 215px;
+  }
+
+  .data-card {
+    right: 8px;
+    width: 245px;
+  }
+
+  .layers-card,
+  .focus-card {
+    left: 8px;
+  }
 }
