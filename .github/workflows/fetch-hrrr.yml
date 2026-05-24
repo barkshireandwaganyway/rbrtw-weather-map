@@ -38,10 +38,6 @@ jobs:
         run: |
           python backend/process_grib.py
 
-           - name: Convert GRIB2 to PNG frames
-        run: |
-          python backend/process_grib.py
-
       - name: Commit updated model data
         run: |
           git config user.name "github-actions"
