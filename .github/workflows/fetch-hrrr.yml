@@ -2,8 +2,10 @@ name: Fetch HRRR GRIB2 Data
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "20 * * * *"
+
+concurrency:
+  group: hrrr-data-update
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -15,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,11 +42,18 @@ jobs:
         run: |
           python backend/process_grib.py
 
-           - name: Commit updated model data
+      - name: Commit updated model data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
+          git pull --rebase --autostash origin main
+
           git add public/data/model/hrrr
-          git commit -m "Update HRRR reflectivity frames" || echo "No changes to commit"
-          git pull --rebase origin main
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No HRRR data changes to commit"
+          else
+            git commit -m "Update HRRR reflectivity frames"
+            git push
+          fi
