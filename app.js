@@ -2806,3 +2806,154 @@ function refreshActiveLayers() {
 }
 
 renderLegends();
+
+/* ===== RBRTW FINAL MAP KEY SCREENSHOT BEHAVIOR FIX =====
+   Live map: most active layers may show map keys.
+   Saved PNG: only Radar, QPF, Rainfall QPE, Temperature, Air Quality, SPC, WPC, and Surface keys are allowed.
+*/
+const liveMapKeyTypesFinal = new Set([
+  "radar",
+  "pastRadar",
+  "hrrr",
+  "qpf",
+  "spc",
+  "wpc",
+  "alerts",
+  "temp",
+  "wind",
+  "rainfall",
+  "airQuality",
+  "surface"
+]);
+
+const screenshotMapKeyTypesFinal = new Set([
+  "radar",
+  "pastRadar",
+  "qpf",
+  "rainfall",
+  "temp",
+  "airQuality",
+  "spc",
+  "wpc",
+  "surface"
+]);
+
+function shouldShowMapKeyTypeFinal(type) {
+  if (document.body.classList.contains("capture-mode")) {
+    return screenshotMapKeyTypesFinal.has(type);
+  }
+  return liveMapKeyTypesFinal.has(type);
+}
+
+function renderLegends() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  if (document.body.classList.contains("capture-hide-key")) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const visibleTypes = [...activeLegendTypes].filter(type => shouldShowMapKeyTypeFinal(type));
+
+  if (!visibleTypes.length) {
+    box.innerHTML = document.body.classList.contains("capture-mode")
+      ? ""
+      : "No map key needed for active layers.";
+    return;
+  }
+
+  const titleMap = {
+    radar: "Radar",
+    pastRadar: "Past Radar",
+    hrrr: "HRRR Future Radar",
+    qpf: "QPF Forecast",
+    spc: "SPC Outlook",
+    wpc: "WPC Outlook",
+    alerts: "NWS Alerts",
+    temp: tempDisplayMode === "heat" ? "Heat Index" : tempDisplayMode === "windchill" ? "Wind Chill" : "Temperature",
+    wind: "Wind",
+    rainfall: "Rainfall QPE",
+    airQuality: "Air Quality",
+    surface: "Surface Map"
+  };
+
+  box.innerHTML = visibleTypes.map(type => `
+    <div class="legend-section" data-key-type="${sanitizeForPanel(type)}">
+      <div class="legend-section-title">${titleMap[type] || type}</div>
+      ${legendHtml(type)}
+    </div>
+  `).join("");
+}
+
+function updateLegend(type) {
+  // County lines intentionally do not need a map key.
+  if (type === "county") {
+    activeLegendTypes.delete(type);
+    renderLegends();
+    return;
+  }
+
+  // Regular radar and past radar should not duplicate each other.
+  if (type === "pastRadar") activeLegendTypes.delete("radar");
+  if (type === "radar") activeLegendTypes.delete("pastRadar");
+
+  if (liveMapKeyTypesFinal.has(type) || screenshotMapKeyTypesFinal.has(type)) {
+    activeLegendTypes.add(type);
+  }
+
+  renderLegends();
+}
+
+function clearLegend(type) {
+  activeLegendTypes.delete(type);
+  renderLegends();
+}
+
+async function saveMapPhoto() {
+  const btn = document.getElementById("savePhotoBtn");
+  const legendBody = document.getElementById("legendBody");
+  const includeKey = document.getElementById("photoIncludeKeyCheck")?.checked !== false;
+  const includeData = document.getElementById("photoIncludeDataCheck")?.checked === true;
+
+  try {
+    if (btn) btn.textContent = "Saving...";
+    if (legendBody) legendBody.classList.remove("collapsed");
+
+    document.body.classList.add("capture-mode");
+    document.body.classList.toggle("capture-hide-key", !includeKey);
+    document.body.classList.toggle("capture-include-data", includeData);
+
+    // Re-render the map key after entering capture mode so only screenshot-approved keys appear.
+    renderLegends();
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
+
+    const canvas = await html2canvas(document.body, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+      logging: false
+    });
+
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.download = `RBRTW-weather-map-${timestamp}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+    updatePanel("Save as Photo", "Map photo saved. Screenshot map keys were filtered to the approved PNG key set.");
+  } catch (error) {
+    console.error(error);
+    updatePanel("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
+  } finally {
+    document.body.classList.remove("capture-mode", "capture-hide-key", "capture-include-data");
+    renderLegends();
+    if (btn) btn.textContent = "Save as Photo";
+  }
+}
+
+renderLegends();
