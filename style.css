@@ -1285,3 +1285,55 @@ input[type="checkbox"] {
     font-size: 9px;
   }
 }
+
+
+/* ===== RBRTW POINT IDENTIFY MARKERS ===== */
+.air-probe-icon,
+.radar-probe-icon {
+  background: transparent;
+  border: none;
+  pointer-events: none;
+}
+.air-dot,
+.radar-dot {
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 2px;
+  border-radius: 50%;
+  color: #07111f;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 11px;
+  box-shadow: 0 0 10px rgba(255,255,255,0.75), 0 2px 8px rgba(0,0,0,0.45);
+}
+.air-value,
+.radar-value {
+  background: rgba(7,17,31,0.96);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 5px;
+  padding: 2px 5px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+.radar-value { border-color: rgba(255, 0, 255, 0.85); }
+.air-value { border-color: rgba(0, 228, 0, 0.85); }
+
+/* Allow bigger surface key because it now includes the full national surface-map item set. */
+.legend-card .card-body {
+  max-height: 260px !important;
+}
+@media (max-width: 760px) {
+  .legend-card {
+    max-height: 220px !important;
+  }
+  .legend-card .card-body {
+    max-height: 184px !important;
+  }
+}
