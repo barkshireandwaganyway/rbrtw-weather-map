@@ -456,3 +456,97 @@ input[type="checkbox"] {
   .legend-card .card-body { max-height: 116px !important; }
   .radar-top-row,.radar-controls,.hrrr-top-row,.hrrr-controls { flex-wrap: wrap; font-size: 13px; }
 }
+
+/* Targeted fix: Surface Day 1/2/3 controls must remain available. */
+#surfaceSubToggles {
+  display: block;
+}
+
+/* Targeted fix: reliable DATA card content in PNG export without breaking the working map-key export. */
+.export-data-card {
+  display: none;
+}
+.capture-mode.capture-use-export-data .data-card {
+  display: none !important;
+}
+.capture-mode.capture-use-export-data .export-data-card {
+  display: block !important;
+  position: absolute !important;
+  z-index: 998 !important;
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+.export-data-header {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: rgba(10,31,52,0.98);
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.export-data-body {
+  max-height: calc(45vh - 30px);
+  overflow: hidden;
+  padding: 9px 12px 10px;
+  font-size: 12px;
+  line-height: 1.30;
+  box-sizing: border-box;
+}
+.capture-mode.capture-use-export-data .export-data-card .tab-row {
+  display: none !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-section {
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  max-height: 162px !important;
+  overflow: hidden !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-title {
+  font-size: 13px !important;
+  margin-bottom: 2px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-note {
+  font-size: 10px !important;
+  margin-bottom: 6px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-title {
+  font-size: 10.5px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-subtitle {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-body {
+  font-size: 10px !important;
+  line-height: 1.18 !important;
+}
+@media (max-width: 760px) {
+  .capture-mode.capture-use-export-data .export-data-card {
+    top: 60px !important;
+    left: 8px !important;
+    right: 8px !important;
+    max-height: 44vh !important;
+  }
+  .export-data-body {
+    max-height: calc(44vh - 30px) !important;
+  }
+}
