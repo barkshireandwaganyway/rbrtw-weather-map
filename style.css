@@ -16,7 +16,7 @@ html, body {
 .app-header {
   height: 58px;
   background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
-  /* Yellow border removed */
+  /* yellow border removed */
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -40,12 +40,12 @@ html, body {
   z-index: 900;
   width: clamp(190px, 17vw, 245px);
   background: rgba(7, 17, 31, 0.98) !important;
-  background-color: rgb(7, 17, 31) !important;
   color: #ffffff;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.18);
   box-shadow: 0 4px 18px rgba(0,0,0,0.42);
+  backdrop-filter: blur(5px);
   box-sizing: border-box;
 }
 
@@ -70,7 +70,7 @@ html, body {
   bottom: 10px !important;
   width: 245px !important;
   max-height: 230px;
-  background: rgba(7,17,31,0.98) !important;
+  background: rgba(7,17,31,0.94) !important;
   z-index: 910;
 }
 
@@ -146,16 +146,16 @@ input[type="checkbox"] {
   display: inline-block;
   flex: 0 0 auto;
 }
-.green  { background: #35d04f; }
-.red    { background: #ff3b3b; }
-.blue   { background: #258dff; }
+.green { background: #35d04f; }
+.red { background: #ff3b3b; }
+.blue { background: #258dff; }
 .yellow { background: #f5c542; }
 .purple { background: #9254de; }
-.cyan   { background: #15d5ff; }
+.cyan { background: #15d5ff; }
 .orange { background: #ff8c00; }
-.lime   { background: #00e400; }
-.pink   { background: #ff4fd8; }
-.white  { background: #ffffff; border: 1px solid #555555; }
+.lime { background: #00e400; }
+.pink { background: #ff4fd8; }
+.white { background: #ffffff; border: 1px solid #555555; }
 
 .card-body button,
 .tab-row button,
@@ -209,7 +209,7 @@ input[type="checkbox"] {
   cursor: pointer;
   box-shadow: 0 3px 14px rgba(0,0,0,0.35);
 }
-.home-btn    { left: 10px; }
+.home-btn { left: 10px; }
 .basemap-btn { left: 56px; }
 
 .basemap-menu {
@@ -223,6 +223,7 @@ input[type="checkbox"] {
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 8px;
   box-shadow: 0 4px 18px rgba(0,0,0,0.42);
+  backdrop-filter: blur(5px);
 }
 .basemap-menu button { display: block; width: 100%; text-align: left; padding: 9px 10px; margin: 4px 0; }
 
@@ -236,7 +237,7 @@ input[type="checkbox"] {
   cursor: pointer;
   white-space: nowrap;
 }
-.save-photo-btn:hover    { background: #1c88ff; }
+.save-photo-btn:hover { background: #1c88ff; }
 .save-photo-btn:disabled { opacity: 0.6; cursor: wait; }
 
 .divider { height: 1px; background: rgba(255,255,255,0.15); margin: 8px 0; }
@@ -269,9 +270,6 @@ input[type="checkbox"] {
 }
 .sub-toggle-box label { padding: 4px 0; font-size: 12px; }
 
-/* Surface sub-toggles always visible */
-#surfaceSubToggles { display: block; }
-
 .photo-options-box {
   margin: 8px 0;
   padding: 8px;
@@ -295,7 +293,7 @@ input[type="checkbox"] {
 #radarFrameLabel,
 #hrrrFrameLabel { padding: 4px 8px; border-radius: 5px; font-weight: 900; }
 #radarFrameLabel { background: #0bb84f; }
-#hrrrFrameLabel  { background: #1c88ff; }
+#hrrrFrameLabel { background: #1c88ff; }
 #radarFrameSlider,
 #hrrrFrameSlider { width: 100%; margin: 12px 0; }
 .radar-controls button,
@@ -332,18 +330,18 @@ input[type="checkbox"] {
   line-height: 1.18;
 }
 .mapkey-swatch { width: 15px; height: 10px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.45); }
-.mapkey-line   { width: 18px; height: 0; border-top: 4px solid #ffffff; border-radius: 3px; }
-.mapkey-label  { color: #ffffff; font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
-.mapkey-value  { color: rgba(255,255,255,0.78); font-size: 9.5px; text-align: right; white-space: nowrap; }
-.mapkey-note   { margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.70); font-size: 9.5px; line-height: 1.2; }
+.mapkey-line { width: 18px; height: 0; border-top: 4px solid #ffffff; border-radius: 3px; }
+.mapkey-label { color: #ffffff; font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
+.mapkey-value { color: rgba(255,255,255,0.78); font-size: 9.5px; text-align: right; white-space: nowrap; }
+.mapkey-note { margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.70); font-size: 9.5px; line-height: 1.2; }
 
 .data-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .data-row span:first-child { color: #f5b301; font-weight: 900; }
-.data-row span:last-child  { text-align: right; }
+.data-row span:last-child { text-align: right; }
 .data-section-title { margin: 10px 0 5px; color: #f5b301; font-weight: 900; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
 
 .stack-data-card-title { font-size: 14px; font-weight: 900; color: #f5b301; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px; }
-.stack-data-card-note  { font-size: 11px; color: rgba(255,255,255,0.72); margin-bottom: 8px; line-height: 1.25; }
+.stack-data-card-note { font-size: 11px; color: rgba(255,255,255,0.72); margin-bottom: 8px; line-height: 1.25; }
 .stack-data-section {
   margin: 8px 0;
   padding: 8px;
@@ -352,20 +350,20 @@ input[type="checkbox"] {
   background: linear-gradient(180deg, rgba(7,17,31,0.965), rgba(10,24,42,0.955));
   box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px var(--stack-glow, rgba(245,179,1,0.34)), 0 4px 16px rgba(0,0,0,0.30);
 }
-.stack-data-title    { font-size: 12px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.stack-data-title { font-size: 12px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
 .stack-data-subtitle { font-size: 11px; font-weight: 900; color: #f5b301; margin-bottom: 5px; line-height: 1.25; }
-.stack-data-body     { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,0.94); }
+.stack-data-body { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,0.94); }
 .stack-data-radar,.stack-data-pastRadar { --stack-color:#44ff44; --stack-glow:rgba(68,255,68,0.34); }
-.stack-data-alerts   { --stack-color:#ff4b4b; --stack-glow:rgba(255,75,75,0.50); }
-.stack-data-spc      { --stack-color:#f5c542; --stack-glow:rgba(245,197,66,0.36); }
-.stack-data-wpc      { --stack-color:#9254de; --stack-glow:rgba(146,84,222,0.38); }
-.stack-data-qpf      { --stack-color:#258dff; --stack-glow:rgba(37,141,255,0.36); }
+.stack-data-alerts { --stack-color:#ff4b4b; --stack-glow:rgba(255,75,75,0.50); }
+.stack-data-spc { --stack-color:#f5c542; --stack-glow:rgba(245,197,66,0.36); }
+.stack-data-wpc { --stack-color:#9254de; --stack-glow:rgba(146,84,222,0.38); }
+.stack-data-qpf { --stack-color:#258dff; --stack-glow:rgba(37,141,255,0.36); }
 .stack-data-rainfall { --stack-color:#22c55e; --stack-glow:rgba(34,197,94,0.36); }
 .stack-data-airQuality { --stack-color:#00e400; --stack-glow:rgba(0,228,0,0.34); }
-.stack-data-surface  { --stack-color:#ff4fd8; --stack-glow:rgba(255,79,216,0.36); }
+.stack-data-surface { --stack-color:#ff4fd8; --stack-glow:rgba(255,79,216,0.36); }
 .stack-data-hrrr,.stack-data-wind { --stack-color:#15d5ff; --stack-glow:rgba(21,213,255,0.34); }
-.stack-data-temp     { --stack-color:#ff8c00; --stack-glow:rgba(255,140,0,0.34); }
-.stack-data-county   { --stack-color:#ffffff; --stack-glow:rgba(255,255,255,0.25); }
+.stack-data-temp { --stack-color:#ff8c00; --stack-glow:rgba(255,140,0,0.34); }
+.stack-data-county { --stack-color:#ffffff; --stack-glow:rgba(255,255,255,0.25); }
 
 .temp-div-icon,
 .wind-div-icon,
@@ -374,58 +372,34 @@ input[type="checkbox"] {
 .airq-probe-icon,
 .radar-probe-icon { background: transparent; border: none; pointer-events: none; }
 .temp-badge { min-width: 38px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #08111f; font-weight: 900; font-size: 13px; border: 2px solid rgba(255,255,255,0.95); box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
-.temp-hot          { background: #ffb000; color: #111111; }
-.temp-warm         { background: #f5c542; color: #111111; }
-.temp-mild         { background: #7bd88f; color: #06111f; }
-.temp-cool         { background: #66d9ff; color: #06111f; }
-.temp-cold         { background: #4f8cff; color: #ffffff; }
-.temp-extreme-heat { background: #7f0000; color: #ffffff; }
-.temp-danger-heat  { background: #ff0000; color: #ffffff; }
-.temp-caution-heat { background: #ff8c00; color: #111111; }
-.temp-windchill    { background: #6d5dfc; color: #ffffff; }
-.temp-extreme-cold { background: #2b1a78; color: #ffffff; }
+.temp-hot { background: #ffb000; color: #111111; }
+.temp-warm { background: #f5c542; color: #111111; }
+.temp-mild { background: #7bd88f; color: #06111f; }
+.temp-cool { background: #66d9ff; color: #06111f; }
+.temp-cold { background: #4f8cff; color: #ffffff; }
+.temp-extreme-heat { background:#7f0000; color:#ffffff; }
+.temp-danger-heat { background:#ff0000; color:#ffffff; }
+.temp-caution-heat { background:#ff8c00; color:#111111; }
+.temp-windchill { background:#6d5dfc; color:#ffffff; }
+.temp-extreme-cold { background:#2b1a78; color:#ffffff; }
 
 .wind-barb { width: 36px; height: 36px; position: relative; opacity: var(--wind-opacity, 0.55); }
 .wind-barb::before { content:""; position:absolute; left:17px; top:4px; width:3px; height:28px; background:rgba(5,25,40,0.95); border-radius:3px; box-shadow:0 0 4px rgba(255,255,255,0.7); }
-.wind-barb::after  { content:""; position:absolute; left:17px; top:4px; width:13px; height:3px; background:rgba(5,25,40,0.95); transform:rotate(35deg); transform-origin:left center; border-radius:3px; box-shadow:0 0 4px rgba(255,255,255,0.7); }
+.wind-barb::after { content:""; position:absolute; left:17px; top:4px; width:13px; height:3px; background:rgba(5,25,40,0.95); transform:rotate(35deg); transform-origin:left center; border-radius:3px; box-shadow:0 0 4px rgba(255,255,255,0.7); }
 .wind-label { background:rgba(7,17,31,0.88); color:#ffffff; border-radius:4px; padding:1px 4px; font-size:10px; font-weight:900; text-align:center; margin-top:-5px; }
 
 .qpf-plus,.qpe-plus,.rain-plus { width:24px; height:24px; margin:0 auto 2px; border-radius:50%; background:rgba(7,17,31,0.96); border:2px solid #ffffff; color:#ffffff; font-size:22px; line-height:20px; text-align:center; font-weight:900; box-shadow:0 0 10px rgba(255,255,255,0.75); }
 .qpf-value,.qpe-value,.rain-value,.airq-value,.radar-value { background:rgba(7,17,31,0.96); color:#ffffff; border:1px solid rgba(255,255,255,0.65); border-radius:5px; padding:2px 5px; text-align:center; font-size:12px; font-weight:900; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.45); }
-.qpf-value  { border-color:rgba(245,179,1,0.9); }
+.qpf-value { border-color:rgba(245,179,1,0.9); }
 .qpe-value,.rain-value { border-color:rgba(34,197,94,0.9); }
 .airq-dot,.radar-dot { width:28px; height:28px; margin:0 auto 2px; border-radius:50%; color:#06111f; border:2px solid #ffffff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; box-shadow:0 0 10px rgba(255,255,255,0.75),0 2px 8px rgba(0,0,0,0.5); }
-.radar-dot  { color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.9); }
+.radar-dot { color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.9); }
 .airq-value { min-width:86px; max-width:132px; white-space:normal !important; line-height:1.05; }
-.radar-value { min-width: 84px; }
-
-/* Home marker X button */
-.rbrtw-x-icon { background: transparent !important; border: none !important; }
-.rbrtw-x-btn {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: rgba(200,0,0,0.92);
-  color: #ffffff;
-  border: 1.5px solid #ffffff;
-  font-size: 11px;
-  font-weight: 900;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-}
-.rbrtw-x-btn:hover { background: #990000; }
 
 .leaflet-popup-pane { display: none !important; }
 .leaflet-tooltip-pane { z-index: 650; }
 .leaflet-control-zoom { margin-bottom: 58px !important; }
 
-/* ============================================================
-   CAPTURE / EXPORT MODE
-   ============================================================ */
 .capture-mode .layers-card,
 .capture-mode .radar-timeline,
 .capture-mode .hrrr-timeline,
@@ -436,99 +410,100 @@ input[type="checkbox"] {
 .capture-mode .save-photo-btn,
 .capture-mode .leaflet-popup-pane,
 .capture-mode .leaflet-tooltip-pane { display: none !important; }
-
-/* Live data card hidden during capture (export card used instead) */
 .capture-mode .data-card { display: none !important; }
+.capture-mode.capture-include-data .data-card { display: block !important; position: absolute !important; left: 12px !important; right: 12px !important; top: 72px !important; bottom: auto !important; width: auto !important; max-height: 45vh !important; background: rgba(7,17,31,0.985) !important; border: 1px solid rgba(255,255,255,0.28) !important; box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important; }
+.capture-mode.capture-include-data .data-card .card-body { max-height: calc(45vh - 34px) !important; overflow-y: auto !important; overflow-x: hidden !important; }
+.capture-mode.capture-include-data .tab-row { display:none !important; }
+.capture-mode.capture-hide-key .legend-card { display:none !important; }
+.capture-mode:not(.capture-hide-key) .legend-card { display:block !important; position:absolute !important; left:12px !important; right:12px !important; bottom:10px !important; top:auto !important; width:auto !important; max-height:26vh !important; background:rgba(7,17,31,0.985) !important; border:1px solid rgba(255,255,255,0.28) !important; box-shadow:0 6px 24px rgba(0,0,0,0.55) !important; overflow:hidden !important; }
+.capture-mode:not(.capture-hide-key) .legend-card .card-body { max-height:calc(26vh - 28px) !important; overflow-y:auto !important; overflow-x:hidden !important; padding:6px 8px 8px !important; }
+.capture-mode:not(.capture-hide-key) #legendContent { display:flex !important; flex-direction:row !important; flex-wrap:wrap !important; align-items:flex-start !important; gap:7px !important; width:100% !important; background:transparent !important; }
+.capture-mode:not(.capture-hide-key) .export-key-section { flex:1 1 240px !important; min-width:185px !important; padding:5px 7px !important; margin:0 !important; border-top:0 !important; border-left:3px solid rgba(245,179,1,0.86) !important; border-radius:5px !important; background:rgba(255,255,255,0.05) !important; overflow:hidden !important; }
+.capture-mode:not(.capture-hide-key) .export-key-title { font-size:9.5px !important; line-height:1 !important; margin:0 0 4px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .export-key-items { display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:4px 7px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-row { display:inline-flex !important; align-items:center !important; gap:3px !important; width:auto !important; margin:0 !important; padding:0 !important; font-size:8.5px !important; line-height:1 !important; white-space:nowrap !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-swatch { width:10px !important; height:8px !important; flex:0 0 10px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-line { width:13px !important; flex:0 0 13px !important; border-top-width:3px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-label { max-width:120px !important; font-size:8.5px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-value { max-width:80px !important; font-size:8px !important; text-align:left !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-note { display:none !important; }
 
-/* Legend always hidden during capture if key is off */
-.capture-mode.capture-hide-key .legend-card { display: none !important; }
+@media (max-width: 760px) {
+  #map { inset: 52px 0 0 0; }
+  .app-header { height: 52px; padding: 0 12px; }
+  .app-header h1 { font-size: 17px; }
+  .save-photo-btn { padding: 7px 9px; font-size: 12px; }
+  .layers-card { top: 64px !important; left: 8px !important; width: min(252px, calc(100vw - 16px)) !important; max-height: 78vh !important; }
+  .layers-card .card-body { max-height: calc(78vh - 36px) !important; overflow-y: auto !important; }
+  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; left: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; display: block !important; }
+  .data-card .card-body { max-height: calc(34vh - 36px) !important; overflow-y: auto !important; }
+  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; width: auto !important; max-height: 154px !important; }
+  .legend-card .card-body { max-height: 120px !important; }
+  .home-btn { bottom: 8px !important; left: 8px !important; }
+  .basemap-btn { left: 54px !important; bottom: 8px !important; }
+  .basemap-menu { left: 54px !important; bottom: 54px !important; }
+  .radar-timeline,.hrrr-timeline { left: 8px !important; right: 8px !important; transform: none !important; bottom: 70px !important; width: auto !important; }
+  .leaflet-control-zoom { margin-bottom: 62px !important; }
+  .mapkey-row { grid-template-columns: 15px minmax(92px,1fr) auto; font-size: 10px; }
+  .mapkey-value { font-size: 9px; }
+}
 
-/* Legend during capture (key on) – compact, bottom-right */
-.capture-mode:not(.capture-hide-key) .legend-card {
-  display: block !important;
-  position: fixed !important;
-  right: 18px !important;
-  bottom: 18px !important;
-  left: auto !important;
-  top: auto !important;
-  width: min(540px, calc(100vw - 36px)) !important;
-  max-height: 130px !important;
-  background: rgba(7,17,31,0.985) !important;
-  border: 1px solid rgba(255,255,255,0.28) !important;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
-  overflow: hidden !important;
-  z-index: 2000 !important;
+@media (max-width: 520px) {
+  .layers-card { width: 220px !important; }
+  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; }
+  .data-card .card-body { max-height: calc(34vh - 36px) !important; }
+  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; max-height: 150px !important; }
+  .legend-card .card-body { max-height: 116px !important; }
+  .radar-top-row,.radar-controls,.hrrr-top-row,.hrrr-controls { flex-wrap: wrap; font-size: 13px; }
 }
-.capture-mode:not(.capture-hide-key) .legend-card .card-body {
-  max-height: 98px !important;
-  overflow: hidden !important;
-  padding: 6px 8px 8px !important;
+
+/* Export DATA card: compact overrides so priority info fits without overflow */
+.capture-mode.capture-use-export-data .export-data-card .big-temp {
+  font-size: 16px !important;
+  margin: 1px 0 !important;
 }
-.capture-mode:not(.capture-hide-key) #legendContent {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: flex-start !important;
-  gap: 6px !important;
-  width: 100% !important;
-}
-.capture-mode:not(.capture-hide-key) .export-key-section {
-  flex: 0 1 auto !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  padding: 4px 6px !important;
-  margin: 0 !important;
-  border-top: 0 !important;
-  border-left: 3px solid rgba(245,179,1,0.86) !important;
-  border-radius: 5px !important;
-  background: rgba(255,255,255,0.05) !important;
-  overflow: hidden !important;
-}
-.capture-mode:not(.capture-hide-key) .export-key-items {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-  gap: 3px 7px !important;
-}
-.capture-mode:not(.capture-hide-key) .mapkey-row {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 3px !important;
-  width: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
+.capture-mode.capture-use-export-data .export-data-card .data-section-title {
   font-size: 8.5px !important;
-  line-height: 1 !important;
-  white-space: nowrap !important;
+  margin: 2px 0 1px !important;
+  letter-spacing: 0 !important;
 }
-.capture-mode:not(.capture-hide-key) .mapkey-swatch { width: 10px !important; height: 8px !important; flex: 0 0 10px !important; }
-.capture-mode:not(.capture-hide-key) .mapkey-line   { width: 13px !important; flex: 0 0 13px !important; border-top-width: 3px !important; }
-.capture-mode:not(.capture-hide-key) .mapkey-label  { max-width: 120px !important; font-size: 8.5px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-.capture-mode:not(.capture-hide-key) .mapkey-value  { max-width: 80px !important; font-size: 8px !important; text-align: left !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-.capture-mode:not(.capture-hide-key) .mapkey-note   { display: none !important; }
+.capture-mode.capture-use-export-data .export-data-card .data-row {
+  padding: 1px 0 !important;
+  font-size: 9.5px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-section {
+  max-height: none !important;
+  overflow: visible !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .hazard-detail-row {
+  margin: 0 0 2px !important;
+  font-size: 9.5px !important;
+  line-height: 1.2 !important;
+}
 
-/* Export DATA card – bottom-left, compact */
-.export-data-card { display: none; }
-
+/* Targeted fix: reliable DATA card content in PNG export without breaking the working map-key export. */
+.export-data-card {
+  display: none;
+}
+.capture-mode.capture-use-export-data .data-card {
+  display: none !important;
+}
 .capture-mode.capture-use-export-data .export-data-card {
   display: block !important;
-  position: fixed !important;
-  z-index: 2147483000 !important;
-  top: auto !important;
-  left: 18px !important;
-  right: auto !important;
-  bottom: 18px !important;
-  width: min(400px, calc(100vw - 36px)) !important;
-  max-height: 32vh !important;
+  position: absolute !important;
+  z-index: 998 !important;
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  max-height: 45vh !important;
   overflow: hidden !important;
-  background: rgba(7,17,31,0.988) !important;
+  background: rgba(7, 17, 31, 0.988) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255,255,255,0.30) !important;
   border-radius: 8px !important;
   box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
   box-sizing: border-box !important;
 }
-
 .export-data-header {
   height: 30px;
   display: flex;
@@ -541,57 +516,197 @@ input[type="checkbox"] {
   font-weight: 900;
   letter-spacing: 0.08em;
 }
-
 .export-data-body {
-  max-height: calc(32vh - 30px);
+  max-height: calc(45vh - 30px);
   overflow: hidden;
-  padding: 8px 11px 10px;
-  font-size: 11px;
-  line-height: 1.28;
+  padding: 9px 12px 10px;
+  font-size: 12px;
+  line-height: 1.30;
   box-sizing: border-box;
 }
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
+.capture-mode.capture-use-export-data .export-data-card .tab-row {
+  display: none !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-section {
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  max-height: 162px !important;
+  overflow: hidden !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-title {
+  font-size: 13px !important;
+  margin-bottom: 2px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-note {
+  font-size: 10px !important;
+  margin-bottom: 6px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-title {
+  font-size: 10.5px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-subtitle {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-body {
+  font-size: 10px !important;
+  line-height: 1.18 !important;
+}
 @media (max-width: 760px) {
-  #map { inset: 52px 0 0 0; }
-  .app-header { height: 52px; padding: 0 12px; }
-  .app-header h1 { font-size: 17px; }
-  .save-photo-btn { padding: 7px 9px; font-size: 12px; }
-  .layers-card { top: 64px !important; left: 8px !important; width: min(252px, calc(100vw - 16px)) !important; max-height: 78vh !important; }
-  .layers-card .card-body { max-height: calc(78vh - 36px) !important; overflow-y: auto !important; }
-  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; left: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; display: block !important; }
-  .data-card .card-body { max-height: calc(34vh - 36px) !important; overflow-y: auto !important; }
-  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; width: auto !important; max-height: 154px !important; }
-  .legend-card .card-body { max-height: 120px !important; }
-  .home-btn  { bottom: 8px !important; left: 8px !important; }
-  .basemap-btn { left: 54px !important; bottom: 8px !important; }
-  .basemap-menu { left: 54px !important; bottom: 54px !important; }
-  .radar-timeline,.hrrr-timeline { left: 8px !important; right: 8px !important; transform: none !important; bottom: 70px !important; width: auto !important; }
-  .leaflet-control-zoom { margin-bottom: 62px !important; }
-  .mapkey-row   { grid-template-columns: 15px minmax(92px,1fr) auto; font-size: 10px; }
-  .mapkey-value { font-size: 9px; }
-
   .capture-mode.capture-use-export-data .export-data-card {
+    top: 60px !important;
     left: 8px !important;
-    right: auto !important;
-    bottom: 8px !important;
-    width: min(340px, calc(100vw - 16px)) !important;
-    max-height: 28vh !important;
+    right: 8px !important;
+    max-height: 44vh !important;
   }
-  .export-data-body { max-height: calc(28vh - 30px) !important; }
-  .capture-mode:not(.capture-hide-key) .legend-card {
-    left: 8px !important; right: 8px !important; bottom: 8px !important;
-    width: auto !important; max-height: 110px !important;
+  .export-data-body {
+    max-height: calc(44vh - 30px) !important;
   }
 }
 
-@media (max-width: 520px) {
-  .layers-card { width: 220px !important; }
-  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; }
-  .data-card .card-body { max-height: calc(34vh - 36px) !important; }
-  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; max-height: 150px !important; }
-  .legend-card .card-body { max-height: 116px !important; }
-  .radar-top-row,.radar-controls,.hrrr-top-row,.hrrr-controls { flex-wrap: wrap; font-size: 13px; }
+/* Final targeted repair: make exported DATA card impossible to hide behind capture-mode rules. */
+.export-data-card[data-export-card="true"] {
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+.export-data-card[data-export-card="true"] .export-data-body {
+  max-height: calc(45vh - 30px) !important;
+  overflow: hidden !important;
+}
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+  display: block !important;
+}
+.radar-value {
+  min-width: 84px;
+}
+@media (max-width: 760px) {
+  .export-data-card[data-export-card="true"] {
+    top: 60px !important;
+    left: 8px !important;
+    right: 8px !important;
+    max-height: 44vh !important;
+  }
+}
+
+/* Universal PNG export layout repair: keep DATA and MAP KEY compact for every layer/export type. */
+.capture-mode.capture-use-export-data .export-data-card,
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  top: auto !important;
+  left: 18px !important;
+  right: auto !important;
+  bottom: 92px !important;
+  width: min(420px, calc(100vw - 36px)) !important;
+  max-height: 28vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+
+.capture-mode.capture-use-export-data .export-data-card .export-data-body,
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] .export-data-body {
+  max-height: calc(28vh - 30px) !important;
+  overflow: hidden !important;
+  padding: 8px 10px 9px !important;
+  font-size: 11px !important;
+  line-height: 1.24 !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  position: fixed !important;
+  left: auto !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  top: auto !important;
+  width: min(540px, calc(100vw - 36px)) !important;
+  max-height: 132px !important;
+  background: rgba(7,17,31,0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card .card-body {
+  max-height: 98px !important;
+  overflow: hidden !important;
+  padding: 6px 8px 8px !important;
+}
+
+.capture-mode:not(.capture-hide-key) #legendContent {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.capture-mode:not(.capture-hide-key) .export-key-section {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  border-top: 0 !important;
+  border-left: 3px solid rgba(245,179,1,0.86) !important;
+  border-radius: 5px !important;
+  background: rgba(255,255,255,0.05) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode:not(.capture-hide-key) .export-key-items {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 3px 7px !important;
+}
+
+@media (max-width: 760px) {
+  .capture-mode.capture-use-export-data .export-data-card,
+  .capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+    left: 8px !important;
+    right: auto !important;
+    bottom: 138px !important;
+    width: min(360px, calc(100vw - 16px)) !important;
+    max-height: 26vh !important;
+  }
+  .capture-mode.capture-use-export-data .export-data-card .export-data-body,
+  .capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] .export-data-body {
+    max-height: calc(26vh - 30px) !important;
+  }
+  .capture-mode:not(.capture-hide-key) .legend-card {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-height: 120px !important;
+  }
+  .capture-mode:not(.capture-hide-key) .legend-card .card-body {
+    max-height: 88px !important;
+  }
 }
