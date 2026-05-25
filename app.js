@@ -641,6 +641,16 @@ function radarCategory(value) {
   if (n >= 20) return { label: 'Moderate', color: '#ffff44' };
   return { label: 'Light', color: '#44ff44' };
 }
+function radarCategoryMeaning(label) {
+  const key = String(label || '').toLowerCase();
+  if (key.includes('extreme')) return 'Extreme reflectivity can indicate a very intense storm core and possible hail, but it does not confirm hail at the ground.';
+  if (key.includes('very intense')) return 'Very intense reflectivity suggests a strong storm core with heavy rain and possibly small hail aloft.';
+  if (key.includes('strong')) return 'Strong reflectivity usually means a storm core with very heavy rain, frequent lightning, and stronger storm potential.';
+  if (key.includes('heavy')) return 'Heavy reflectivity usually means heavy rain is likely at or near the selected point.';
+  if (key.includes('moderate')) return 'Moderate reflectivity usually means steady rain or a developing shower/storm.';
+  if (key.includes('light')) return 'Light reflectivity usually means light rain, drizzle, or a weak shower.';
+  return 'No clear radar category was found at the selected point.';
+}
 function radarEstimateFromPixelColor(r, g, b, a) {
   if (!Number.isFinite(a) || a < 18) return null;
   const max = Math.max(r, g, b);
@@ -793,14 +803,8 @@ async function runRadarPoint(latlng) {
     }),
     interactive: false
   }).addTo(map);
-  const methodText = result.method ? `<br>Method: ${sanitizeForPanel(result.method)}` : '';
-  const estimateNote = result.estimated
-    ? '<br>Numeric dBZ was not returned by the source, so this is a category estimate from the rendered radar color.'
-    : '';
-  const noValueNote = value === null
-    ? '<br>The radar layer was clicked, but the source did not return a usable numeric dBZ value at this point.'
-    : '';
-  setStack('radar', 'Radar Point', `Reflectivity: <strong>${sanitizeForPanel(text)}</strong><br>Category: ${sanitizeForPanel(cat.label)}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS/NCEP MRMS Radar${methodText}${estimateNote}${noValueNote}`);
+  const explanation = radarCategoryMeaning(cat.label);
+  setStack('radar', 'Radar Point', `Category: <strong>${sanitizeForPanel(cat.label)}</strong><br><br>${sanitizeForPanel(explanation)}`);
   return true;
 }
 function runPastRadarPoint(latlng) {
@@ -1201,10 +1205,12 @@ async function saveMapPhoto() {
         display: 'block',
         position: 'fixed',
         zIndex: '2147483000',
-        top: '72px',
-        left: '12px',
-        right: '12px',
-        maxHeight: '45vh',
+        top: 'auto',
+        left: '18px',
+        right: 'auto',
+        bottom: '92px',
+        width: 'min(420px, calc(100vw - 36px))',
+        maxHeight: '28vh',
         overflow: 'hidden',
         background: 'rgba(7,17,31,0.988)',
         color: '#ffffff',
