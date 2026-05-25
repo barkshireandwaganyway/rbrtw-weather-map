@@ -1116,3 +1116,89 @@ input[type="checkbox"] {
     max-height: 116px !important;
   }
 }
+
+/* ===== RBRTW SCREENSHOT KEY / MOBILE PANEL FINAL FIX ===== */
+.photo-options-box {
+  margin: 6px 0 8px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+}
+
+.photo-options-title {
+  color: #f5b301;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.photo-options-box label {
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+/* Live map: lower/compact mobile data card so it does not sit in the middle of the map. */
+@media (max-width: 760px) {
+  .data-card {
+    display: block !important;
+    top: auto !important;
+    right: 8px !important;
+    bottom: 164px !important;
+    width: min(235px, calc(100vw - 108px)) !important;
+    max-height: 20vh !important;
+  }
+
+  .data-card .card-body {
+    max-height: calc(20vh - 36px) !important;
+    overflow-y: auto !important;
+  }
+
+  .legend-card {
+    left: 100px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-height: 146px !important;
+  }
+
+  .legend-card .card-body {
+    max-height: 112px !important;
+  }
+}
+
+/* Screenshot mode: only include the data card if requested. */
+.capture-mode .data-card {
+  display: none !important;
+}
+
+.capture-mode.capture-include-data .data-card {
+  display: block !important;
+  left: 12px !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: 138px !important;
+  width: min(320px, calc(100vw - 24px)) !important;
+  max-height: 28vh !important;
+}
+
+.capture-mode.capture-hide-key .legend-card {
+  display: none !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  width: auto !important;
+  max-height: 118px !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card .card-body {
+  display: block !important;
+  max-height: 82px !important;
+  overflow-y: auto !important;
+}
