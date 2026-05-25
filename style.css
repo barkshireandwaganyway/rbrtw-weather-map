@@ -22,6 +22,8 @@ html, body {
   padding: 0 18px;
   position: relative;
   z-index: 1000;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .app-header h1 {
@@ -34,12 +36,13 @@ html, body {
   position: absolute;
   z-index: 900;
   width: clamp(190px, 17vw, 245px);
-  background: rgba(7, 17, 31, 0.93);
+  background: rgba(7, 17, 31, 0.98) !important;
   color: white;
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 4px 18px rgba(0,0,0,0.38);
   border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(5px);
 }
 
 .hidden {
@@ -55,11 +58,13 @@ html, body {
   top: 78px;
   left: 265px;
   width: 170px;
+  display: none !important;
 }
 
 .focus-card {
   left: 10px;
   bottom: 64px;
+  display: none !important;
 }
 
 .data-card {
@@ -70,9 +75,14 @@ html, body {
 }
 
 .legend-card {
-  right: 10px;
-  bottom: 18px;
-  width: clamp(230px, 22vw, 285px);
+  right: 10px !important;
+  bottom: 10px !important;
+  width: 230px !important;
+  background: rgba(7, 17, 31, 0.90) !important;
+  background-color: rgba(7, 17, 31, 0.90) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.38) !important;
+  overflow: hidden !important;
 }
 
 .hrrr-timeline {
@@ -165,13 +175,34 @@ input[type="checkbox"] {
   flex: 0 0 auto;
 }
 
-.green { background: #35d04f; }
-.red { background: #ff3b3b; }
-.blue { background: #258dff; }
-.yellow { background: #f5c542; }
-.purple { background: #9254de; }
-.cyan { background: #15d5ff; }
-.white { background: #ffffff; border: 1px solid #555; }
+.green {
+  background: #35d04f;
+}
+
+.red {
+  background: #ff3b3b;
+}
+
+.blue {
+  background: #258dff;
+}
+
+.yellow {
+  background: #f5c542;
+}
+
+.purple {
+  background: #9254de;
+}
+
+.cyan {
+  background: #15d5ff;
+}
+
+.white {
+  background: #ffffff;
+  border: 1px solid #555;
+}
 
 .card-body button,
 .tab-row button,
@@ -243,14 +274,15 @@ input[type="checkbox"] {
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 6px 0;
-  font-size: 13px;
+  gap: 6px !important;
+  margin: 3px 0 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
 }
 
 .legend-swatch {
-  width: 18px;
-  height: 12px;
+  width: 16px !important;
+  height: 9px !important;
   border-radius: 2px;
   border: 1px solid rgba(255,255,255,0.4);
 }
@@ -276,7 +308,6 @@ input[type="checkbox"] {
     right: 10px;
     top: 78px;
   }
-
   .data-card {
     top: 126px;
   }
@@ -286,37 +317,38 @@ input[type="checkbox"] {
   #map {
     inset: 52px 0 0 0;
   }
-
   .app-header {
     height: 52px;
     padding: 0 12px;
   }
-
   .layers-card {
-    top: 64px;
-    left: 8px;
-    width: min(225px, calc(100vw - 16px));
+    top: 64px !important;
+    left: 8px !important;
+    width: min(252px, calc(100vw - 16px)) !important;
+    max-height: 78vh !important;
+    background: rgba(7, 17, 31, 0.99) !important;
   }
-
   .basemap-card,
   .focus-card {
     display: none;
   }
-
   .data-card {
-    top: auto;
-    right: 8px;
-    bottom: 220px;
-    width: min(280px, calc(100vw - 16px));
-    max-height: 30vh;
+    top: auto !important;
+    right: 8px !important;
+    bottom: 164px !important;
+    width: min(235px, calc(100vw - 108px)) !important;
+    max-height: 20vh !important;
+    display: block !important;
   }
-
   .legend-card {
-    right: 8px;
-    bottom: 78px;
-    width: min(280px, calc(100vw - 16px));
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    left: 100px !important;
+    max-height: 170px !important;
+    background: rgba(7, 17, 31, 0.99) !important;
+    background-color: rgba(7, 17, 31, 0.99) !important;
   }
-
   .hrrr-timeline {
     left: 8px;
     right: 8px;
@@ -324,17 +356,74 @@ input[type="checkbox"] {
     bottom: 8px;
     width: auto;
   }
-
   .card-body {
     max-height: 28vh;
   }
-
   .leaflet-control-zoom {
-    margin-bottom: 180px !important;
+    margin-bottom: 62px !important;
   }
-
   .home-btn {
-    bottom: 188px;
+    bottom: 8px !important;
+    left: 8px !important;
+  }
+  .radar-timeline {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: 112px;
+    width: auto;
+  }
+  .layers-card .card-body {
+    max-height: calc(78vh - 36px) !important;
+    overflow-y: auto !important;
+  }
+  .legend-card .card-body {
+    max-height: 150px !important;
+  }
+  .hrrr-timeline,
+  .radar-timeline {
+    left: 8px !important;
+    right: 8px !important;
+    transform: none !important;
+    bottom: 70px !important;
+    width: auto !important;
+  }
+  .legend-card .card-body,
+  #legendContent,
+  .legend-section {
+    background: rgba(7, 17, 31, 0.99) !important;
+    background-color: rgba(7, 17, 31, 0.99) !important;
+  }
+  .basemap-btn {
+    left: 54px !important;
+    bottom: 8px !important;
+  }
+  .basemap-menu {
+    left: 54px !important;
+    bottom: 54px !important;
+  }
+  .data-card .card-body {
+    max-height: calc(20vh - 36px) !important;
+    overflow-y: auto !important;
+  }
+  .mapkey-row {
+    grid-template-columns: 15px minmax(92px, 1fr) auto !important;
+    font-size: 10px;
+  }
+  .mapkey-value {
+    font-size: 9px;
+  }
+  .data-toggle-sub label {
+    font-size: 10.5px;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .data-card {
+    bottom: 150px !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
+    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
+  }
+  .capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
   }
 }
 
@@ -342,26 +431,43 @@ input[type="checkbox"] {
   .layers-card {
     width: 220px;
   }
-
   .data-card {
-    display: none;
+    display: block !important;
+    right: 8px !important;
+    bottom: 188px !important;
+    width: min(255px, calc(100vw - 16px)) !important;
+    max-height: 23vh !important;
   }
-
   .legend-card {
-    bottom: 122px;
-    width: min(270px, calc(100vw - 16px));
+    bottom: 8px !important;
+    width: auto !important;
+    left: 100px !important;
+    right: 8px !important;
+    max-height: 150px !important;
   }
-
   .hrrr-timeline {
     bottom: 8px;
   }
-
   .hrrr-top-row {
     font-size: 13px;
   }
-
   .hrrr-controls {
     flex-wrap: wrap;
+  }
+  .radar-timeline {
+    bottom: 112px;
+  }
+  .radar-top-row {
+    font-size: 13px;
+  }
+  .radar-controls {
+    flex-wrap: wrap;
+  }
+  .data-card .card-body {
+    max-height: calc(23vh - 36px) !important;
+  }
+  .legend-card .card-body {
+    max-height: 116px !important;
   }
 }
 
@@ -424,35 +530,17 @@ input[type="checkbox"] {
   box-shadow: 0 0 12px rgba(0,255,255,0.7);
 }
 
-
-@media (max-width: 760px) {
-  .radar-timeline {
-    left: 8px;
-    right: 8px;
-    transform: none;
-    bottom: 112px;
-    width: auto;
-  }
+.orange {
+  background: #ff8c00;
 }
 
-@media (max-width: 520px) {
-  .radar-timeline {
-    bottom: 112px;
-  }
-
-  .radar-top-row {
-    font-size: 13px;
-  }
-
-  .radar-controls {
-    flex-wrap: wrap;
-  }
+.lime {
+  background: #00e400;
 }
 
-
-.orange { background: #ff8c00; }
-.lime { background: #00e400; }
-.pink { background: #ff4fd8; }
+.pink {
+  background: #ff4fd8;
+}
 
 .sub-toggle-box {
   margin: 0 0 8px 24px;
@@ -468,7 +556,8 @@ input[type="checkbox"] {
 
 .legend-section {
   border-top: 1px solid rgba(255,255,255,0.14);
-  padding: 7px 0 5px;
+  padding: 5px 0 !important;
+  background: transparent !important;
 }
 
 .legend-section:first-child {
@@ -477,11 +566,11 @@ input[type="checkbox"] {
 }
 
 .legend-section-title {
-  font-size: 12px;
+  font-size: 10px !important;
   font-weight: 900;
-  color: #f5b301;
+  color: #f5b301 !important;
   letter-spacing: 0.04em;
-  margin: 2px 0 6px;
+  margin: 0 0 4px !important;
   text-transform: uppercase;
 }
 
@@ -493,9 +582,18 @@ input[type="checkbox"] {
   border-radius: 3px;
 }
 
-.blue-line { border-color: #1683ff; }
-.red-line { border-color: #ff3434; }
-.purple-line { border-color: #b05cff; }
+.blue-line {
+  border-color: #1683ff;
+}
+
+.red-line {
+  border-color: #ff3434;
+}
+
+.purple-line {
+  border-color: #b05cff;
+}
+
 .temp-swatch {
   background: linear-gradient(90deg, #66d9ff, #f5c542, #ff3b3b);
 }
@@ -519,11 +617,30 @@ input[type="checkbox"] {
   box-shadow: 0 2px 10px rgba(0,0,0,0.45);
 }
 
-.temp-hot { background: #ff3b3b; color: white; }
-.temp-warm { background: #ff8c00; color: #111; }
-.temp-mild { background: #f5c542; color: #111; }
-.temp-cool { background: #66d9ff; color: #06111f; }
-.temp-cold { background: #4f8cff; color: white; }
+.temp-hot {
+  background: #ffb000;
+  color: #111111;
+}
+
+.temp-warm {
+  background: #f5c542;
+  color: #111111;
+}
+
+.temp-mild {
+  background: #7bd88f;
+  color: #06111f;
+}
+
+.temp-cool {
+  background: #66d9ff;
+  color: #06111f;
+}
+
+.temp-cold {
+  background: #4f8cff;
+  color: #ffffff;
+}
 
 .rain-probe-icon {
   background: transparent;
@@ -559,16 +676,9 @@ input[type="checkbox"] {
 }
 
 .legend-card .card-body.collapsed {
-  display: none;
-  padding: 0;
-  max-height: 0;
-}
-
-
-/* ===== RBRTW FINAL MOBILE / SAVE PHOTO / WIND / TEMP FIXES ===== */
-.app-header {
-  justify-content: space-between;
-  gap: 12px;
+  display: none !important;
+  padding: 0 !important;
+  max-height: 0 !important;
 }
 
 .save-photo-btn {
@@ -584,11 +694,6 @@ input[type="checkbox"] {
 
 .save-photo-btn:hover {
   background: #1c88ff;
-}
-
-.control-card {
-  background: rgba(7, 17, 31, 0.98) !important;
-  backdrop-filter: blur(5px);
 }
 
 .scroll-hint {
@@ -678,66 +783,29 @@ input[type="checkbox"] {
   margin-top: -5px;
 }
 
-.temp-extreme-heat { background: #7f0000; color: #ffffff; }
-.temp-danger-heat { background: #ff0000; color: #ffffff; }
-.temp-caution-heat { background: #ff8c00; color: #111111; }
-.temp-hot { background: #ffb000; color: #111111; }
-.temp-warm { background: #f5c542; color: #111111; }
-.temp-mild { background: #7bd88f; color: #06111f; }
-.temp-cool { background: #66d9ff; color: #06111f; }
-.temp-cold { background: #4f8cff; color: #ffffff; }
-.temp-windchill { background: #6d5dfc; color: #ffffff; }
-.temp-extreme-cold { background: #2b1a78; color: #ffffff; }
-
-@media (max-width: 760px) {
-  .layers-card {
-    top: 64px !important;
-    left: 8px !important;
-    width: min(252px, calc(100vw - 16px)) !important;
-    max-height: 62vh !important;
-    background: rgba(7, 17, 31, 0.99) !important;
-  }
-
-  .layers-card .card-body {
-    max-height: calc(62vh - 36px) !important;
-    overflow-y: auto !important;
-  }
-
-  .legend-card {
-    left: 76px !important;
-    right: 8px !important;
-    bottom: 8px !important;
-    width: auto !important;
-    max-height: 34vh !important;
-  }
-
-  .legend-card .card-body {
-    max-height: 24vh !important;
-  }
-
-  .home-btn {
-    left: 8px !important;
-    bottom: 8px !important;
-  }
-
-  .leaflet-control-zoom {
-    margin-bottom: 62px !important;
-  }
-
-  .hrrr-timeline,
-  .radar-timeline {
-    left: 8px !important;
-    right: 8px !important;
-    transform: none !important;
-    bottom: 70px !important;
-    width: auto !important;
-  }
+.temp-extreme-heat {
+  background: #7f0000;
+  color: #ffffff;
 }
 
+.temp-danger-heat {
+  background: #ff0000;
+  color: #ffffff;
+}
 
-/* ===== RBRTW FOCUS REMOVAL + QPF/QPE POINT MARKERS ===== */
-.focus-card {
-  display: none !important;
+.temp-caution-heat {
+  background: #ff8c00;
+  color: #111111;
+}
+
+.temp-windchill {
+  background: #6d5dfc;
+  color: #ffffff;
+}
+
+.temp-extreme-cold {
+  background: #2b1a78;
+  color: #ffffff;
 }
 
 .qpf-probe-icon,
@@ -787,69 +855,26 @@ input[type="checkbox"] {
   border-color: rgba(34, 197, 94, 0.9);
 }
 
-@media (max-width: 760px) {
-  .layers-card {
-    max-height: 78vh !important;
-  }
-
-  .layers-card .card-body {
-    max-height: calc(78vh - 36px) !important;
-  }
-}
-
-
-/* ===== RBRTW LEGEND SOLID BACKGROUND FIX ===== */
-.legend-card {
-  background: rgba(7, 17, 31, 0.99) !important;
-  background-color: rgba(7, 17, 31, 0.99) !important;
-  border: 1px solid rgba(255,255,255,0.22) !important;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.55) !important;
-  overflow: hidden !important;
-}
-
 .legend-card .card-header {
-  background: rgba(10, 31, 52, 1) !important;
+  background: rgba(10, 31, 52, 0.96) !important;
   background-color: rgba(10, 31, 52, 1) !important;
+  height: 26px !important;
+  padding: 0 9px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
 }
 
 .legend-card .card-body {
-  background: rgba(7, 17, 31, 0.99) !important;
-  background-color: rgba(7, 17, 31, 0.99) !important;
+  background: rgba(7, 17, 31, 0.90) !important;
+  background-color: rgba(7, 17, 31, 0.90) !important;
+  padding: 7px 9px !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
 }
 
 #legendContent {
-  background: rgba(7, 17, 31, 0.99) !important;
-  background-color: rgba(7, 17, 31, 0.99) !important;
-}
-
-.legend-section {
-  background: rgba(7, 17, 31, 0.99) !important;
-}
-
-.legend-card .card-body.collapsed {
-  display: none !important;
-  padding: 0 !important;
-  max-height: 0 !important;
-}
-
-@media (max-width: 760px) {
-  .legend-card {
-    background: rgba(7, 17, 31, 0.99) !important;
-    background-color: rgba(7, 17, 31, 0.99) !important;
-  }
-
-  .legend-card .card-body,
-  #legendContent,
-  .legend-section {
-    background: rgba(7, 17, 31, 0.99) !important;
-    background-color: rgba(7, 17, 31, 0.99) !important;
-  }
-}
-
-
-/* ===== BASEMAP ICON BUTTON FIX ===== */
-.basemap-card {
-  display: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .home-btn,
@@ -859,18 +884,13 @@ input[type="checkbox"] {
   bottom: 10px;
   width: 38px;
   height: 38px;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 7px;
   background: rgba(7, 17, 31, 0.96);
   color: white;
   font-size: 21px;
   cursor: pointer;
   box-shadow: 0 3px 14px rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.18);
-}
-
-.home-btn {
-  left: 10px;
 }
 
 .basemap-btn {
@@ -919,81 +939,8 @@ input[type="checkbox"] {
   display: none !important;
 }
 
-@media (max-width: 760px) {
-  .home-btn {
-    left: 8px !important;
-    bottom: 8px !important;
-  }
-
-  .basemap-btn {
-    left: 54px !important;
-    bottom: 8px !important;
-  }
-
-  .basemap-menu {
-    left: 54px !important;
-    bottom: 54px !important;
-  }
-}
-
-
-/* ===== RBRTW DATA CARD + COMPACT MAP KEY + TEMP SUBMENU FIX ===== */
-.legend-card {
-  width: 230px !important;
-  right: 10px !important;
-  bottom: 10px !important;
-  background: rgba(7, 17, 31, 0.90) !important;
-  background-color: rgba(7, 17, 31, 0.90) !important;
-  border: 1px solid rgba(255,255,255,0.18) !important;
-  box-shadow: 0 3px 14px rgba(0,0,0,0.38) !important;
-}
-
-.legend-card .card-header {
-  height: 26px !important;
-  padding: 0 9px !important;
-  font-size: 11px !important;
-  letter-spacing: 0.08em !important;
-  background: rgba(10, 31, 52, 0.96) !important;
-}
-
 .legend-card .card-header span:first-child::after {
   content: " / MAP KEY";
-}
-
-.legend-card .card-body {
-  padding: 7px 9px !important;
-  max-height: 176px !important;
-  overflow-y: auto !important;
-  background: rgba(7, 17, 31, 0.90) !important;
-  background-color: rgba(7, 17, 31, 0.90) !important;
-}
-
-.legend-section {
-  padding: 5px 0 !important;
-  background: transparent !important;
-}
-
-.legend-section-title {
-  font-size: 10px !important;
-  margin: 0 0 4px !important;
-  color: #f5b301 !important;
-}
-
-.legend-row {
-  gap: 6px !important;
-  margin: 3px 0 !important;
-  font-size: 11px !important;
-  line-height: 1.15 !important;
-}
-
-.legend-swatch {
-  width: 16px !important;
-  height: 9px !important;
-}
-
-#legendContent {
-  background: transparent !important;
-  background-color: transparent !important;
 }
 
 .key-gradient {
@@ -1063,74 +1010,20 @@ input[type="checkbox"] {
   text-transform: uppercase;
 }
 
-@media (max-width: 760px) {
-  .data-card {
-    display: block !important;
-    top: auto !important;
-    right: 8px !important;
-    bottom: 244px !important;
-    width: min(270px, calc(100vw - 16px)) !important;
-    max-height: 24vh !important;
-  }
-
-  .data-card .card-body {
-    max-height: calc(24vh - 36px) !important;
-    overflow-y: auto !important;
-  }
-
-  .legend-card {
-    left: auto !important;
-    right: 8px !important;
-    bottom: 8px !important;
-    width: min(230px, calc(100vw - 76px)) !important;
-    max-height: 168px !important;
-  }
-
-  .legend-card .card-body {
-    max-height: 132px !important;
-  }
-}
-
-@media (max-width: 520px) {
-  .data-card {
-    display: block !important;
-    right: 8px !important;
-    bottom: 188px !important;
-    width: min(255px, calc(100vw - 16px)) !important;
-    max-height: 23vh !important;
-  }
-
-  .data-card .card-body {
-    max-height: calc(23vh - 36px) !important;
-  }
-
-  .legend-card {
-    left: 100px !important;
-    right: 8px !important;
-    bottom: 8px !important;
-    width: auto !important;
-    max-height: 150px !important;
-  }
-
-  .legend-card .card-body {
-    max-height: 116px !important;
-  }
-}
-
-/* ===== RBRTW SCREENSHOT KEY / MOBILE PANEL FINAL FIX ===== */
 .photo-options-box {
   margin: 6px 0 8px;
-  padding: 7px 8px;
-  border: 1px solid rgba(255,255,255,0.14);
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.16);
   border-radius: 6px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.045);
+  margin-top: 8px;
 }
 
 .photo-options-title {
   color: #f5b301;
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
@@ -1140,36 +1033,6 @@ input[type="checkbox"] {
   padding: 4px 0;
 }
 
-/* Live map: lower/compact mobile data card so it does not sit in the middle of the map. */
-@media (max-width: 760px) {
-  .data-card {
-    display: block !important;
-    top: auto !important;
-    right: 8px !important;
-    bottom: 164px !important;
-    width: min(235px, calc(100vw - 108px)) !important;
-    max-height: 20vh !important;
-  }
-
-  .data-card .card-body {
-    max-height: calc(20vh - 36px) !important;
-    overflow-y: auto !important;
-  }
-
-  .legend-card {
-    left: 100px !important;
-    right: 8px !important;
-    bottom: 8px !important;
-    width: auto !important;
-    max-height: 146px !important;
-  }
-
-  .legend-card .card-body {
-    max-height: 112px !important;
-  }
-}
-
-/* Screenshot mode: only include the data card if requested. */
 .capture-mode .data-card {
   display: none !important;
 }
@@ -1180,8 +1043,9 @@ input[type="checkbox"] {
   right: auto !important;
   top: auto !important;
   bottom: 138px !important;
-  width: min(320px, calc(100vw - 24px)) !important;
-  max-height: 28vh !important;
+  width: min(390px, calc(100vw - 24px)) !important;
+  max-height: 42vh !important;
+  background: rgba(7, 17, 31, 0.98) !important;
 }
 
 .capture-mode.capture-hide-key .legend-card {
@@ -1203,22 +1067,6 @@ input[type="checkbox"] {
   overflow-y: auto !important;
 }
 
-
-/* ===== RBRTW CORRECT DATA MAP KEY READABILITY FIX ===== */
-.photo-options-box {
-  margin-top: 8px;
-  padding: 8px;
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 6px;
-  background: rgba(255,255,255,0.045);
-}
-.photo-options-title {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #f5b301;
-  margin-bottom: 4px;
-}
 .photo-options-box small {
   display: block;
   color: rgba(255,255,255,0.68);
@@ -1226,39 +1074,45 @@ input[type="checkbox"] {
   line-height: 1.25;
   margin-top: 5px;
 }
+
 .mapkey-row {
   display: grid;
-  grid-template-columns: 16px minmax(78px, 1fr) auto;
+  grid-template-columns: 16px minmax(112px, 1fr) auto !important;
   align-items: center;
   gap: 6px;
   margin: 3px 0;
   font-size: 10.5px;
   line-height: 1.18;
 }
+
 .mapkey-swatch {
   width: 15px;
   height: 10px;
   border-radius: 2px;
   border: 1px solid rgba(255,255,255,0.45);
 }
+
 .mapkey-line {
   width: 18px;
   height: 0;
   border-top: 4px solid white;
   border-radius: 3px;
 }
+
 .mapkey-label {
   color: #ffffff;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .mapkey-value {
   color: rgba(255,255,255,0.78);
   font-size: 9.5px;
   text-align: right;
   white-space: nowrap;
 }
+
 .mapkey-note {
   margin-top: 5px;
   padding-top: 4px;
@@ -1267,33 +1121,14 @@ input[type="checkbox"] {
   font-size: 9.5px;
   line-height: 1.2;
 }
-.legend-card .card-body {
-  max-height: 220px !important;
-}
-@media (max-width: 760px) {
-  .legend-card {
-    max-height: 170px !important;
-  }
-  .legend-card .card-body {
-    max-height: 134px !important;
-  }
-  .mapkey-row {
-    grid-template-columns: 15px minmax(64px, 1fr) auto;
-    font-size: 10px;
-  }
-  .mapkey-value {
-    font-size: 9px;
-  }
-}
 
-
-/* ===== RBRTW AIR QUALITY / RADAR POINT MARKERS ===== */
 .airq-probe-icon,
 .radar-probe-icon {
   background: transparent;
   border: none;
   pointer-events: none;
 }
+
 .airq-dot,
 .radar-dot {
   width: 28px;
@@ -1309,10 +1144,12 @@ input[type="checkbox"] {
   font-weight: 900;
   box-shadow: 0 0 10px rgba(255,255,255,0.75), 0 2px 8px rgba(0,0,0,0.5);
 }
+
 .radar-dot {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
+
 .airq-value,
 .radar-value {
   background: rgba(7,17,31,0.96);
@@ -1326,20 +1163,7 @@ input[type="checkbox"] {
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
-.mapkey-row {
-  grid-template-columns: 16px minmax(112px, 1fr) auto !important;
-}
-@media (max-width: 760px) {
-  .mapkey-row {
-    grid-template-columns: 15px minmax(92px, 1fr) auto !important;
-  }
-  .legend-card .card-body {
-    max-height: 150px !important;
-  }
-}
 
-
-/* ===== RBRTW AQI TEXT MARKER WIDTH FIX ===== */
 .airq-value {
   min-width: 86px;
   max-width: 132px;
@@ -1347,51 +1171,28 @@ input[type="checkbox"] {
   line-height: 1.05;
 }
 
-/* ===== RBRTW CLICK-ONLY DATA CARD TOGGLES + SATELLITE LABEL FIX ===== */
-.data-toggle-sub {
-  margin: -2px 0 4px 28px;
-  padding: 2px 7px 5px;
-  border-left: 2px solid rgba(245,179,1,0.28);
-  background: rgba(255,255,255,0.025);
-}
-.data-toggle-sub label {
-  padding: 2px 0;
-  font-size: 11px;
-  color: rgba(255,255,255,0.74);
-}
-.data-toggle-sub input[type="checkbox"] {
-  width: 13px;
-  height: 13px;
-}
-.data-toggle-sub:has(input:not(:checked)) label {
-  color: rgba(255,255,255,0.46);
-}
-@media (max-width: 760px) {
-  .data-toggle-sub label {
-    font-size: 10.5px;
-  }
-}
-
-
-/* ===== RBRTW FINAL AUDIT UI POLISH ===== */
 .data-toggle-sub {
   margin: -2px 0 4px 28px;
   padding: 2px 7px 5px;
   border-left: 2px solid rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.035);
 }
+
 .data-toggle-sub label {
+  padding: 3px 0 !important;
   font-size: 11px !important;
   color: rgba(255,255,255,0.76);
-  padding: 3px 0 !important;
 }
+
 .data-toggle-sub input[type="checkbox"] {
   width: 13px;
   height: 13px;
 }
 
+.data-toggle-sub:has(input:not(:checked)) label {
+  color: rgba(255,255,255,0.46);
+}
 
-/* ===== RBRTW STACKED DATA CARD + EXPORT SUMMARY STYLE ===== */
 .stack-data-card-title {
   font-size: 14px;
   font-weight: 900;
@@ -1400,12 +1201,14 @@ input[type="checkbox"] {
   text-transform: uppercase;
   margin-bottom: 3px;
 }
+
 .stack-data-card-note {
   font-size: 11px;
   color: rgba(255,255,255,0.72);
   margin-bottom: 8px;
   line-height: 1.25;
 }
+
 .stack-data-section {
   margin: 8px 0;
   padding: 8px;
@@ -1415,6 +1218,7 @@ input[type="checkbox"] {
   background: rgba(255,255,255,0.055);
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
+
 .stack-data-title {
   font-size: 12px;
   font-weight: 900;
@@ -1423,6 +1227,7 @@ input[type="checkbox"] {
   letter-spacing: 0.04em;
   margin-bottom: 2px;
 }
+
 .stack-data-subtitle {
   font-size: 11px;
   font-weight: 800;
@@ -1430,49 +1235,69 @@ input[type="checkbox"] {
   margin-bottom: 5px;
   line-height: 1.25;
 }
+
 .stack-data-body {
   font-size: 12px;
   line-height: 1.35;
   color: rgba(255,255,255,0.94);
 }
-.stack-data-radar { border-left-color: #44ff44; }
-.stack-data-airQuality { border-left-color: #00e400; }
-.stack-data-alerts { border-left-color: #ff3b3b; }
-.stack-data-spc { border-left-color: #f5c542; }
-.stack-data-wpc { border-left-color: #9254de; }
-.stack-data-qpf { border-left-color: #258dff; }
-.stack-data-rainfall { border-left-color: #22c55e; }
-.stack-data-surface { border-left-color: #ff4fd8; }
-.stack-data-hrrr { border-left-color: #15d5ff; }
-.stack-data-county { border-left-color: #ffffff; }
 
-.capture-mode.capture-include-data .data-card {
-  display: block !important;
-  left: 12px !important;
-  right: auto !important;
-  top: auto !important;
-  bottom: 138px !important;
-  width: min(390px, calc(100vw - 24px)) !important;
-  max-height: 42vh !important;
-  background: rgba(7, 17, 31, 0.98) !important;
+.stack-data-radar {
+  border-left-color: #44ff44;
 }
+
+.stack-data-airQuality {
+  border-left-color: #00e400;
+}
+
+.stack-data-alerts {
+  border-left-color: #ff3b3b;
+}
+
+.stack-data-spc {
+  border-left-color: #f5c542;
+}
+
+.stack-data-wpc {
+  border-left-color: #9254de;
+}
+
+.stack-data-qpf {
+  border-left-color: #258dff;
+}
+
+.stack-data-rainfall {
+  border-left-color: #22c55e;
+}
+
+.stack-data-surface {
+  border-left-color: #ff4fd8;
+}
+
+.stack-data-hrrr {
+  border-left-color: #15d5ff;
+}
+
+.stack-data-county {
+  border-left-color: #ffffff;
+}
+
 .capture-mode.capture-include-data .data-card .card-body {
   max-height: calc(42vh - 36px) !important;
   overflow-y: auto !important;
 }
+
 .capture-mode.capture-include-data .stack-data-section {
   break-inside: avoid;
   margin: 6px 0;
   padding: 7px;
 }
+
 .capture-mode.capture-include-data .stack-data-body {
   font-size: 11px;
   line-height: 1.25;
 }
 
-/* ===== RBRTW EXPORT POLISH FINAL: FULL-WIDTH DATA SUMMARY + MAP KEY BAR =====
-   Applies only while Save as Photo is capturing. Live map layout is unchanged.
-*/
 .capture-mode.capture-export-polish .layers-card,
 .capture-mode.capture-export-polish .basemap-card,
 .capture-mode.capture-export-polish .focus-card,
@@ -1665,168 +1490,4 @@ input[type="checkbox"] {
 
 .capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-note {
   display: none !important;
-}
-
-@media (max-width: 760px) {
-  .capture-mode.capture-export-polish.capture-include-data .data-card {
-    bottom: 150px !important;
-  }
-  .capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
-    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
-  }
-  .capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
-  }
-}
-
-/* ===== RBRTW EXPORT VERIFICATION FINAL: NO-OVERLAP PNG LAYOUT =====
-   This is export-only. It keeps the live map unchanged, but makes the saved PNG
-   use a true lower information band: stacked data summary above, separated map keys below.
-*/
-.capture-mode.capture-export-polish.capture-include-data .data-card {
-  left: 12px !important;
-  right: 12px !important;
-  bottom: 188px !important;
-  width: auto !important;
-  max-height: calc(100vh - 232px) !important;
-  overflow: hidden !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .data-card .card-body {
-  max-height: calc(100vh - 270px) !important;
-  overflow: hidden !important;
-  padding: 7px 10px 9px !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-card-title {
-  font-size: 12px !important;
-  line-height: 1.05 !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-card-note {
-  font-size: 9.5px !important;
-  line-height: 1.05 !important;
-  margin-bottom: 5px !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
-  gap: 6px !important;
-  align-items: stretch !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-section {
-  max-height: 108px !important;
-  min-height: 82px !important;
-  overflow: hidden !important;
-  padding: 6px 7px !important;
-  margin: 0 !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-title {
-  font-size: 10px !important;
-  line-height: 1.05 !important;
-  margin-bottom: 1px !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-subtitle {
-  font-size: 9px !important;
-  line-height: 1.08 !important;
-  margin-bottom: 3px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-body {
-  font-size: 9.2px !important;
-  line-height: 1.12 !important;
-}
-
-.capture-mode.capture-export-polish.capture-include-data .stack-data-body br {
-  line-height: 1.05 !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card {
-  left: 12px !important;
-  right: 12px !important;
-  bottom: 10px !important;
-  width: auto !important;
-  max-height: 166px !important;
-  overflow: hidden !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-body {
-  max-height: 132px !important;
-  overflow: hidden !important;
-  padding: 6px 8px 7px !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
-  gap: 6px !important;
-  align-items: start !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section {
-  padding: 0 6px 0 7px !important;
-  min-height: 0 !important;
-  max-height: 124px !important;
-  overflow: hidden !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section-title {
-  font-size: 8.8px !important;
-  line-height: 1 !important;
-  margin: 3px 0 2px !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-row {
-  grid-template-columns: 11px minmax(48px, 1fr) auto !important;
-  gap: 3px !important;
-  margin: 0 !important;
-  font-size: 8px !important;
-  line-height: 1.02 !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-swatch {
-  width: 10px !important;
-  height: 7px !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-line {
-  width: 11px !important;
-  border-top-width: 2px !important;
-}
-
-.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-value {
-  font-size: 7.5px !important;
-}
-
-@media (max-width: 760px) {
-  .capture-mode.capture-export-polish.capture-include-data .data-card {
-    bottom: 178px !important;
-    max-height: calc(100vh - 218px) !important;
-  }
-  .capture-mode.capture-export-polish.capture-include-data .data-card .card-body {
-    max-height: calc(100vh - 254px) !important;
-  }
-  .capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
-    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)) !important;
-    gap: 5px !important;
-  }
-  .capture-mode.capture-export-polish.capture-include-data .stack-data-section {
-    max-height: 88px !important;
-    min-height: 70px !important;
-    padding: 5px 6px !important;
-  }
-  .capture-mode.capture-export-polish.capture-include-data .stack-data-body {
-    font-size: 8px !important;
-    line-height: 1.05 !important;
-  }
-  .capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
-    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)) !important;
-  }
 }
