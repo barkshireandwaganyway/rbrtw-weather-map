@@ -1346,3 +1346,28 @@ input[type="checkbox"] {
   white-space: normal !important;
   line-height: 1.05;
 }
+
+/* ===== RBRTW CLICK-ONLY DATA CARD TOGGLES + SATELLITE LABEL FIX ===== */
+.data-toggle-sub {
+  margin: -2px 0 4px 28px;
+  padding: 2px 7px 5px;
+  border-left: 2px solid rgba(245,179,1,0.28);
+  background: rgba(255,255,255,0.025);
+}
+.data-toggle-sub label {
+  padding: 2px 0;
+  font-size: 11px;
+  color: rgba(255,255,255,0.74);
+}
+.data-toggle-sub input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+}
+.data-toggle-sub:has(input:not(:checked)) label {
+  color: rgba(255,255,255,0.46);
+}
+@media (max-width: 760px) {
+  .data-toggle-sub label {
+    font-size: 10.5px;
+  }
+}
