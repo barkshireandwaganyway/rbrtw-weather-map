@@ -49,10 +49,19 @@ const basemaps = {
   })
 };
 
+function toggleBasemapMenu() {
+  const menu = document.getElementById("basemapMenu");
+  if (menu) menu.classList.toggle("hidden");
+}
+
 function setBasemap(type) {
   if (baseLayer) map.removeLayer(baseLayer);
   baseLayer = basemaps[type] || basemaps.standard;
   baseLayer.addTo(map);
+
+  const menu = document.getElementById("basemapMenu");
+  if (menu) menu.classList.add("hidden");
+
   updatePanel("Basemap", `${type.charAt(0).toUpperCase() + type.slice(1)} basemap selected.`);
 }
 
@@ -1461,6 +1470,15 @@ async function loadCurrentConditions() {
     console.error(error);
   }
 }
+
+document.addEventListener("click", event => {
+  const menu = document.getElementById("basemapMenu");
+  const button = document.querySelector(".basemap-btn");
+  if (!menu || !button) return;
+  if (menu.classList.contains("hidden")) return;
+  if (menu.contains(event.target) || button.contains(event.target)) return;
+  menu.classList.add("hidden");
+});
 
 loadNwsPointData();
 
