@@ -2014,3 +2014,386 @@ function refreshActiveLayers() {
 
   updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
 }
+
+
+/* ===== RBRTW FINAL QPF/QPE POINT FIXES + FOCUS MENU REMOVAL ===== */
+
+var qpfProbeHandler = null;
+var qpfHoverMarker = null;
+var qpfPermanentMarkers = L.layerGroup().addTo(map);
+var rainfallHoverMarker = null;
+var rainfallPermanentMarkers = L.layerGroup().addTo(map);
+
+function asNumberFromUnknown(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = String(value).replace(/,/g, " ");
+  const matches = text.match(/-?\d+(?:\.\d+)?/g);
+  if (!matches || !matches.length) return null;
+  const nums = matches.map(Number).filter(Number.isFinite);
+  if (!nums.length) return null;
+  return Math.max(...nums);
+}
+
+function formatInches(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return "No data";
+  if (n < 0.005) return "Trace/0.00 in";
+  return `${n.toFixed(2)} in`;
+}
+
+function extractLikelyPrecipValue(obj) {
+  if (!obj) return null;
+
+  if (Array.isArray(obj.samples) && obj.samples.length) {
+    for (const sample of obj.samples) {
+      const sampleValues = [sample.value, sample.Value, sample.pixelValue, sample.PixelValue];
+      for (const v of sampleValues) {
+        const n = asNumberFromUnknown(v);
+        if (n !== null) return n;
+      }
+      const attrs = sample.attributes || {};
+      const attrResult = extractLikelyPrecipValue(attrs);
+      if (attrResult !== null) return attrResult;
+    }
+  }
+
+  if (Array.isArray(obj.results) && obj.results.length) {
+    for (const result of obj.results) {
+      const attrResult = extractLikelyPrecipValue(result.attributes || result.properties || {});
+      if (attrResult !== null) return attrResult;
+      const valueResult = asNumberFromUnknown(result.value || result.Value);
+      if (valueResult !== null) return valueResult;
+    }
+  }
+
+  const preferredKeys = [
+    "qpf", "QPF", "qpf_in", "QPF_IN", "qpf_inches", "QPF_INCHES",
+    "amount", "AMOUNT", "precip", "PRECIP", "rainfall", "RAINFALL",
+    "value", "VALUE", "Value", "Pixel Value", "PixelValue", "pixelValue",
+    "contour", "CONTOUR", "Contour", "gridcode", "GRIDCODE", "label", "LABEL"
+  ];
+
+  for (const key of preferredKeys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const n = asNumberFromUnknown(obj[key]);
+      if (n !== null) return n;
+    }
+  }
+
+  if (obj.value !== undefined) {
+    const n = asNumberFromUnknown(obj.value);
+    if (n !== null) return n;
+  }
+
+  if (obj.properties) {
+    const n = extractLikelyPrecipValue(obj.properties);
+    if (n !== null) return n;
+  }
+
+  return null;
+}
+
+function qpfMapExtentParam4326() {
+  const b = map.getBounds();
+  return `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+}
+
+function qpfImageDisplayParam() {
+  const size = map.getSize();
+  return `${size.x},${size.y},96`;
+}
+
+async function identifyQpfAt(latlng) {
+  const params = new URLSearchParams({
+    f: "json",
+    geometry: `${latlng.lng},${latlng.lat}`,
+    geometryType: "esriGeometryPoint",
+    sr: "4326",
+    layers: "visible:9",
+    tolerance: "6",
+    mapExtent: qpfMapExtentParam4326(),
+    imageDisplay: qpfImageDisplayParam(),
+    returnGeometry: "false"
+  });
+
+  const url = `https://mapservices.weather.noaa.gov/vector/rest/services/precip/wpc_qpf/MapServer/identify?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("QPF identify failed");
+  const data = await response.json();
+  const value = extractLikelyPrecipValue(data);
+  const layerName = data.results?.[0]?.layerName || "QPF 72 Hour Day 1-3";
+  return { value, layerName, raw: data };
+}
+
+function markerIconForPrecip(text, type) {
+  const isQpf = type === "qpf";
+  return L.divIcon({
+    className: isQpf ? "qpf-probe-icon" : "rain-probe-icon",
+    html: `<div class="${isQpf ? "qpf-plus" : "qpe-plus"}">+</div><div class="${isQpf ? "qpf-value" : "qpe-value"}">${sanitizeForPanel(text)}</div>`,
+    iconSize: [92, 48],
+    iconAnchor: [46, 24]
+  });
+}
+
+function showQpfHoverMarker(latlng, text) {
+  if (qpfHoverMarker) map.removeLayer(qpfHoverMarker);
+  qpfHoverMarker = L.marker(latlng, {
+    icon: markerIconForPrecip(text, "qpf"),
+    interactive: false
+  }).addTo(map);
+}
+
+function addQpfPermanentMarker(latlng, text) {
+  L.marker(latlng, {
+    icon: markerIconForPrecip(text, "qpf"),
+    interactive: false
+  }).addTo(qpfPermanentMarkers);
+}
+
+function showRainfallHoverMarker(latlng, text) {
+  if (rainfallHoverMarker) map.removeLayer(rainfallHoverMarker);
+  rainfallHoverMarker = L.marker(latlng, {
+    icon: markerIconForPrecip(text, "qpe"),
+    interactive: false
+  }).addTo(map);
+}
+
+function addRainfallPermanentMarker(latlng, text) {
+  L.marker(latlng, {
+    icon: markerIconForPrecip(text, "qpe"),
+    interactive: false
+  }).addTo(rainfallPermanentMarkers);
+}
+
+let qpfProbeDebounce = null;
+function attachQpfProbe() {
+  detachQpfProbe(false);
+
+  qpfProbeHandler = async e => {
+    const isClick = e.type === "click";
+    if (!qpfLayer) return;
+
+    const runProbe = async () => {
+      try {
+        if (!isClick) showQpfHoverMarker(e.latlng, "+");
+        const result = await identifyQpfAt(e.latlng);
+        const text = formatInches(result.value);
+        if (isClick) addQpfPermanentMarker(e.latlng, text);
+        else showQpfHoverMarker(e.latlng, text);
+        updatePanel("QPF Forecast Point", `
+          <strong>${sanitizeForPanel(result.layerName)}</strong><br><br>
+          Forecast liquid precipitation at selected point: <strong>${text}</strong><br>
+          Period: Day 1–3 / 72-hour forecast total<br>
+          Source: WPC Quantitative Precipitation Forecast
+        `);
+      } catch (error) {
+        if (isClick) addQpfPermanentMarker(e.latlng, "No data");
+        else showQpfHoverMarker(e.latlng, "No data");
+      }
+    };
+
+    if (isClick) {
+      clearTimeout(qpfProbeDebounce);
+      runProbe();
+    } else {
+      clearTimeout(qpfProbeDebounce);
+      qpfProbeDebounce = setTimeout(runProbe, 180);
+    }
+  };
+
+  map.on("mousemove", qpfProbeHandler);
+  map.on("click", qpfProbeHandler);
+}
+
+function detachQpfProbe(clearPermanent = true) {
+  if (qpfProbeHandler) {
+    map.off("mousemove", qpfProbeHandler);
+    map.off("click", qpfProbeHandler);
+    qpfProbeHandler = null;
+  }
+  if (qpfHoverMarker) {
+    map.removeLayer(qpfHoverMarker);
+    qpfHoverMarker = null;
+  }
+  if (clearPermanent && qpfPermanentMarkers) {
+    qpfPermanentMarkers.clearLayers();
+  }
+}
+
+function toggleQpf() {
+  if (qpfLayer) {
+    map.removeLayer(qpfLayer);
+    qpfLayer = null;
+    detachQpfProbe(true);
+    setCheck("qpfCheck", false);
+    clearLegend("qpf");
+    updatePanel("Rainfall / QPF", "QPF layer turned off.");
+    return;
+  }
+
+  qpfLayer = L.esri.dynamicMapLayer({
+    url: "https://mapservices.weather.noaa.gov/vector/rest/services/precip/wpc_qpf/MapServer",
+    layers: [9],
+    opacity: Number(document.getElementById("qpfOpacity").value)
+  }).addTo(map);
+
+  attachQpfProbe();
+  setCheck("qpfCheck", true);
+  updateLegend("qpf");
+  updatePanel("Rainfall / QPF", `
+    <strong>WPC QPF 72 Hour Day 1–3</strong><br><br>
+    This layer shows forecast liquid precipitation totals in inches for the Day 1–3 period.<br>
+    QPF means Quantitative Precipitation Forecast. It is forecast rainfall/liquid equivalent, not observed rainfall.<br><br>
+    Hover with a mouse to preview a point value. Tap/click to leave a small saved point marker on the map.
+  `);
+}
+
+async function getRainfallSampleValue(latlng) {
+  const point = L.CRS.EPSG3857.project(latlng);
+  const getSamplesParams = new URLSearchParams({
+    f: "json",
+    geometry: `${point.x},${point.y}`,
+    geometryType: "esriGeometryPoint",
+    inSR: "102100",
+    returnGeometry: "false",
+    returnFirstValueOnly: "true",
+    sampleDistance: "573",
+    outFields: "*",
+    renderingRule: JSON.stringify(rainfallRenderingRule())
+  });
+
+  const sampleUrl = `${rainfallServiceUrl}/getSamples?${getSamplesParams.toString()}`;
+  const sampleResponse = await fetch(sampleUrl);
+  if (sampleResponse.ok) {
+    const sampleData = await sampleResponse.json();
+    const sampleValue = extractLikelyPrecipValue(sampleData);
+    if (sampleValue !== null) return sampleValue;
+  }
+
+  return await identifyRainfallAt(latlng);
+}
+
+async function identifyRainfallAt(latlng) {
+  const point = L.CRS.EPSG3857.project(latlng);
+  const size = map.getSize();
+  const params = new URLSearchParams({
+    f: "json",
+    geometry: `${point.x},${point.y}`,
+    geometryType: "esriGeometryPoint",
+    sr: "102100",
+    returnGeometry: "false",
+    returnCatalogItems: "false",
+    pixelSize: "573,573",
+    mapExtent: mapExtentParam(),
+    imageDisplay: `${size.x},${size.y},96`,
+    renderingRule: JSON.stringify(rainfallRenderingRule())
+  });
+
+  const response = await fetch(`${rainfallServiceUrl}/identify?${params.toString()}`);
+  if (!response.ok) throw new Error("Rainfall identify failed");
+  const data = await response.json();
+  return extractLikelyPrecipValue(data);
+}
+
+function attachRainfallProbe() {
+  detachRainfallProbe(false);
+
+  rainfallProbeHandler = e => {
+    const isClick = e.type === "click";
+    clearTimeout(rainfallProbeDebounce);
+
+    const runProbe = async () => {
+      if (!rainfallLayer) return;
+      if (!isClick) showRainfallHoverMarker(e.latlng, "+");
+
+      try {
+        const value = await getRainfallSampleValue(e.latlng);
+        const text = formatInches(value);
+        if (isClick) addRainfallPermanentMarker(e.latlng, text);
+        else showRainfallHoverMarker(e.latlng, text);
+        updatePanel("Rainfall Total Point", `
+          <strong>${rainfallLabel()}</strong><br><br>
+          Estimated observed rainfall total at selected point: <strong>${text}</strong><br>
+          Source: NOAA/NWS MRMS QPE Image Service<br>
+          Note: this is radar-only estimated accumulation, not rainfall rate.
+        `);
+      } catch (error) {
+        if (isClick) addRainfallPermanentMarker(e.latlng, "No data");
+        else showRainfallHoverMarker(e.latlng, "No data");
+      }
+    };
+
+    if (isClick) runProbe();
+    else rainfallProbeDebounce = setTimeout(runProbe, 180);
+  };
+
+  map.on("mousemove", rainfallProbeHandler);
+  map.on("click", rainfallProbeHandler);
+}
+
+function detachRainfallProbe(clearPermanent = true) {
+  if (rainfallProbeHandler) {
+    map.off("mousemove", rainfallProbeHandler);
+    map.off("click", rainfallProbeHandler);
+    rainfallProbeHandler = null;
+  }
+  if (rainfallHoverMarker) {
+    map.removeLayer(rainfallHoverMarker);
+    rainfallHoverMarker = null;
+  }
+  if (rainfallMarker) {
+    map.removeLayer(rainfallMarker);
+    rainfallMarker = null;
+  }
+  if (clearPermanent && rainfallPermanentMarkers) {
+    rainfallPermanentMarkers.clearLayers();
+  }
+}
+
+function setRainfallPeriod(period) {
+  rainfallPeriod = period;
+  setExclusiveRainChecks(period);
+
+  if (!rainfallLayer) return;
+
+  map.removeLayer(rainfallLayer);
+  rainfallLayer = createRainfallLayer(period).addTo(map);
+  attachRainfallProbe();
+  updateLegend("rainfall");
+  updatePanel("Rainfall Totals / QPE", `
+    <strong>${rainfallLabel(period)} MRMS QPE</strong><br><br>
+    This layer shows radar-only estimated rainfall accumulation in inches for the selected lookback period.<br>
+    It is not rainfall rate.<br><br>
+    Hover with a mouse to preview. Tap/click to leave a small saved point marker on the map.
+  `);
+}
+
+function toggleRainfall72() {
+  const subBox = document.getElementById("rainfallSubToggles");
+
+  if (rainfallLayer) {
+    map.removeLayer(rainfallLayer);
+    rainfallLayer = null;
+    detachRainfallProbe(true);
+    if (subBox) subBox.classList.add("hidden");
+    setCheck("rain72Check", false);
+    clearLegend("rainfall");
+    updatePanel("Rainfall Totals / QPE", "Rainfall totals layer turned off.");
+    return;
+  }
+
+  rainfallPeriod = "24";
+  setExclusiveRainChecks("24");
+  rainfallLayer = createRainfallLayer(rainfallPeriod).addTo(map);
+  attachRainfallProbe();
+  if (subBox) subBox.classList.remove("hidden");
+  setCheck("rain72Check", true);
+  updateLegend("rainfall");
+  updatePanel("Rainfall Totals / QPE", `
+    <strong>${rainfallLabel()} MRMS QPE</strong><br><br>
+    This layer shows radar-only estimated rainfall accumulation in inches for the selected period.<br>
+    It is not rainfall rate.<br><br>
+    Use the 24/48/72 hour sub toggles. Hover with a mouse to preview. Tap/click to leave small saved point markers.
+  `);
+}
