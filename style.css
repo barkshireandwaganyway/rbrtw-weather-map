@@ -1491,3 +1491,358 @@ input[type="checkbox"] {
 .capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-note {
   display: none !important;
 }
+
+/* ===== RBRTW FINAL ALERT EXPORT CARD PATCH =====
+   Keeps the stacked data card dark like the app panels and gives each section
+   a full border + glow ring. Alert sections use the alert-type color passed in
+   from JS. Exported alert data cards move out of the way to the upper-left.
+*/
+.stack-data-section {
+  border: 2px solid var(--stack-color, #f5b301) !important;
+  border-left: 2px solid var(--stack-color, #f5b301) !important;
+  border-radius: 9px !important;
+  background: linear-gradient(180deg, rgba(7,17,31,0.965), rgba(10,24,42,0.955)) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 14px var(--stack-glow, rgba(245,179,1,0.34)),
+    0 4px 16px rgba(0,0,0,0.30) !important;
+}
+
+.stack-data-radar,
+.stack-data-pastRadar {
+  --stack-color: #44ff44;
+  --stack-glow: rgba(68,255,68,0.34);
+}
+
+.stack-data-airQuality {
+  --stack-color: #00e400;
+  --stack-glow: rgba(0,228,0,0.34);
+}
+
+.stack-data-alerts {
+  --stack-color: #ff4b4b;
+  --stack-glow: rgba(255,75,75,0.50);
+}
+
+.stack-data-spc {
+  --stack-color: #f5c542;
+  --stack-glow: rgba(245,197,66,0.36);
+}
+
+.stack-data-wpc {
+  --stack-color: #9254de;
+  --stack-glow: rgba(146,84,222,0.38);
+}
+
+.stack-data-qpf {
+  --stack-color: #258dff;
+  --stack-glow: rgba(37,141,255,0.36);
+}
+
+.stack-data-rainfall {
+  --stack-color: #22c55e;
+  --stack-glow: rgba(34,197,94,0.36);
+}
+
+.stack-data-surface {
+  --stack-color: #ff4fd8;
+  --stack-glow: rgba(255,79,216,0.36);
+}
+
+.stack-data-hrrr {
+  --stack-color: #15d5ff;
+  --stack-glow: rgba(21,213,255,0.36);
+}
+
+.stack-data-county {
+  --stack-color: #ffffff;
+  --stack-glow: rgba(255,255,255,0.25);
+}
+
+.stack-data-temp {
+  --stack-color: #ff8c00;
+  --stack-glow: rgba(255,140,0,0.34);
+}
+
+.stack-data-wind {
+  --stack-color: #15d5ff;
+  --stack-glow: rgba(21,213,255,0.34);
+}
+
+.stack-alert-neon {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 16px var(--stack-glow, rgba(255,75,75,0.55)),
+    0 0 3px var(--stack-color, #ff4b4b),
+    0 6px 20px rgba(0,0,0,0.34) !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .data-card.capture-priority-alert {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: auto !important;
+  top: 72px !important;
+  bottom: auto !important;
+  width: min(430px, calc(100vw - 24px)) !important;
+  max-width: min(430px, calc(100vw - 24px)) !important;
+  max-height: calc(100vh - 190px) !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.24) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .data-card.capture-priority-alert .card-header {
+  background: rgba(10, 31, 52, 0.96) !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .data-card.capture-priority-alert .card-body {
+  max-height: calc(100vh - 230px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 8px 10px 10px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .stack-data-sections,
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-section {
+  margin: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 9px 10px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-title {
+  font-size: 11.5px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-subtitle {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-body {
+  font-size: 11px !important;
+  line-height: 1.28 !important;
+}
+
+/* ===== RBRTW FINAL RECOVERY CSS: ALERT CLICK CARD + EXPORT KEY LAYOUT ===== */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: rgba(7, 17, 31, 0.98) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0,255,255,0.68) !important;
+  box-shadow: 0 0 14px rgba(0,255,255,0.42), 0 6px 18px rgba(0,0,0,0.45) !important;
+}
+
+.leaflet-popup-content {
+  color: #ffffff !important;
+}
+
+.stack-data-section {
+  border: 2px solid var(--stack-color, #f5b301) !important;
+  border-left: 2px solid var(--stack-color, #f5b301) !important;
+  border-radius: 9px !important;
+  background: linear-gradient(180deg, rgba(7,17,31,0.965), rgba(10,24,42,0.955)) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 14px var(--stack-glow, rgba(245,179,1,0.34)),
+    0 4px 16px rgba(0,0,0,0.30) !important;
+}
+
+.stack-alert-neon {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 18px var(--stack-glow, rgba(255,75,75,0.55)),
+    0 0 3px var(--stack-color, #ff4b4b),
+    0 6px 20px rgba(0,0,0,0.34) !important;
+}
+
+.capture-mode.capture-export-polish .leaflet-popup-pane {
+  display: none !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .data-card.capture-priority-alert {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: auto !important;
+  top: 72px !important;
+  bottom: auto !important;
+  width: min(410px, calc(100vw - 24px)) !important;
+  max-width: min(410px, calc(100vw - 24px)) !important;
+  max-height: calc(100vh - 185px) !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.24) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data.capture-has-alert-data .data-card.capture-priority-alert .card-body {
+  max-height: calc(100vh - 225px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 8px 10px 10px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card.capture-priority-alert .stack-data-section {
+  margin: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 9px 10px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  top: auto !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 26vh !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card.export-key-single {
+  max-height: 86px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-header {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 12px !important;
+  font-size: 10.5px !important;
+  line-height: 24px !important;
+  letter-spacing: 0.10em !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-body {
+  display: block !important;
+  max-height: calc(26vh - 26px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 6px 8px 8px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card.export-key-single .card-body {
+  max-height: 58px !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 7px !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .export-key-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  min-width: 185px !important;
+  max-width: 100% !important;
+  flex: 1 1 260px !important;
+  padding: 5px 7px !important;
+  margin: 0 !important;
+  border-left: 3px solid rgba(245,179,1,0.86) !important;
+  border-radius: 5px !important;
+  background: rgba(255,255,255,0.050) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card.export-key-single .export-key-section {
+  flex: 1 1 100% !important;
+  min-width: 0 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .export-key-title {
+  color: #f5b301 !important;
+  font-size: 9.5px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .export-key-items {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px 7px !important;
+  min-width: 0 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-row {
+  display: inline-flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 8.5px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-swatch {
+  width: 10px !important;
+  height: 8px !important;
+  flex: 0 0 10px !important;
+  margin: 0 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-line {
+  width: 13px !important;
+  flex: 0 0 13px !important;
+  border-top-width: 3px !important;
+  margin: 0 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-label {
+  max-width: 120px !important;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-value {
+  max-width: 80px !important;
+  font-size: 8px !important;
+  color: rgba(255,255,255,0.78) !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-note {
+  display: none !important;
+}
