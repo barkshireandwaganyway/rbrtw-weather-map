@@ -3521,3 +3521,444 @@ toggleRadar = function() {
   if (!radarLayer) cleanupAllPointProbesExcept("radar");
   previousToggleRadarFinal();
 };
+
+/* ===== RBRTW EMERGENCY STABILIZER: CLICK/TAP ONLY + DATA-CARD GATES + SATELLITE LABELS =====
+   - No layer uses hover/mousemove for target data anymore.
+   - One shared map click dispatcher chooses ONE enabled data-card source at a time.
+   - Per-layer data-card checkboxes control whether a layer is allowed to write to the DATA card.
+   - Radar data is OFF by default so alerts/SPC/WPC/etc. are not overwritten by weak radar point feedback.
+   - Satellite basemap now includes roads/transportation and place labels.
+*/
+
+// Replace satellite basemap with imagery + roads/cities/reference labels.
+basemaps.satellite = L.layerGroup([
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Tiles © Esri"
+  }),
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Roads © Esri"
+  }),
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Labels © Esri"
+  })
+]);
+
+const dataCardToggleIdsFinal = {
+  radar: "dataRadarCheck",
+  pastRadar: "dataPastRadarCheck",
+  alerts: "dataAlertsCheck",
+  qpf: "dataQpfCheck",
+  spc: "dataSpcCheck",
+  wpc: "dataWpcCheck",
+  hrrr: "dataHrrrCheck",
+  county: "dataCountyCheck",
+  temp: "dataTempCheck",
+  wind: "dataWindCheck",
+  rainfall: "dataRainfallCheck",
+  airQuality: "dataAirQualityCheck",
+  surface: "dataSurfaceCheck"
+};
+
+let activeClickDataLayerFinal = "";
+let pointProbeRunIdFinal = 0;
+
+function dataCardEnabledFinal(type) {
+  const id = dataCardToggleIdsFinal[type];
+  const el = id ? document.getElementById(id) : null;
+  if (!el) return true;
+  return el.checked === true;
+}
+
+function setActiveClickDataLayerFinal(type) {
+  activeClickDataLayerFinal = type || "";
+}
+
+function removeLayerSafeFinal(layer) {
+  try {
+    if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+  } catch (error) {}
+}
+
+function clearProbeMarkersFinal(keepType = "") {
+  pointProbeRunIdFinal++;
+
+  if (keepType !== "airQuality" && airQualityHoverMarker) {
+    removeLayerSafeFinal(airQualityHoverMarker);
+    airQualityHoverMarker = null;
+  }
+  if (keepType !== "radar" && radarHoverMarker) {
+    removeLayerSafeFinal(radarHoverMarker);
+    radarHoverMarker = null;
+  }
+  if (keepType !== "qpf") {
+    if (qpfHoverMarker) removeLayerSafeFinal(qpfHoverMarker);
+    qpfHoverMarker = null;
+    if (qpfPermanentMarkers) qpfPermanentMarkers.clearLayers();
+  }
+  if (keepType !== "rainfall") {
+    if (rainfallHoverMarker) removeLayerSafeFinal(rainfallHoverMarker);
+    rainfallHoverMarker = null;
+    if (rainfallMarker) removeLayerSafeFinal(rainfallMarker);
+    rainfallMarker = null;
+    if (rainfallPermanentMarkers) rainfallPermanentMarkers.clearLayers();
+  }
+}
+
+function removeKnownMousemoveProbeHandlersFinal() {
+  try { if (airQualityProbeHandler) map.off("mousemove", airQualityProbeHandler); } catch (error) {}
+  try { if (radarProbeHandler) map.off("mousemove", radarProbeHandler); } catch (error) {}
+  try { if (qpfProbeHandler) map.off("mousemove", qpfProbeHandler); } catch (error) {}
+  try { if (rainfallProbeHandler) map.off("mousemove", rainfallProbeHandler); } catch (error) {}
+}
+
+// These attach functions intentionally do not add any mousemove behavior.
+function attachAirQualityProbe() {
+  detachAirQualityProbe();
+  removeKnownMousemoveProbeHandlersFinal();
+}
+function attachRadarProbe() {
+  detachRadarProbe();
+  removeKnownMousemoveProbeHandlersFinal();
+}
+function attachQpfProbe() {
+  detachQpfProbe(false);
+  removeKnownMousemoveProbeHandlersFinal();
+}
+function attachRainfallProbe() {
+  detachRainfallProbe(false);
+  removeKnownMousemoveProbeHandlersFinal();
+}
+
+function detachAirQualityProbe() {
+  if (airQualityProbeHandler) {
+    try { map.off("click", airQualityProbeHandler); } catch (error) {}
+    try { map.off("mousemove", airQualityProbeHandler); } catch (error) {}
+    airQualityProbeHandler = null;
+  }
+  if (airQualityHoverMarker) {
+    removeLayerSafeFinal(airQualityHoverMarker);
+    airQualityHoverMarker = null;
+  }
+  pointProbeRunIdFinal++;
+}
+function detachRadarProbe() {
+  if (radarProbeHandler) {
+    try { map.off("click", radarProbeHandler); } catch (error) {}
+    try { map.off("mousemove", radarProbeHandler); } catch (error) {}
+    radarProbeHandler = null;
+  }
+  if (radarHoverMarker) {
+    removeLayerSafeFinal(radarHoverMarker);
+    radarHoverMarker = null;
+  }
+  pointProbeRunIdFinal++;
+}
+function detachQpfProbe(clearPermanent = true) {
+  if (qpfProbeHandler) {
+    try { map.off("click", qpfProbeHandler); } catch (error) {}
+    try { map.off("mousemove", qpfProbeHandler); } catch (error) {}
+    qpfProbeHandler = null;
+  }
+  if (qpfHoverMarker) {
+    removeLayerSafeFinal(qpfHoverMarker);
+    qpfHoverMarker = null;
+  }
+  if (clearPermanent && qpfPermanentMarkers) qpfPermanentMarkers.clearLayers();
+  pointProbeRunIdFinal++;
+}
+function detachRainfallProbe(clearPermanent = true) {
+  if (rainfallProbeHandler) {
+    try { map.off("click", rainfallProbeHandler); } catch (error) {}
+    try { map.off("mousemove", rainfallProbeHandler); } catch (error) {}
+    rainfallProbeHandler = null;
+  }
+  if (rainfallHoverMarker) {
+    removeLayerSafeFinal(rainfallHoverMarker);
+    rainfallHoverMarker = null;
+  }
+  if (rainfallMarker) {
+    removeLayerSafeFinal(rainfallMarker);
+    rainfallMarker = null;
+  }
+  if (clearPermanent && rainfallPermanentMarkers) rainfallPermanentMarkers.clearLayers();
+  pointProbeRunIdFinal++;
+}
+
+function targetLayerPriorityFinal() {
+  const preferred = activeClickDataLayerFinal ? [activeClickDataLayerFinal] : [];
+  const fallback = ["rainfall", "qpf", "airQuality", "radar"];
+  return [...preferred, ...fallback.filter(type => !preferred.includes(type))];
+}
+
+async function runRainfallPointFinal(latlng, token) {
+  if (!rainfallLayer || !dataCardEnabledFinal("rainfall")) return false;
+  try {
+    const result = await getRainfallSampleValue(latlng);
+    if (token !== pointProbeRunIdFinal) return true;
+    const raw = result?.raw ?? result?.inches ?? result;
+    const inches = normalizePrecipInchesRaw(raw);
+    const text = formatInches(inches);
+    addRainfallPermanentMarker(latlng, text);
+    const rawText = raw === null || raw === undefined ? "N/A" : sanitizeForPanel(raw);
+    const normNote = Number(raw) > 8 ? `<br>Display was normalized so large raw samples do not show as unrealistic inch totals.` : "";
+    updatePanel("Rainfall Total Point", `
+      <strong>${rainfallLabel()}</strong><br><br>
+      Estimated observed rainfall total at selected point: <strong>${text}</strong><br>
+      Raw raster sample: ${rawText}${normNote}<br>
+      Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+      Source: NOAA/NWS MRMS QPE Image Service<br>
+      Note: MRMS QPE is radar-only estimated accumulation, not rainfall rate.
+    `);
+    return true;
+  } catch (error) {
+    if (token === pointProbeRunIdFinal) {
+      addRainfallPermanentMarker(latlng, "No data");
+      updatePanel("Rainfall Total Point", "No MRMS QPE value returned at the selected point.");
+    }
+    return true;
+  }
+}
+
+async function runQpfPointFinal(latlng, token) {
+  if (!qpfLayer || !dataCardEnabledFinal("qpf")) return false;
+  try {
+    const result = await identifyQpfAt(latlng);
+    if (token !== pointProbeRunIdFinal) return true;
+    const text = formatInches(result.value);
+    addQpfPermanentMarker(latlng, text);
+    const matchText = result.matches?.length
+      ? `<br>Matched QPF layers at this point: ${result.matches.map(m => `${sanitizeForPanel(m.layerName)} ${formatInches(m.value)}`).join("; ")}`
+      : "";
+    updatePanel("QPF Forecast Point", `
+      <strong>${sanitizeForPanel(result.layerName)}</strong><br><br>
+      Forecast liquid precipitation at selected point: <strong>${text}</strong><br>
+      Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+      Checked WPC QPF layers: Day 1, Day 2, Day 3, 48hr, 72hr, 120hr, 168hr, and 6hr Day 1.${matchText}<br>
+      Source: WPC Quantitative Precipitation Forecast
+    `);
+    return true;
+  } catch (error) {
+    if (token === pointProbeRunIdFinal) {
+      addQpfPermanentMarker(latlng, "No data");
+      updatePanel("QPF Forecast Point", "No WPC QPF value returned at the selected point.");
+    }
+    return true;
+  }
+}
+
+async function runAirQualityPointFinal(latlng, token) {
+  if (!airQualityLayer || !dataCardEnabledFinal("airQuality")) return false;
+  try {
+    const result = await identifyAirQualityAt(latlng);
+    if (token !== pointProbeRunIdFinal) return true;
+    const valueText = result.value === null || Number.isNaN(result.value) ? "No data" : `${result.value.toFixed(1)} µg/m³`;
+    showAirQualityMarker(latlng, valueText, result.category);
+    updatePanel("Air Quality Point", `
+      <strong>${sanitizeForPanel(result.category.label)}</strong><br><br>
+      Category at selected point: <strong>${sanitizeForPanel(result.category.label)}</strong><br>
+      PM2.5 guidance value: ${sanitizeForPanel(valueText)}<br>
+      ${sanitizeForPanel(result.category.range)}<br>
+      Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+      Source: NOAA/NWS Air Quality Guidance Image Service
+    `);
+    return true;
+  } catch (error) {
+    if (token === pointProbeRunIdFinal) {
+      showAirQualityMarker(latlng, "No data", { label: "No data", color: "#ffffff" });
+      updatePanel("Air Quality Point", "No PM2.5 value returned at the selected point.");
+    }
+    return true;
+  }
+}
+
+async function identifyRadarAt(latlng) {
+  const b = map.getBounds();
+  const size = map.getSize();
+  const pt = map.latLngToContainerPoint(latlng);
+  const baseParams = {
+    service: "WMS",
+    version: "1.1.1",
+    request: "GetFeatureInfo",
+    layers: "conus_bref_qcd",
+    query_layers: "conus_bref_qcd",
+    styles: "",
+    bbox: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+    height: String(size.y),
+    width: String(size.x),
+    srs: "EPSG:4326",
+    format: "image/png",
+    x: String(Math.round(pt.x)),
+    y: String(Math.round(pt.y))
+  };
+
+  async function requestInfo(format) {
+    const params = new URLSearchParams({ ...baseParams, info_format: format });
+    const response = await fetch(`https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params.toString()}`);
+    if (!response.ok) throw new Error("Radar identify failed");
+    if (format.includes("json")) return await response.json();
+    return await response.text();
+  }
+
+  try {
+    const data = await requestInfo("application/json");
+    const value = extractLikelyPrecipValue(data);
+    return { value, raw: data };
+  } catch (error) {
+    const text = await requestInfo("text/plain");
+    const value = asNumberFromUnknown(text);
+    return { value, raw: text };
+  }
+}
+
+async function runRadarPointFinal(latlng, token) {
+  if (!radarLayer || !dataCardEnabledFinal("radar")) return false;
+  try {
+    const result = await identifyRadarAt(latlng);
+    if (token !== pointProbeRunIdFinal) return true;
+    const category = radarCategoryFromDbz(result.value);
+    const valueText = result.value === null ? "No data" : `${Number(result.value).toFixed(1)} dBZ`;
+    showRadarProbeMarker(latlng, valueText, category);
+    updatePanel("Radar Point", `
+      <strong>${sanitizeForPanel(category.label)}</strong><br><br>
+      Radar feedback at selected point: <strong>${sanitizeForPanel(valueText)}</strong><br>
+      ${sanitizeForPanel(category.range)}<br>
+      Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+      Source: NOAA/NWS MRMS base reflectivity WMS<br>
+      Note: Radar data card feedback is optional and can be disabled under Radar.
+    `);
+    return true;
+  } catch (error) {
+    if (token === pointProbeRunIdFinal) {
+      showRadarProbeMarker(latlng, "No data", { label: "No data", color: "#ffffff" });
+      updatePanel("Radar Point", "No radar value returned at the selected point.");
+    }
+    return true;
+  }
+}
+
+async function handleSharedMapDataClickFinal(e) {
+  if (!e || !e.latlng) return;
+  // Do not treat UI clicks as map data requests.
+  const target = e.originalEvent?.target;
+  if (target && target.closest && target.closest(".control-card, .home-btn, .basemap-btn, .basemap-menu, .leaflet-control")) return;
+
+  removeKnownMousemoveProbeHandlersFinal();
+  const token = ++pointProbeRunIdFinal;
+  for (const type of targetLayerPriorityFinal()) {
+    if (type === "rainfall" && await runRainfallPointFinal(e.latlng, token)) return;
+    if (type === "qpf" && await runQpfPointFinal(e.latlng, token)) return;
+    if (type === "airQuality" && await runAirQualityPointFinal(e.latlng, token)) return;
+    if (type === "radar" && await runRadarPointFinal(e.latlng, token)) return;
+  }
+}
+
+if (!window.__RBRTW_CLICK_ONLY_DATA_DISPATCHER__) {
+  window.__RBRTW_CLICK_ONLY_DATA_DISPATCHER__ = true;
+  map.on("click", handleSharedMapDataClickFinal);
+}
+
+// Rebind hazard/polygon click behavior so alerts/SPC/WPC do not compete with raster point data.
+function hazardDataTypeFromSourceFinal(source) {
+  const s = String(source || "").toLowerCase();
+  if (s.includes("nws")) return "alerts";
+  if (s.includes("spc")) return "spc";
+  if (s.includes("wpc")) return "wpc";
+  return "alerts";
+}
+
+function bindHazardFeature(layer, source, feature, extra = {}) {
+  const properties = feature?.properties || {};
+  const details = hazardPanelHtml(source, properties, extra);
+  const dataType = hazardDataTypeFromSourceFinal(source);
+
+  layer.on("click", e => {
+    if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+    clearProbeMarkersFinal("");
+    setActiveClickDataLayerFinal(dataType);
+    if (dataCardEnabledFinal(dataType)) updatePanel(details.title, details.html);
+  });
+
+  layer.bindPopup(`<strong>${details.title}</strong><br>${details.html}`);
+  layer.bindTooltip(details.title, { sticky: true, direction: "top", className: "hazard-tooltip" });
+  layer.on("mouseover", function () { if (layer.setStyle) layer.setStyle({ weight: 5, opacity: 1 }); });
+  layer.on("mouseout", function () { if (layer.setStyle) layer.setStyle({ weight: 3, opacity: 1 }); });
+}
+
+// Suppress station/feature updates when the layer's data-card checkbox is off.
+const updatePanelCoreFinal = updatePanel;
+updatePanel = function(title, html) {
+  const t = String(title || "");
+  if ((t.startsWith("Station:") || t.startsWith("Temperature:")) && !dataCardEnabledFinal("temp")) return;
+  if (t.includes("Wind Observation") && !dataCardEnabledFinal("wind")) return;
+  if (t.startsWith("SPC:") && !dataCardEnabledFinal("spc")) return;
+  if (t.startsWith("WPC:") && !dataCardEnabledFinal("wpc")) return;
+  if ((t.startsWith("NWS Alert") || t.startsWith("NWS Alert / Statement")) && !dataCardEnabledFinal("alerts")) return;
+  if (t.startsWith("Radar Point") && !dataCardEnabledFinal("radar")) return;
+  if (t.startsWith("QPF Forecast Point") && !dataCardEnabledFinal("qpf")) return;
+  if (t.startsWith("Rainfall Total Point") && !dataCardEnabledFinal("rainfall")) return;
+  if (t.startsWith("Air Quality Point") && !dataCardEnabledFinal("airQuality")) return;
+  updatePanelCoreFinal(title, html);
+};
+
+// Wrap layer toggles to set which click/tap data source should win when multiple raster layers are on.
+const toggleRadarClickOnlyFinal = toggleRadar;
+toggleRadar = function() {
+  const wasOn = !!radarLayer;
+  if (!wasOn) clearProbeMarkersFinal("radar");
+  toggleRadarClickOnlyFinal();
+  if (radarLayer) setActiveClickDataLayerFinal("radar");
+  else if (activeClickDataLayerFinal === "radar") setActiveClickDataLayerFinal("");
+  removeKnownMousemoveProbeHandlersFinal();
+};
+
+const toggleQpfClickOnlyFinal = toggleQpf;
+toggleQpf = function() {
+  const wasOn = !!qpfLayer;
+  if (!wasOn) clearProbeMarkersFinal("qpf");
+  toggleQpfClickOnlyFinal();
+  if (qpfLayer) setActiveClickDataLayerFinal("qpf");
+  else if (activeClickDataLayerFinal === "qpf") setActiveClickDataLayerFinal("");
+  removeKnownMousemoveProbeHandlersFinal();
+};
+
+const toggleRainfallClickOnlyFinal = toggleRainfall72;
+toggleRainfall72 = function() {
+  const wasOn = !!rainfallLayer;
+  if (!wasOn) clearProbeMarkersFinal("rainfall");
+  toggleRainfallClickOnlyFinal();
+  if (rainfallLayer) setActiveClickDataLayerFinal("rainfall");
+  else if (activeClickDataLayerFinal === "rainfall") setActiveClickDataLayerFinal("");
+  removeKnownMousemoveProbeHandlersFinal();
+};
+
+const toggleAirQualityClickOnlyFinal = toggleAirQuality;
+toggleAirQuality = function() {
+  const wasOn = !!airQualityLayer;
+  if (!wasOn) clearProbeMarkersFinal("airQuality");
+  toggleAirQualityClickOnlyFinal();
+  if (airQualityLayer) setActiveClickDataLayerFinal("airQuality");
+  else if (activeClickDataLayerFinal === "airQuality") setActiveClickDataLayerFinal("");
+  removeKnownMousemoveProbeHandlersFinal();
+};
+
+// Safer QPE normalizer: large raw samples from 48/72 hr are treated as mm-like values.
+function normalizePrecipInchesRaw(rawValue) {
+  const raw = asNumberFromUnknown(rawValue);
+  if (raw === null || !Number.isFinite(raw) || raw < 0) return null;
+  if ((rainfallPeriod === "48" || rainfallPeriod === "72") && raw > 8) return raw / 25.4;
+  if (rainfallPeriod === "24" && raw > 12) return raw / 25.4;
+  if (raw > 30) return null;
+  return raw;
+}
+
+// Update wording on radar panel when toggled on by replacing the inherited hover wording.
+const updateLegendAfterClickOnlyFinal = renderLegends;
+renderLegends = function() {
+  updateLegendAfterClickOnlyFinal();
+};
+
+removeKnownMousemoveProbeHandlersFinal();
+renderLegends();
