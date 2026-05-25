@@ -69,13 +69,28 @@ const rbrtwMarker = L.marker(RBRTW_AREA)
   .bindPopup("<strong>RBRTW AREA</strong>")
   .openPopup();
 
-L.circle(RBRTW_AREA, {
-  radius: 9000,
-  color: "#ff3b3b",
-  weight: 1,
-  fillColor: "#ff3b3b",
-  fillOpacity: 0.12
-}).addTo(map);
+let rbrtwCircle = null;
+
+function showRbrtwCircle() {
+  if (rbrtwCircle) return;
+
+  rbrtwCircle = L.circle(RBRTW_AREA, {
+    radius: 9000,
+    color: "#ff3b3b",
+    weight: 1,
+    fillColor: "#ff3b3b",
+    fillOpacity: 0.12
+  }).addTo(map);
+}
+
+function hideRbrtwCircle() {
+  if (!rbrtwCircle) return;
+  map.removeLayer(rbrtwCircle);
+  rbrtwCircle = null;
+}
+
+showRbrtwCircle();
+rbrtwMarker.on("popupclose", hideRbrtwCircle);
 
 function toggleCard(id) {
   document.getElementById(id).classList.toggle("collapsed");
@@ -83,6 +98,7 @@ function toggleCard(id) {
 
 function focusArea() {
   map.setView(RBRTW_AREA, 11);
+  showRbrtwCircle();
   rbrtwMarker.openPopup();
 }
 
@@ -753,7 +769,7 @@ async function toggleSpc() {
         const p = feature.properties;
         const color = spcColor(p.label, p.dn);
         return {
-          color: "#00ffff",
+          color: color,
           fillColor: color,
           weight: 3,
           opacity: 1,
@@ -824,9 +840,9 @@ function toggleWpc() {
       style: function (feature) {
         const p = feature.properties || {};
         return {
-          color: "#00ffff",
-          weight: 3,
-          opacity: 1,
+          color: wpcColor(p.outlook, p.dn),
+          weight: 2.5,
+          opacity: 0.95,
           fillColor: wpcColor(p.outlook, p.dn),
           fillOpacity: opacity
         };
@@ -1447,3 +1463,554 @@ async function loadCurrentConditions() {
 }
 
 loadNwsPointData();
+
+
+/* ===== RBRTW FINAL OVERRIDES: TEMP, WIND, SURFACE DAYS, SAVE PHOTO, NON-NEON BORDERS ===== */
+let windLayer = null;
+let surfaceDay = 1;
+
+function alertColorFromEvent(eventName = "") {
+  const event = String(eventName).toLowerCase();
+  if (event.includes("tornado")) return "#c026d3";
+  if (event.includes("severe thunderstorm")) return "#facc15";
+  if (event.includes("flash flood")) return "#16a34a";
+  if (event.includes("flood")) return "#15803d";
+  if (event.includes("winter")) return "#60a5fa";
+  if (event.includes("wind")) return "#a16207";
+  if (event.includes("heat")) return "#ea580c";
+  if (event.includes("fire")) return "#dc2626";
+  if (event.includes("marine")) return "#0ea5e9";
+  return "#dc2626";
+}
+
+function legendHtml(type) {
+  const legends = {
+    radar: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>Light precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Source: NOAA/NWS MRMS</div>
+    `,
+    pastRadar: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>Light precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>Moderate precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff4444"></span>Heavy precip</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff44ff"></span>Very heavy / hail core</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Source: RainViewer past radar</div>
+    `,
+    hrrr: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#44ff44"></span>5–20 dBZ Light</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff44"></span>20–35 dBZ Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff5500"></span>35–50 dBZ Heavy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0000"></span>50–65 dBZ Strong</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff00ff"></span>65+ dBZ Extreme / Hail Core</div>
+    `,
+    county: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#d1d5db"></span>County lines low opacity</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#374151"></span>County lines higher opacity</div>
+    `,
+    qpf: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#b7e4c7"></span>Light forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#52b788"></span>Moderate forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#2d6a4f"></span>Heavy forecast rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7209b7"></span>Extreme forecast rainfall</div>
+    `,
+    spc: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#c1e9c1"></span>General Thunder</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#66a366"></span>Marginal</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffe066"></span>Slight</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffa366"></span>Enhanced</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Outlines match risk color</div>
+    `,
+    wpc: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#66a366"></span>Marginal Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffe066"></span>Slight Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#e06666"></span>Moderate Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ee99ee"></span>High Excessive Rainfall</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Outlines match risk color</div>
+    `,
+    alerts: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#c026d3"></span>Tornado</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#facc15"></span>Severe Thunderstorm</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#16a34a"></span>Flash Flood</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ea580c"></span>Heat</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#60a5fa"></span>Winter / Cold</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#dc2626"></span>Other active alert</div>
+    `,
+    temp: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#4f8cff"></span>Cold</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#66d9ff"></span>Cool</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7bd88f"></span>Mild</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#f5c542"></span>Warm</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffb000"></span>Hot</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff8c00"></span>Heat Index Caution</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0000"></span>Heat Index Danger</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#6d5dfc"></span>Wind Chill</div>
+    `,
+    wind: `
+      <div class="legend-row"><span class="legend-line blue-line"></span>Wind barb / direction marker</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Arrow points where wind is moving</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#8fd3ff"></span>Opacity slider controls transparency</div>
+    `,
+    rainfall: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#e8f7ff"></span>Trace–0.10 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#79c8ff"></span>0.10–0.50 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#0b72ff"></span>0.50–1.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#22c55e"></span>1.00–2.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#facc15"></span>2.00–4.00 in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ef4444"></span>4.00+ in</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Hover/tap map for estimated value</div>
+    `,
+    airQuality: `
+      <div class="legend-row"><span class="legend-swatch" style="background:#00e400"></span>Good</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffff00"></span>Moderate</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff7e00"></span>Unhealthy for Sensitive Groups</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ff0000"></span>Unhealthy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#8f3f97"></span>Very Unhealthy</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7e0023"></span>Hazardous</div>
+    `,
+    surface: `
+      <div class="legend-row"><span class="legend-line blue-line"></span>Cold front</div>
+      <div class="legend-row"><span class="legend-line red-line"></span>Warm front</div>
+      <div class="legend-row"><span class="legend-line purple-line"></span>Occluded front</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Highs / lows</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#7dd3fc"></span>Rain / thunderstorms</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ef4444"></span>Heavy rain / severe / fire areas</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#dbeafe"></span>Snow / mixed / freezing precip</div>
+    `
+  };
+  return legends[type] || "";
+}
+
+function renderLegends() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  if (!activeLegendTypes.size) {
+    box.innerHTML = "Turn on a layer to view its legend.";
+    return;
+  }
+
+  const titleMap = {
+    radar: "Radar",
+    pastRadar: "Past Radar",
+    hrrr: "HRRR Future Radar",
+    county: "County Lines",
+    qpf: "QPF Forecast",
+    spc: "SPC Outlook",
+    wpc: "WPC Outlook",
+    alerts: "NWS Alerts",
+    temp: "Temperatures",
+    wind: "Wind Barbs",
+    rainfall: "Rainfall Totals / QPE",
+    airQuality: "Air Quality",
+    surface: "Surface Map"
+  };
+
+  box.innerHTML = [...activeLegendTypes].map(type => `
+    <div class="legend-section">
+      <div class="legend-section-title">${titleMap[type] || type}</div>
+      ${legendHtml(type)}
+    </div>
+  `).join("");
+}
+
+function toggleAlerts() {
+  if (alertLayer) {
+    map.removeLayer(alertLayer);
+    alertLayer = null;
+    setCheck("alertsCheck", false);
+    clearLegend("alerts");
+    updatePanel("NWS Alerts", "Alert layer turned off.");
+    return;
+  }
+
+  fetch(`https://api.weather.gov/alerts/active?point=${RBRTW_AREA[0]},${RBRTW_AREA[1]}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Alerts request failed");
+      return response.json();
+    })
+    .then(data => {
+      alertLayer = L.geoJSON(data, {
+        style: function (feature) {
+          const color = alertColorFromEvent(feature.properties?.event || "");
+          return {
+            color,
+            weight: 3,
+            opacity: 0.95,
+            fillColor: color,
+            fillOpacity: 0.2
+          };
+        },
+        onEachFeature: function (feature, layer) {
+          bindHazardFeature(layer, "NWS Alert", feature);
+        }
+      }).addTo(map);
+
+      setCheck("alertsCheck", true);
+      updateLegend("alerts");
+
+      const alertList = data.features.map(feature => {
+        const p = feature.properties;
+        return `<div style="margin-bottom:10px;"><strong>${sanitizeForPanel(p.event)}</strong><br><small>${sanitizeForPanel(p.areaDesc || "")}</small></div>`;
+      }).join("");
+
+      updatePanel("Active NWS Alerts", `${alertList || "No active alerts for RBRTW AREA."}<br><br>Updated: ${new Date().toLocaleTimeString()}`);
+    })
+    .catch(error => {
+      setCheck("alertsCheck", false);
+      updatePanel("NWS Alerts", "Could not load alerts.");
+      console.error(error);
+    });
+}
+
+function heatIndexF(tempF, humidity) {
+  const month = new Date().getMonth() + 1;
+  const heatSeason = month >= 4 && month <= 10;
+  if (!heatSeason) return null;
+  if (tempF === null || humidity === null || tempF < 80 || humidity < 40) return null;
+  const T = tempF;
+  const R = humidity;
+  return -42.379 + 2.04901523 * T + 10.14333127 * R - 0.22475541 * T * R - 0.00683783 * T * T - 0.05481717 * R * R + 0.00122874 * T * T * R + 0.00085282 * T * R * R - 0.00000199 * T * T * R * R;
+}
+
+function windChillF(tempF, windMph) {
+  if (tempF === null || windMph === null || tempF > 50 || windMph <= 3) return null;
+  return 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windMph, 0.16) + 0.4275 * tempF * Math.pow(windMph, 0.16);
+}
+
+function tempMarkerClass(tempF, feelsLikeType = "") {
+  if (feelsLikeType === "heat") {
+    if (tempF >= 125) return "temp-extreme-heat";
+    if (tempF >= 103) return "temp-danger-heat";
+    if (tempF >= 90) return "temp-caution-heat";
+    return "temp-hot";
+  }
+  if (feelsLikeType === "windchill") {
+    if (tempF <= 0) return "temp-extreme-cold";
+    return "temp-windchill";
+  }
+  if (tempF >= 100) return "temp-hot";
+  if (tempF >= 90) return "temp-warm";
+  if (tempF >= 70) return "temp-mild";
+  if (tempF >= 50) return "temp-cool";
+  return "temp-cold";
+}
+
+async function toggleTemperatures() {
+  if (tempLayer) {
+    map.removeLayer(tempLayer);
+    tempLayer = null;
+    setCheck("tempCheck", false);
+    clearLegend("temp");
+    updatePanel("Temperatures", "Temperature layer turned off.");
+    return;
+  }
+
+  try {
+    tempLayer = L.layerGroup().addTo(map);
+    const point = await getNwsPointData();
+    const stationsResponse = await fetch(point.properties.observationStations);
+    if (!stationsResponse.ok) throw new Error("Observation stations request failed");
+    const stationsData = await stationsResponse.json();
+    const stations = (stationsData.features || []).slice(0, 18);
+
+    const obsResults = await Promise.allSettled(stations.map(async station => {
+      const obsResponse = await fetch(`${station.id}/observations/latest`);
+      if (!obsResponse.ok) throw new Error("Latest observation failed");
+      const obs = await obsResponse.json();
+      return { station, obs };
+    }));
+
+    let plotted = 0;
+    obsResults.forEach(result => {
+      if (result.status !== "fulfilled") return;
+      const { station, obs } = result.value;
+      const coords = station.geometry?.coordinates;
+      const p = obs.properties || {};
+      if (!coords || !p.temperature) return;
+      const tempF = cToF(p.temperature.value);
+      if (tempF === null || Number.isNaN(tempF)) return;
+      const humidity = p.relativeHumidity?.value ?? null;
+      const windMph = mpsToMph(p.windSpeed?.value ?? null);
+      const officialHeatIndex = p.heatIndex?.value !== null && p.heatIndex?.value !== undefined ? cToF(p.heatIndex.value) : null;
+      const officialWindChill = p.windChill?.value !== null && p.windChill?.value !== undefined ? cToF(p.windChill.value) : null;
+      const hi = officialHeatIndex !== null ? officialHeatIndex : heatIndexF(tempF, humidity);
+      const wc = officialWindChill !== null ? officialWindChill : windChillF(tempF, windMph);
+      const showHeatIndex = hi !== null && hi >= 80;
+      const showWindChill = !showHeatIndex && wc !== null && wc <= 50;
+      const feelsLikeValue = showHeatIndex ? hi : showWindChill ? wc : null;
+      const feelsLikeType = showHeatIndex ? "heat" : showWindChill ? "windchill" : "";
+      const displayValue = feelsLikeValue !== null ? feelsLikeValue : tempF;
+      const stationId = station.properties?.stationIdentifier || station.id.split("/").pop();
+      const stationName = station.properties?.name || stationId;
+      const lines = [
+        `<div class="big-temp">${Math.round(tempF)}°F</div>`,
+        `${sanitizeForPanel(p.textDescription || "Latest observation")}`,
+        `Station: ${sanitizeForPanel(stationName)}`,
+        humidity !== null ? `Humidity: ${Math.round(humidity)}%` : "",
+        windMph !== null ? `Wind: ${Math.round(windMph)} mph` : "",
+        showHeatIndex ? `<strong>Heat Index: ${Math.round(hi)}°F</strong>` : "",
+        showWindChill ? `<strong>Wind Chill: ${Math.round(wc)}°F</strong>` : "",
+        p.timestamp ? `Updated: ${new Date(p.timestamp).toLocaleTimeString()}` : ""
+      ].filter(Boolean).join("<br>");
+      const icon = L.divIcon({
+        className: "temp-div-icon",
+        html: `<div class="temp-badge ${tempMarkerClass(displayValue, feelsLikeType)}">${Math.round(tempF)}°</div>`,
+        iconSize: [44, 28],
+        iconAnchor: [22, 14]
+      });
+      L.marker([coords[1], coords[0]], { icon })
+        .bindTooltip(`${stationId}: ${Math.round(tempF)}°F`, { sticky: true })
+        .on("click", () => updatePanel(`Station: ${sanitizeForPanel(stationId)}`, lines))
+        .addTo(tempLayer);
+      plotted++;
+    });
+    setCheck("tempCheck", true);
+    updateLegend("temp");
+    updatePanel("Temperatures", `Current temperature markers loaded.<br>Stations plotted: ${plotted}<br>Click a station for temp, humidity, heat index, or wind chill when applicable.`);
+  } catch (error) {
+    if (tempLayer) map.removeLayer(tempLayer);
+    tempLayer = null;
+    setCheck("tempCheck", false);
+    updatePanel("Temperatures", "Could not load temperature stations.");
+    console.error(error);
+  }
+}
+
+async function toggleWindLayer() {
+  if (windLayer) {
+    map.removeLayer(windLayer);
+    windLayer = null;
+    setCheck("windCheck", false);
+    clearLegend("wind");
+    updatePanel("Wind Barbs", "Wind barb layer turned off.");
+    return;
+  }
+  try {
+    windLayer = L.layerGroup().addTo(map);
+    const point = await getNwsPointData();
+    const stationsResponse = await fetch(point.properties.observationStations);
+    if (!stationsResponse.ok) throw new Error("Observation stations request failed");
+    const stationsData = await stationsResponse.json();
+    const stations = (stationsData.features || []).slice(0, 18);
+    const obsResults = await Promise.allSettled(stations.map(async station => {
+      const obsResponse = await fetch(`${station.id}/observations/latest`);
+      if (!obsResponse.ok) throw new Error("Latest observation failed");
+      const obs = await obsResponse.json();
+      return { station, obs };
+    }));
+    let plotted = 0;
+    const opacity = Number(document.getElementById("windOpacity")?.value || 0.55);
+    obsResults.forEach(result => {
+      if (result.status !== "fulfilled") return;
+      const { station, obs } = result.value;
+      const coords = station.geometry?.coordinates;
+      const p = obs.properties || {};
+      if (!coords) return;
+      const windMph = mpsToMph(p.windSpeed?.value ?? null);
+      const windDirection = p.windDirection?.value ?? null;
+      if (windMph === null || windDirection === null || Number.isNaN(windMph) || Number.isNaN(windDirection)) return;
+      const stationId = station.properties?.stationIdentifier || station.id.split("/").pop();
+      const movingToward = Number(windDirection) + 180;
+      const icon = L.divIcon({
+        className: "wind-div-icon",
+        html: `<div class="wind-barb" style="transform: rotate(${movingToward}deg); --wind-opacity:${opacity};"></div><div class="wind-label">${Math.round(windMph)}</div>`,
+        iconSize: [42, 48],
+        iconAnchor: [21, 24]
+      });
+      const panelHtml = [
+        `Station: ${sanitizeForPanel(stationId)}`,
+        `Wind Speed: ${Math.round(windMph)} mph`,
+        `Wind Direction: ${Math.round(windDirection)}° from`,
+        `Moving Toward: ${Math.round(movingToward % 360)}°`,
+        p.timestamp ? `Updated: ${new Date(p.timestamp).toLocaleTimeString()}` : ""
+      ].filter(Boolean).join("<br>");
+      L.marker([coords[1], coords[0]], { icon })
+        .bindTooltip(`${stationId}: ${Math.round(windMph)} mph`, { sticky: true })
+        .on("click", () => updatePanel("Wind Observation", panelHtml))
+        .addTo(windLayer);
+      plotted++;
+    });
+    setCheck("windCheck", true);
+    updateLegend("wind");
+    updatePanel("Wind Barbs", `Wind barb layer loaded.<br>Stations plotted: ${plotted}<br>Arrow points where the wind is moving.`);
+  } catch (error) {
+    if (windLayer) map.removeLayer(windLayer);
+    windLayer = null;
+    setCheck("windCheck", false);
+    updatePanel("Wind Barbs", "Could not load wind barbs.");
+    console.error(error);
+  }
+}
+
+const surfaceMapServiceUrl = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/natl_fcst_wx_chart/MapServer";
+const surfaceLayerSets = {
+  1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  2: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+  3: [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
+};
+
+function setSurfaceChecks(day) {
+  setCheck("surfaceDay1Check", day === 1);
+  setCheck("surfaceDay2Check", day === 2);
+  setCheck("surfaceDay3Check", day === 3);
+}
+
+function createSurfaceLayer(day = surfaceDay) {
+  return L.esri.dynamicMapLayer({
+    url: surfaceMapServiceUrl,
+    layers: surfaceLayerSets[day] || surfaceLayerSets[1],
+    opacity: Number(document.getElementById("surfaceOpacity")?.value || 0.78)
+  });
+}
+
+function setSurfaceDay(day) {
+  surfaceDay = Number(day);
+  setSurfaceChecks(surfaceDay);
+  if (!surfaceLayer) return;
+  map.removeLayer(surfaceLayer);
+  surfaceLayer = createSurfaceLayer(surfaceDay).addTo(map);
+  updateLegend("surface");
+  updatePanel("Surface Map", `WPC Day ${surfaceDay} surface map information is on.<br>Showing highs/lows, fronts, precipitation, and hazard areas available for Day ${surfaceDay}.`);
+}
+
+function toggleSurfaceMap() {
+  const subBox = document.getElementById("surfaceSubToggles");
+  if (surfaceLayer) {
+    map.removeLayer(surfaceLayer);
+    surfaceLayer = null;
+    if (subBox) subBox.classList.add("hidden");
+    setCheck("surfaceCheck", false);
+    clearLegend("surface");
+    updatePanel("Surface Map", "Surface map layer turned off.");
+    return;
+  }
+  surfaceDay = 1;
+  setSurfaceChecks(surfaceDay);
+  surfaceLayer = createSurfaceLayer(surfaceDay).addTo(map);
+  if (subBox) subBox.classList.remove("hidden");
+  setCheck("surfaceCheck", true);
+  updateLegend("surface");
+  updatePanel("Surface Map", "WPC Day 1 surface map information is on.<br>Use Day 1, Day 2, or Day 3 to switch the surface forecast layer.");
+}
+
+async function saveMapPhoto() {
+  const btn = document.getElementById("savePhotoBtn");
+  const legendBody = document.getElementById("legendBody");
+  try {
+    if (btn) btn.textContent = "Saving...";
+    if (legendBody) legendBody.classList.remove("collapsed");
+    document.body.classList.add("capture-mode");
+    await new Promise(resolve => setTimeout(resolve, 450));
+    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
+    const canvas = await html2canvas(document.body, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+      logging: false
+    });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.download = `RBRTW-weather-map-${timestamp}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    updatePanel("Save as Photo", "Map photo saved with active layers and active legends.");
+  } catch (error) {
+    console.error(error);
+    updatePanel("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
+  } finally {
+    document.body.classList.remove("capture-mode");
+    if (btn) btn.textContent = "Save as Photo";
+  }
+}
+
+function setLayerOpacity(type) {
+  if (type === "radar") {
+    const opacity = Number(document.getElementById("radarOpacity").value);
+    if (radarLayer) radarLayer.setOpacity(opacity);
+    if (pastRadarLayer) pastRadarLayer.setOpacity(opacity);
+  }
+  if (type === "qpf" && qpfLayer) qpfLayer.setOpacity(Number(document.getElementById("qpfOpacity").value));
+  if (type === "spc" && spcLayer) {
+    spcLayer.setStyle({
+      fillOpacity: Number(document.getElementById("spcOpacity").value),
+      opacity: 0.95
+    });
+  }
+  if (type === "wpc" && wpcLayer) {
+    const opacity = Number(document.getElementById("wpcOpacity").value);
+    setGroupStyle(wpcLayer, { opacity: 0.95, fillOpacity: opacity });
+  }
+  if (type === "hrrr" && hrrrLayer) hrrrLayer.setOpacity(Number(document.getElementById("hrrrOpacity").value));
+  if (type === "county" && countyLayer) {
+    countyLayer.setStyle({
+      color: "#374151",
+      weight: 1.25,
+      opacity: Number(document.getElementById("countyOpacity").value),
+      fillOpacity: 0
+    });
+  }
+  if (type === "wind" && windLayer) {
+    const opacity = Number(document.getElementById("windOpacity")?.value || 0.55);
+    windLayer.eachLayer(layer => {
+      const el = layer.getElement?.();
+      if (el) el.style.setProperty("--wind-opacity", opacity);
+    });
+  }
+  if (type === "rainfall" && rainfallLayer) rainfallLayer.setOpacity(Number(document.getElementById("rainfallOpacity")?.value || 0.68));
+  if (type === "airQuality" && airQualityLayer) airQualityLayer.setOpacity(Number(document.getElementById("airQualityOpacity")?.value || 0.62));
+  if (type === "surface" && surfaceLayer) surfaceLayer.setOpacity(Number(document.getElementById("surfaceOpacity")?.value || 0.78));
+}
+
+function refreshActiveLayers() {
+  const radarWasOn = !!radarLayer;
+  const pastRadarWasOn = !!pastRadarLayer || radarFrames.length > 0;
+  const alertsWasOn = !!alertLayer;
+  const qpfWasOn = !!qpfLayer;
+  const spcWasOn = !!spcLayer;
+  const wpcWasOn = !!wpcLayer;
+  const countyWasOn = !!countyLayer;
+  const hrrrWasOn = !!hrrrLayer;
+  const tempWasOn = !!tempLayer;
+  const windWasOn = !!windLayer;
+  const rainfallWasOn = !!rainfallLayer;
+  const airQualityWasOn = !!airQualityLayer;
+  const surfaceWasOn = !!surfaceLayer;
+
+  if (radarWasOn) toggleRadar();
+  if (pastRadarWasOn) turnOffPastRadar(false);
+  if (alertsWasOn) toggleAlerts();
+  if (qpfWasOn) toggleQpf();
+  if (spcWasOn) toggleSpc();
+  if (wpcWasOn) toggleWpc();
+  if (countyWasOn) toggleCountyLines();
+  if (hrrrWasOn) toggleHrrr();
+  if (tempWasOn) toggleTemperatures();
+  if (windWasOn) toggleWindLayer();
+  if (rainfallWasOn) toggleRainfall72();
+  if (airQualityWasOn) toggleAirQuality();
+  if (surfaceWasOn) toggleSurfaceMap();
+
+  setTimeout(() => {
+    if (radarWasOn) toggleRadar();
+    if (pastRadarWasOn) togglePastRadar();
+    if (alertsWasOn) toggleAlerts();
+    if (qpfWasOn) toggleQpf();
+    if (spcWasOn) toggleSpc();
+    if (wpcWasOn) toggleWpc();
+    if (countyWasOn) toggleCountyLines();
+    if (hrrrWasOn) toggleHrrr();
+    if (tempWasOn) toggleTemperatures();
+    if (windWasOn) toggleWindLayer();
+    if (rainfallWasOn) toggleRainfall72();
+    if (airQualityWasOn) toggleAirQuality();
+    if (surfaceWasOn) toggleSurfaceMap();
+  }, 500);
+
+  updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
+}
