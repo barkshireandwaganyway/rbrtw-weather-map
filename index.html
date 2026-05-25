@@ -70,16 +70,17 @@
         <label><input id="surfaceDay3Check" type="checkbox" onchange="setSurfaceDay(3)" />Day 3</label>
       </div>
 
+      <div class="divider"></div>
+      <button onclick="refreshActiveLayers()">Refresh Active Layers</button>
+      <div class="scroll-hint">Scroll</div>
 
       <div class="divider"></div>
       <div class="photo-options-box">
-        <div class="photo-options-title">Photo Options</div>
+        <div class="photo-options-title">PHOTO OPTIONS</div>
         <label><input id="photoIncludeKeyCheck" type="checkbox" checked />Include map key in PNG</label>
         <label><input id="photoIncludeDataCheck" type="checkbox" />Include data card in PNG</label>
+        <small>PNG keys are limited to Radar, QPF, Rainfall QPE, Temperature, Air Quality, SPC, WPC, and Surface Map.</small>
       </div>
-
-      <button onclick="refreshActiveLayers()">Refresh Active Layers</button>
-      <div class="scroll-hint">Scroll</div>
     </div>
   </section>
 
