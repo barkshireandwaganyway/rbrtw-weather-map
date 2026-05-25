@@ -4572,3 +4572,377 @@ toggleWpc = async function() {
 // Final hard check: no data-card target probe binds mousemove after this point.
 removeKnownMousemoveProbeHandlersFinal();
 renderLegends();
+
+
+/* ===== RBRTW VERIFIED FIX: STACKED DATA CARD + RADAR CLICK VALUE =====
+   This block is intentionally last.
+   It changes the Data card behavior from "last layer wins" to stacked sections.
+   When multiple active layers have their data-card checkbox checked, one map click/tap
+   runs each checked data source and appends each result inside the single DATA card.
+   It also replaces radar GetFeatureInfo with EPSG:3857-first requests and radar-specific
+   value extraction so live MRMS radar click/tap has a real chance to return dBZ.
+*/
+
+const RBRTW_STACK_DATA_LABELS_FINAL = {
+  radar: "Radar",
+  pastRadar: "Past Radar",
+  alerts: "NWS Alerts / Statements",
+  qpf: "QPF Forecast",
+  spc: "SPC Outlook",
+  wpc: "WPC Outlook",
+  hrrr: "HRRR Future Radar",
+  county: "County Boundary",
+  temp: "Temperature Station",
+  wind: "Wind Station",
+  rainfall: "Rainfall Totals / QPE",
+  airQuality: "Air Quality",
+  surface: "Surface Map"
+};
+
+const RBRTW_STACK_DATA_ORDER_FINAL = [
+  "alerts",
+  "spc",
+  "wpc",
+  "airQuality",
+  "radar",
+  "qpf",
+  "rainfall",
+  "surface",
+  "hrrr",
+  "pastRadar",
+  "county",
+  "temp",
+  "wind"
+];
+
+let rbrtwDataStackFinal = {};
+let rbrtwDataStackClickIdFinal = 0;
+
+function classifyDataPanelTitleFinal(title) {
+  const t = String(title || "").toLowerCase();
+  if (t.startsWith("radar point")) return "radar";
+  if (t.startsWith("past radar point")) return "pastRadar";
+  if (t.startsWith("qpf forecast point")) return "qpf";
+  if (t.startsWith("rainfall total point")) return "rainfall";
+  if (t.startsWith("air quality point")) return "airQuality";
+  if (t.startsWith("surface map point")) return "surface";
+  if (t.startsWith("hrrr future radar point")) return "hrrr";
+  if (t.startsWith("county boundary")) return "county";
+  if (t.startsWith("wind observation")) return "wind";
+  if (t.startsWith("station:") || t.startsWith("temperature:")) return "temp";
+  if (t.startsWith("spc:")) return "spc";
+  if (t.startsWith("wpc:")) return "wpc";
+  if (t.startsWith("nws alert") || t.includes("nws alert / statement")) return "alerts";
+  return "";
+}
+
+function renderStackedDataCardFinal() {
+  const status = document.getElementById("status");
+  if (!status) return;
+
+  const activeTypes = RBRTW_STACK_DATA_ORDER_FINAL.filter(type => rbrtwDataStackFinal[type]);
+  if (!activeTypes.length) {
+    status.innerHTML = "Click/tap the map to load checked data-card items.";
+    return;
+  }
+
+  const sections = activeTypes.map(type => {
+    const item = rbrtwDataStackFinal[type];
+    const label = RBRTW_STACK_DATA_LABELS_FINAL[type] || item.title || type;
+    return `
+      <div class="stack-data-section stack-data-${sanitizeForPanel(type)}">
+        <div class="stack-data-title">${sanitizeForPanel(label)}</div>
+        <div class="stack-data-subtitle">${sanitizeForPanel(item.title || label)}</div>
+        <div class="stack-data-body">${item.html || ""}</div>
+      </div>
+    `;
+  }).join("");
+
+  status.innerHTML = `
+    <div class="stack-data-card-title">Selected Point Data</div>
+    <div class="stack-data-card-note">${activeTypes.length} checked data item${activeTypes.length === 1 ? "" : "s"} from the latest click/tap.</div>
+    ${sections}
+  `;
+}
+
+function setStackedDataSectionFinal(type, title, html) {
+  if (!type) return;
+  if (!dataCardEnabledFinal(type)) return;
+  rbrtwDataStackFinal[type] = { title: String(title || RBRTW_STACK_DATA_LABELS_FINAL[type] || type), html: String(html || "") };
+  renderStackedDataCardFinal();
+}
+
+function resetStackedDataCardFinal() {
+  rbrtwDataStackFinal = {};
+  rbrtwDataStackClickIdFinal++;
+}
+
+const rbrtwBaseUpdatePanelFinal = (typeof updatePanelCoreFinal === "function") ? updatePanelCoreFinal : updatePanel;
+updatePanel = function(title, html) {
+  const type = classifyDataPanelTitleFinal(title);
+  if (type) {
+    setStackedDataSectionFinal(type, title, html);
+    return;
+  }
+
+  // Non-click informational panels should replace the card and clear old click/tap stack.
+  rbrtwDataStackFinal = {};
+  rbrtwBaseUpdatePanelFinal(title, html);
+};
+
+function extractRadarDbzValueFinal(raw) {
+  const preferredKeys = [
+    "GRAY_INDEX", "gray_index", "GrayIndex", "GRAYINDEX",
+    "value", "VALUE", "Value", "pixelValue", "PixelValue", "PIXEL_VALUE",
+    "conus_bref_qcd", "bref", "BREF", "dBZ", "dbz", "DBZ"
+  ];
+
+  function fromObject(obj, depth = 0) {
+    if (obj === null || obj === undefined || depth > 6) return null;
+    if (typeof obj === "number") return Number.isFinite(obj) ? obj : null;
+    if (typeof obj === "string") return fromString(obj);
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        const n = fromObject(item, depth + 1);
+        if (n !== null) return n;
+      }
+      return null;
+    }
+
+    if (typeof obj === "object") {
+      const props = obj.properties || obj.attributes || null;
+      if (props && props !== obj) {
+        for (const key of preferredKeys) {
+          if (props[key] !== undefined && props[key] !== null) {
+            const n = asNumberFromUnknown(props[key]);
+            if (n !== null && n > -40 && n < 100) return n;
+          }
+        }
+      }
+
+      for (const key of preferredKeys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+          const n = asNumberFromUnknown(obj[key]);
+          if (n !== null && n > -40 && n < 100) return n;
+        }
+      }
+
+      if (Array.isArray(obj.features)) {
+        for (const feature of obj.features) {
+          const n = fromObject(feature.properties || feature.attributes || feature, depth + 1);
+          if (n !== null) return n;
+        }
+      }
+
+      // Last resort: scan shallow object values but avoid bounding boxes/geometry arrays.
+      for (const [key, value] of Object.entries(obj)) {
+        if (["bbox", "geometry", "coordinates", "crs"].includes(String(key).toLowerCase())) continue;
+        const n = fromObject(value, depth + 1);
+        if (n !== null && n > -40 && n < 100) return n;
+      }
+    }
+    return null;
+  }
+
+  function fromString(text) {
+    const s = String(text || "");
+    const keyed = s.match(/(?:GRAY_INDEX|gray_index|value|pixelValue|PixelValue|dBZ|dbz)\s*[=:]\s*(-?\d+(?:\.\d+)?)/i);
+    if (keyed) {
+      const n = Number(keyed[1]);
+      if (Number.isFinite(n) && n > -40 && n < 100) return n;
+    }
+    const nums = s.match(/-?\d+(?:\.\d+)?/g);
+    if (!nums) return null;
+    const usable = nums.map(Number).filter(n => Number.isFinite(n) && n > -40 && n < 100);
+    return usable.length ? usable[0] : null;
+  }
+
+  return fromObject(raw);
+}
+
+async function identifyRadarAt(latlng) {
+  const size = map.getSize();
+  const pt = map.latLngToContainerPoint(latlng);
+  const b = map.getBounds();
+  const sw3857 = L.CRS.EPSG3857.project(b.getSouthWest());
+  const ne3857 = L.CRS.EPSG3857.project(b.getNorthEast());
+
+  const attempts = [
+    {
+      service: "WMS",
+      version: "1.1.1",
+      request: "GetFeatureInfo",
+      layers: "conus_bref_qcd",
+      query_layers: "conus_bref_qcd",
+      styles: "",
+      bbox: `${sw3857.x},${sw3857.y},${ne3857.x},${ne3857.y}`,
+      height: String(size.y),
+      width: String(size.x),
+      srs: "EPSG:3857",
+      format: "image/png",
+      feature_count: "10",
+      x: String(Math.round(pt.x)),
+      y: String(Math.round(pt.y))
+    },
+    {
+      service: "WMS",
+      version: "1.3.0",
+      request: "GetFeatureInfo",
+      layers: "conus_bref_qcd",
+      query_layers: "conus_bref_qcd",
+      styles: "",
+      bbox: `${sw3857.x},${sw3857.y},${ne3857.x},${ne3857.y}`,
+      height: String(size.y),
+      width: String(size.x),
+      crs: "EPSG:3857",
+      format: "image/png",
+      feature_count: "10",
+      i: String(Math.round(pt.x)),
+      j: String(Math.round(pt.y))
+    },
+    {
+      service: "WMS",
+      version: "1.1.1",
+      request: "GetFeatureInfo",
+      layers: "conus_bref_qcd",
+      query_layers: "conus_bref_qcd",
+      styles: "",
+      bbox: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+      height: String(size.y),
+      width: String(size.x),
+      srs: "EPSG:4326",
+      format: "image/png",
+      feature_count: "10",
+      x: String(Math.round(pt.x)),
+      y: String(Math.round(pt.y))
+    }
+  ];
+
+  const formats = ["application/json", "text/plain", "text/html"];
+  let lastRaw = null;
+  let lastError = null;
+
+  for (const base of attempts) {
+    for (const infoFormat of formats) {
+      try {
+        const params = new URLSearchParams({ ...base, info_format: infoFormat });
+        const response = await fetch(`https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params.toString()}`);
+        if (!response.ok) throw new Error(`Radar identify failed ${response.status}`);
+        const raw = infoFormat.includes("json") ? await response.json() : await response.text();
+        lastRaw = raw;
+        const value = extractRadarDbzValueFinal(raw);
+        if (value !== null) return { value, raw, method: `${base.version} ${base.srs || base.crs} ${infoFormat}` };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  }
+
+  if (lastRaw !== null) return { value: null, raw: lastRaw, method: "No dBZ value in GetFeatureInfo response" };
+  throw lastError || new Error("Radar identify failed");
+}
+
+async function runAllCheckedPointDataFinal(latlng, token, skipTypes = []) {
+  const skip = new Set(skipTypes || []);
+  const tasks = [
+    ["airQuality", () => runAirQualityPointFinal(latlng, token)],
+    ["radar", () => runRadarPointFinal(latlng, token)],
+    ["qpf", () => runQpfPointFinal(latlng, token)],
+    ["rainfall", () => runRainfallPointFinal(latlng, token)],
+    ["surface", () => runSurfacePointFinal(latlng, token)],
+    ["hrrr", () => Promise.resolve(runHrrrPointFinal(latlng, token))],
+    ["pastRadar", () => Promise.resolve(runPastRadarPointFinal(latlng, token))]
+  ];
+
+  let ranAny = false;
+  for (const [type, fn] of tasks) {
+    if (skip.has(type)) continue;
+    if (!dataCardEnabledFinal(type)) continue;
+    try {
+      const didRun = await fn();
+      if (didRun) ranAny = true;
+    } catch (error) {
+      console.warn("Stacked data source failed", type, error);
+    }
+  }
+  return ranAny;
+}
+
+try { map.off("click", handleSharedMapDataClickFinal); } catch (error) {}
+async function handleSharedMapDataClickFinal(e) {
+  if (!e || !e.latlng) return;
+  const target = e.originalEvent?.target;
+  if (target && target.closest && target.closest(".control-card, .home-btn, .basemap-btn, .basemap-menu, .leaflet-control")) return;
+
+  removeKnownMousemoveProbeHandlersFinal();
+  clearProbeMarkersFinal("");
+  resetStackedDataCardFinal();
+  const token = ++pointProbeRunIdFinal;
+  const didRun = await runAllCheckedPointDataFinal(e.latlng, token);
+  if (!didRun && token === pointProbeRunIdFinal) {
+    rbrtwBaseUpdatePanelFinal("Map Data", "No checked active data-card layers were available for that click/tap.");
+  }
+}
+map.on("click", handleSharedMapDataClickFinal);
+
+function bindHazardFeature(layer, source, feature, extra = {}) {
+  const properties = feature?.properties || {};
+  const details = hazardPanelHtml(source, properties, extra);
+  const dataType = hazardDataTypeFromSourceFinal(source);
+
+  layer.on("click", async e => {
+    if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+    removeKnownMousemoveProbeHandlersFinal();
+    clearProbeMarkersFinal("");
+    resetStackedDataCardFinal();
+    const token = ++pointProbeRunIdFinal;
+
+    if (dataCardEnabledFinal(dataType)) {
+      setStackedDataSectionFinal(dataType, details.title, details.html);
+    }
+
+    if (e?.latlng) {
+      await runAllCheckedPointDataFinal(e.latlng, token, [dataType]);
+    }
+  });
+
+  layer.bindPopup(`<strong>${details.title}</strong><br>${details.html}`);
+  layer.bindTooltip(details.title, { sticky: true, direction: "top", className: "hazard-tooltip" });
+  layer.on("mouseover", function () { if (layer.setStyle) layer.setStyle({ weight: 5, opacity: 1 }); });
+  layer.on("mouseout", function () { if (layer.setStyle) layer.setStyle({ weight: 3, opacity: 1 }); });
+}
+
+function runHrrrPointFinal(latlng, token) {
+  if (!hrrrLayer || !dataCardEnabledFinal("hrrr")) return false;
+  const frame = hrrrFrames[hrrrIndex] || {};
+  updatePanel("HRRR Future Radar Point", `
+    Current HRRR frame: <strong>${sanitizeForPanel(frame.label || `F${hrrrIndex}`)}</strong><br>
+    ${frame.validTime ? `Valid: ${sanitizeForPanel(frame.validTime)}<br>` : ""}
+    Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+    Summary: HRRR simulated reflectivity frame is active. Pixel dBZ sampling is not available from this local image overlay.
+  `);
+  return true;
+}
+
+function runPastRadarPointFinal(latlng, token) {
+  if (!pastRadarLayer || !dataCardEnabledFinal("pastRadar")) return false;
+  const frame = radarFrames[radarIndex] || {};
+  updatePanel("Past Radar Point", `
+    Current past radar frame: <strong>${frame.time ? sanitizeForPanel(localRadarTime(frame.time)) : "Latest"}</strong><br>
+    Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>
+    Summary: RainViewer playback is active. Pixel dBZ sampling is not exposed by the tile playback source.
+  `);
+  return true;
+}
+
+// Keep data-card stack presentable in PNG exports when Include data card in PNG is checked.
+const rbrtwSavePhotoStackedFinal = saveMapPhoto;
+saveMapPhoto = async function() {
+  const dataBody = document.getElementById("dataBody");
+  if (dataBody) dataBody.classList.remove("collapsed");
+  await rbrtwSavePhotoStackedFinal();
+};
+
+removeKnownMousemoveProbeHandlersFinal();
+renderLegends();
