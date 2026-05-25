@@ -1389,3 +1389,83 @@ input[type="checkbox"] {
   width: 13px;
   height: 13px;
 }
+
+
+/* ===== RBRTW STACKED DATA CARD + EXPORT SUMMARY STYLE ===== */
+.stack-data-card-title {
+  font-size: 14px;
+  font-weight: 900;
+  color: #f5b301;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.stack-data-card-note {
+  font-size: 11px;
+  color: rgba(255,255,255,0.72);
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+.stack-data-section {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-left: 4px solid #f5b301;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.055);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.stack-data-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.stack-data-subtitle {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f5b301;
+  margin-bottom: 5px;
+  line-height: 1.25;
+}
+.stack-data-body {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255,255,255,0.94);
+}
+.stack-data-radar { border-left-color: #44ff44; }
+.stack-data-airQuality { border-left-color: #00e400; }
+.stack-data-alerts { border-left-color: #ff3b3b; }
+.stack-data-spc { border-left-color: #f5c542; }
+.stack-data-wpc { border-left-color: #9254de; }
+.stack-data-qpf { border-left-color: #258dff; }
+.stack-data-rainfall { border-left-color: #22c55e; }
+.stack-data-surface { border-left-color: #ff4fd8; }
+.stack-data-hrrr { border-left-color: #15d5ff; }
+.stack-data-county { border-left-color: #ffffff; }
+
+.capture-mode.capture-include-data .data-card {
+  display: block !important;
+  left: 12px !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: 138px !important;
+  width: min(390px, calc(100vw - 24px)) !important;
+  max-height: 42vh !important;
+  background: rgba(7, 17, 31, 0.98) !important;
+}
+.capture-mode.capture-include-data .data-card .card-body {
+  max-height: calc(42vh - 36px) !important;
+  overflow-y: auto !important;
+}
+.capture-mode.capture-include-data .stack-data-section {
+  break-inside: avoid;
+  margin: 6px 0;
+  padding: 7px;
+}
+.capture-mode.capture-include-data .stack-data-body {
+  font-size: 11px;
+  line-height: 1.25;
+}
