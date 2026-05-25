@@ -1338,27 +1338,11 @@ input[type="checkbox"] {
   }
 }
 
-/* ===== RBRTW PROBE CLEANUP UI FIX ===== */
-.airq-probe-icon,
-.radar-probe-icon,
-.qpf-probe-icon,
-.rain-probe-icon {
-  background: transparent !important;
-  border: none !important;
-  pointer-events: none !important;
-}
-.airq-value,
-.radar-value,
-.qpf-value,
-.qpe-value,
-.rain-value {
-  min-width: 74px;
-}
-.legend-card .card-body {
-  max-height: 245px !important;
-}
-@media (max-width: 760px) {
-  .legend-card .card-body {
-    max-height: 160px !important;
-  }
+
+/* ===== RBRTW AQI TEXT MARKER WIDTH FIX ===== */
+.airq-value {
+  min-width: 86px;
+  max-width: 132px;
+  white-space: normal !important;
+  line-height: 1.05;
 }
