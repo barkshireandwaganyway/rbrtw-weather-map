@@ -2957,3 +2957,226 @@ async function saveMapPhoto() {
 }
 
 renderLegends();
+
+
+/* ===== RBRTW FINAL CORRECT DATA MAP KEYS =====
+   Live map keys: most active layers get a compact key.
+   PNG/screenshot keys: limited to Radar, QPF, Rainfall QPE, Temperature, Air Quality, SPC, WPC, and Surface Map.
+*/
+function keyRow(color, label, value) {
+  return `<div class="mapkey-row"><span class="mapkey-swatch" style="background:${color}"></span><span class="mapkey-label">${label}</span><span class="mapkey-value">${value || ""}</span></div>`;
+}
+
+function keyLine(color, label, value) {
+  return `<div class="mapkey-row"><span class="mapkey-line" style="border-color:${color}"></span><span class="mapkey-label">${label}</span><span class="mapkey-value">${value || ""}</span></div>`;
+}
+
+function keyNote(text) {
+  return `<div class="mapkey-note">${sanitizeForPanel(text)}</div>`;
+}
+
+function radarKeyHtml(sourceName) {
+  return `
+    ${keyRow("#44ff44", "Light", "5–20 dBZ")}
+    ${keyRow("#ffff44", "Moderate", "20–35 dBZ")}
+    ${keyRow("#ff5500", "Heavy", "35–50 dBZ")}
+    ${keyRow("#ff0000", "Strong", "50–65 dBZ")}
+    ${keyRow("#ff00ff", "Extreme / hail core", "65+ dBZ")}
+    ${keyNote(sourceName)}
+  `;
+}
+
+function qpfKeyHtml() {
+  return `
+    ${keyRow("#d8f3dc", "Very light", "0.01–0.10 in")}
+    ${keyRow("#95d5b2", "Light", "0.10–0.25 in")}
+    ${keyRow("#52b788", "Moderate", "0.25–1.00 in")}
+    ${keyRow("#2d6a4f", "Heavy", "1.00–2.00 in")}
+    ${keyRow("#7209b7", "Very heavy", "2.00+ in")}
+    ${keyNote("WPC forecast liquid precipitation total. Tap/click leaves an inches point value.")}
+  `;
+}
+
+function rainfallKeyHtml() {
+  return `
+    ${keyRow("#e8f7ff", "Trace", "0.01–0.10 in")}
+    ${keyRow("#79c8ff", "Light", "0.10–0.50 in")}
+    ${keyRow("#0b72ff", "Moderate", "0.50–1.00 in")}
+    ${keyRow("#22c55e", "Heavy", "1.00–2.00 in")}
+    ${keyRow("#facc15", "Very heavy", "2.00–4.00 in")}
+    ${keyRow("#ef4444", "Extreme", "4.00+ in")}
+    ${keyNote("MRMS QPE estimated observed accumulation, not rainfall rate.")}
+  `;
+}
+
+function spcKeyHtml() {
+  return `
+    ${keyRow("#c1e9c1", "General Thunder", "Non-severe storms")}
+    ${keyRow("#66a366", "Marginal", "Level 1 of 5")}
+    ${keyRow("#ffe066", "Slight", "Level 2 of 5")}
+    ${keyRow("#ffa366", "Enhanced", "Level 3 of 5")}
+    ${keyRow("#e06666", "Moderate", "Level 4 of 5")}
+    ${keyRow("#ee99ee", "High", "Level 5 of 5")}
+    ${keyNote("SPC categorical severe-weather outlook. Polygon borders match risk color.")}
+  `;
+}
+
+function wpcKeyHtml() {
+  return `
+    ${keyRow("#66a366", "Marginal", "At least 5% flash-flood risk")}
+    ${keyRow("#ffe066", "Slight", "At least 15% flash-flood risk")}
+    ${keyRow("#e06666", "Moderate", "At least 40% flash-flood risk")}
+    ${keyRow("#ee99ee", "High", "At least 70% flash-flood risk")}
+    ${keyNote("WPC Excessive Rainfall Outlook. Polygon borders match risk color.")}
+  `;
+}
+
+function alertKeyHtml() {
+  return `
+    ${keyRow("#c026d3", "Tornado", "Warning/watch")}
+    ${keyRow("#facc15", "Severe Thunderstorm", "Warning/watch")}
+    ${keyRow("#16a34a", "Flash Flood", "Warning/watch")}
+    ${keyRow("#15803d", "Flood", "Warning/watch/advisory")}
+    ${keyRow("#ea580c", "Heat", "Watch/warning/advisory")}
+    ${keyRow("#60a5fa", "Winter / Cold", "Warning/advisory")}
+    ${keyRow("#dc2626", "Other Alert", "Active hazard")}
+    ${keyNote("NWS active alert polygons use hazard-family colors.")}
+  `;
+}
+
+function airQualityKeyHtml() {
+  return `
+    ${keyRow("#00e400", "Good", "AQI 0–50")}
+    ${keyRow("#ffff00", "Moderate", "AQI 51–100")}
+    ${keyRow("#ff7e00", "Sensitive Groups", "AQI 101–150")}
+    ${keyRow("#ff0000", "Unhealthy", "AQI 151–200")}
+    ${keyRow("#8f3f97", "Very Unhealthy", "AQI 201–300")}
+    ${keyRow("#7e0023", "Hazardous", "AQI 301+")}
+    ${keyNote("NOAA/NWS air-quality guidance layer.")}
+  `;
+}
+
+function surfaceKeyHtml() {
+  return `
+    ${keyLine("#1683ff", "Cold front", "Blue")}
+    ${keyLine("#ff3434", "Warm front", "Red")}
+    ${keyLine("#b05cff", "Occluded front", "Purple")}
+    ${keyRow("#ffffff", "High / Low", "Pressure centers")}
+    ${keyRow("#7dd3fc", "Rain / storms", "Weather areas")}
+    ${keyRow("#dbeafe", "Snow / mixed", "Winter precip")}
+    ${keyNote("WPC national forecast chart. Day 1/2/3 selected in Surface Map controls.")}
+  `;
+}
+
+function windKeyHtml() {
+  return `
+    ${keyLine("#8fd3ff", "Wind barb", "Arrow points downwind")}
+    ${keyRow("#ffffff", "Number", "Wind speed mph")}
+    ${keyNote("Station wind direction is converted from wind-from to wind-moving-toward.")}
+  `;
+}
+
+function tempLegendHtml() {
+  if (tempDisplayMode === "heat") {
+    return `
+      ${keyRow("#facc15", "Caution", "80–89°F")}
+      ${keyRow("#f97316", "Extreme Caution", "90–102°F")}
+      ${keyRow("#dc2626", "Danger", "103–124°F")}
+      ${keyRow("#7f1d1d", "Extreme Danger", "125°F+")}
+      ${keyNote("Heat index markers only replace temperature where heat index is applicable.")}
+    `;
+  }
+
+  if (tempDisplayMode === "windchill") {
+    return `
+      ${keyRow("#2b1a78", "Extreme cold", "Below 0°F")}
+      ${keyRow("#4338ca", "Very cold", "0–14°F")}
+      ${keyRow("#2563eb", "Cold", "15–31°F")}
+      ${keyRow("#38bdf8", "Chilly", "32–50°F")}
+      ${keyNote("Wind chill markers only replace temperature where wind chill is applicable.")}
+    `;
+  }
+
+  return `
+    ${keyRow("#4f8cff", "Cold", "Below 50°F")}
+    ${keyRow("#66d9ff", "Cool", "50–69°F")}
+    ${keyRow("#7bd88f", "Mild", "70–89°F")}
+    ${keyRow("#f5c542", "Warm", "90–99°F")}
+    ${keyRow("#ff3b3b", "Hot", "100°F+")}
+    ${keyNote("Station air temperature from latest NWS observation.")}
+  `;
+}
+
+function legendHtml(type) {
+  if (type === "radar") return radarKeyHtml("NOAA/NWS MRMS radar reflectivity.");
+  if (type === "pastRadar") return radarKeyHtml("RainViewer past radar playback; lower resolution than live MRMS.");
+  if (type === "hrrr") return radarKeyHtml("HRRR simulated reflectivity forecast.");
+  if (type === "qpf") return qpfKeyHtml();
+  if (type === "spc") return spcKeyHtml();
+  if (type === "wpc") return wpcKeyHtml();
+  if (type === "alerts") return alertKeyHtml();
+  if (type === "temp") return tempLegendHtml();
+  if (type === "wind") return windKeyHtml();
+  if (type === "rainfall") return rainfallKeyHtml();
+  if (type === "airQuality") return airQualityKeyHtml();
+  if (type === "surface") return surfaceKeyHtml();
+  return "";
+}
+
+function renderLegends() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  if (document.body.classList.contains("capture-hide-key")) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const visibleTypes = [...activeLegendTypes].filter(type => shouldShowMapKeyTypeFinal(type));
+
+  if (!visibleTypes.length) {
+    box.innerHTML = document.body.classList.contains("capture-mode") ? "" : "No map key needed for active layers.";
+    return;
+  }
+
+  const titleMap = {
+    radar: "Radar Reflectivity",
+    pastRadar: "Past Radar",
+    hrrr: "HRRR Future Radar",
+    qpf: "WPC QPF Forecast",
+    spc: "SPC Outlook",
+    wpc: "WPC Excessive Rainfall",
+    alerts: "NWS Alerts",
+    temp: tempDisplayMode === "heat" ? "Heat Index" : tempDisplayMode === "windchill" ? "Wind Chill" : "Temperature",
+    wind: "Wind Barbs",
+    rainfall: "Rainfall Totals / QPE",
+    airQuality: "Air Quality",
+    surface: "Surface Map"
+  };
+
+  box.innerHTML = visibleTypes.map(type => `
+    <div class="legend-section" data-key-type="${sanitizeForPanel(type)}">
+      <div class="legend-section-title">${titleMap[type] || sanitizeForPanel(type)}</div>
+      ${legendHtml(type)}
+    </div>
+  `).join("");
+}
+
+function updateLegend(type) {
+  if (type === "county") {
+    activeLegendTypes.delete(type);
+    renderLegends();
+    return;
+  }
+  if (type === "pastRadar") activeLegendTypes.delete("radar");
+  if (type === "radar") activeLegendTypes.delete("pastRadar");
+  if (liveMapKeyTypesFinal.has(type) || screenshotMapKeyTypesFinal.has(type)) activeLegendTypes.add(type);
+  renderLegends();
+}
+
+function clearLegend(type) {
+  activeLegendTypes.delete(type);
+  renderLegends();
+}
+
+renderLegends();
