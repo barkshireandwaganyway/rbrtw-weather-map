@@ -563,3 +563,173 @@ input[type="checkbox"] {
   padding: 0;
   max-height: 0;
 }
+
+
+/* ===== RBRTW FINAL MOBILE / SAVE PHOTO / WIND / TEMP FIXES ===== */
+.app-header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.save-photo-btn {
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  font-weight: 800;
+  padding: 8px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.save-photo-btn:hover {
+  background: #1c88ff;
+}
+
+.control-card {
+  background: rgba(7, 17, 31, 0.98) !important;
+  backdrop-filter: blur(5px);
+}
+
+.scroll-hint {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.capture-mode .layers-card,
+.capture-mode .basemap-card,
+.capture-mode .focus-card,
+.capture-mode .data-card,
+.capture-mode .hrrr-timeline,
+.capture-mode .radar-timeline,
+.capture-mode .home-btn,
+.capture-mode .leaflet-control-zoom,
+.capture-mode .save-photo-btn {
+  display: none !important;
+}
+
+.capture-mode .legend-card {
+  display: block !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  width: auto !important;
+  max-height: 34vh !important;
+}
+
+.capture-mode .legend-card .card-body {
+  display: block !important;
+  max-height: 26vh !important;
+  overflow-y: auto;
+}
+
+.wind-div-icon {
+  background: transparent;
+  border: none;
+}
+
+.wind-barb {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  opacity: var(--wind-opacity, 0.55);
+}
+
+.wind-barb::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 4px;
+  width: 3px;
+  height: 28px;
+  background: rgba(5, 25, 40, 0.95);
+  border-radius: 3px;
+  box-shadow: 0 0 4px rgba(255,255,255,0.7);
+}
+
+.wind-barb::after {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 4px;
+  width: 13px;
+  height: 3px;
+  background: rgba(5, 25, 40, 0.95);
+  transform: rotate(35deg);
+  transform-origin: left center;
+  border-radius: 3px;
+  box-shadow: 0 0 4px rgba(255,255,255,0.7);
+}
+
+.wind-label {
+  background: rgba(7,17,31,0.88);
+  color: white;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  margin-top: -5px;
+}
+
+.temp-extreme-heat { background: #7f0000; color: #ffffff; }
+.temp-danger-heat { background: #ff0000; color: #ffffff; }
+.temp-caution-heat { background: #ff8c00; color: #111111; }
+.temp-hot { background: #ffb000; color: #111111; }
+.temp-warm { background: #f5c542; color: #111111; }
+.temp-mild { background: #7bd88f; color: #06111f; }
+.temp-cool { background: #66d9ff; color: #06111f; }
+.temp-cold { background: #4f8cff; color: #ffffff; }
+.temp-windchill { background: #6d5dfc; color: #ffffff; }
+.temp-extreme-cold { background: #2b1a78; color: #ffffff; }
+
+@media (max-width: 760px) {
+  .layers-card {
+    top: 64px !important;
+    left: 8px !important;
+    width: min(252px, calc(100vw - 16px)) !important;
+    max-height: 62vh !important;
+    background: rgba(7, 17, 31, 0.99) !important;
+  }
+
+  .layers-card .card-body {
+    max-height: calc(62vh - 36px) !important;
+    overflow-y: auto !important;
+  }
+
+  .legend-card {
+    left: 76px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-height: 34vh !important;
+  }
+
+  .legend-card .card-body {
+    max-height: 24vh !important;
+  }
+
+  .home-btn {
+    left: 8px !important;
+    bottom: 8px !important;
+  }
+
+  .leaflet-control-zoom {
+    margin-bottom: 62px !important;
+  }
+
+  .hrrr-timeline,
+  .radar-timeline {
+    left: 8px !important;
+    right: 8px !important;
+    transform: none !important;
+    bottom: 70px !important;
+    width: auto !important;
+  }
+}
