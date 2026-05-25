@@ -22,29 +22,38 @@
 
     <div id="layersBody" class="card-body">
       <label><input id="radarCheck" type="checkbox" onchange="toggleRadar()" /><span class="dot green"></span>Radar</label>
+      <div class="data-toggle-sub"><label><input id="dataRadarCheck" type="checkbox" />Radar data card click/tap</label></div>
       <label><input id="pastRadarCheck" type="checkbox" onchange="togglePastRadar()" /><span class="dot green"></span>Past Radar Playback</label>
+      <div class="data-toggle-sub"><label><input id="dataPastRadarCheck" type="checkbox" />Past radar data card click/tap</label></div>
       <input id="radarOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.7" oninput="setLayerOpacity('radar')" />
 
       <label><input id="alertsCheck" type="checkbox" onchange="toggleAlerts()" /><span class="dot red"></span>NWS Alerts / Statements</label>
+      <div class="data-toggle-sub"><label><input id="dataAlertsCheck" type="checkbox" checked />Alerts data card click/tap</label></div>
 
       <label><input id="qpfCheck" type="checkbox" onchange="toggleQpf()" /><span class="dot blue"></span>Rainfall / QPF</label>
+      <div class="data-toggle-sub"><label><input id="dataQpfCheck" type="checkbox" checked />QPF data card click/tap</label></div>
       <input id="qpfOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.65" oninput="setLayerOpacity('qpf')" />
 
       <label><input id="spcCheck" type="checkbox" onchange="toggleSpc()" /><span class="dot yellow"></span>SPC Outlook</label>
+      <div class="data-toggle-sub"><label><input id="dataSpcCheck" type="checkbox" checked />SPC data card click/tap</label></div>
       <input id="spcOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.35" oninput="setLayerOpacity('spc')" />
 
       <label><input id="wpcCheck" type="checkbox" onchange="toggleWpc()" /><span class="dot purple"></span>WPC Outlook</label>
+      <div class="data-toggle-sub"><label><input id="dataWpcCheck" type="checkbox" checked />WPC data card click/tap</label></div>
       <input id="wpcOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.6" oninput="setLayerOpacity('wpc')" />
 
       <label><input id="hrrrCheck" type="checkbox" onchange="toggleHrrr()" /><span class="dot cyan"></span>HRRR Future Radar</label>
+      <div class="data-toggle-sub"><label><input id="dataHrrrCheck" type="checkbox" />HRRR data card click/tap</label></div>
       <input id="hrrrOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.72" oninput="setLayerOpacity('hrrr')" />
 
       <label><input id="countyCheck" type="checkbox" onchange="toggleCountyLines()" /><span class="dot white"></span>County Lines</label>
+      <div class="data-toggle-sub"><label><input id="dataCountyCheck" type="checkbox" />County data card click/tap</label></div>
       <input id="countyOpacity" class="opacity-slider" type="range" min="0" max="1" step="0.05" value="0.25" oninput="setLayerOpacity('county')" />
 
       <div class="divider"></div>
 
       <label><input id="tempCheck" type="checkbox" onchange="toggleTemperatures()" /><span class="dot orange"></span>Temperatures</label>
+      <div class="data-toggle-sub"><label><input id="dataTempCheck" type="checkbox" checked />Temperature station data card</label></div>
       <div id="tempSubToggles" class="sub-toggle-box hidden">
         <label><input id="tempModeTempCheck" type="checkbox" checked onchange="setTempMode('temp')" />Temp</label>
         <label><input id="tempModeHeatCheck" type="checkbox" onchange="setTempMode('heat')" />Heat Index</label>
@@ -52,9 +61,11 @@
       </div>
 
       <label><input id="windCheck" type="checkbox" onchange="toggleWindLayer()" /><span class="dot cyan"></span>Wind Barbs</label>
+      <div class="data-toggle-sub"><label><input id="dataWindCheck" type="checkbox" checked />Wind station data card</label></div>
       <input id="windOpacity" class="opacity-slider" type="range" min="0.05" max="1" step="0.05" value="0.55" oninput="setLayerOpacity('wind')" />
 
       <label><input id="rain72Check" type="checkbox" onchange="toggleRainfall72()" /><span class="dot blue"></span>Rainfall Totals / QPE</label>
+      <div class="data-toggle-sub"><label><input id="dataRainfallCheck" type="checkbox" checked />QPE data card click/tap</label></div>
       <div id="rainfallSubToggles" class="sub-toggle-box hidden">
         <label><input id="rain24Check" type="checkbox" checked onchange="setRainfallPeriod('24')" />Past 24 hr Total</label>
         <label><input id="rain48Check" type="checkbox" onchange="setRainfallPeriod('48')" />Past 48 hr Total</label>
@@ -62,8 +73,10 @@
       </div>
 
       <label><input id="airQualityCheck" type="checkbox" onchange="toggleAirQuality()" /><span class="dot lime"></span>Air Quality</label>
+      <div class="data-toggle-sub"><label><input id="dataAirQualityCheck" type="checkbox" checked />Air Quality data card click/tap</label></div>
 
       <label><input id="surfaceCheck" type="checkbox" onchange="toggleSurfaceMap()" /><span class="dot pink"></span>Surface Map</label>
+      <div class="data-toggle-sub"><label><input id="dataSurfaceCheck" type="checkbox" />Surface map data card click/tap</label></div>
       <div id="surfaceSubToggles" class="sub-toggle-box hidden">
         <label><input id="surfaceDay1Check" type="checkbox" checked onchange="setSurfaceDay(1)" />Day 1</label>
         <label><input id="surfaceDay2Check" type="checkbox" onchange="setSurfaceDay(2)" />Day 2</label>
