@@ -1371,3 +1371,21 @@ input[type="checkbox"] {
     font-size: 10.5px;
   }
 }
+
+
+/* ===== RBRTW FINAL AUDIT UI POLISH ===== */
+.data-toggle-sub {
+  margin: -2px 0 4px 28px;
+  padding: 2px 7px 5px;
+  border-left: 2px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.035);
+}
+.data-toggle-sub label {
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.76);
+  padding: 3px 0 !important;
+}
+.data-toggle-sub input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+}
