@@ -1469,3 +1469,364 @@ input[type="checkbox"] {
   font-size: 11px;
   line-height: 1.25;
 }
+
+/* ===== RBRTW EXPORT POLISH FINAL: FULL-WIDTH DATA SUMMARY + MAP KEY BAR =====
+   Applies only while Save as Photo is capturing. Live map layout is unchanged.
+*/
+.capture-mode.capture-export-polish .layers-card,
+.capture-mode.capture-export-polish .basemap-card,
+.capture-mode.capture-export-polish .focus-card,
+.capture-mode.capture-export-polish .hrrr-timeline,
+.capture-mode.capture-export-polish .radar-timeline,
+.capture-mode.capture-export-polish .home-btn,
+.capture-mode.capture-export-polish .basemap-btn,
+.capture-mode.capture-export-polish .basemap-menu,
+.capture-mode.capture-export-polish .leaflet-control-zoom,
+.capture-mode.capture-export-polish .save-photo-btn {
+  display: none !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  top: auto !important;
+  bottom: 150px !important;
+  width: auto !important;
+  max-height: none !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card .card-header {
+  height: 30px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card .card-body {
+  display: block !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 8px 12px 10px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card .tab-row {
+  display: none !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data #weatherInfo {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data #status {
+  margin: 0 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-card-title {
+  font-size: 13px !important;
+  margin-bottom: 1px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-card-note {
+  font-size: 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-section {
+  margin: 0 !important;
+  padding: 8px 9px !important;
+  min-height: 0 !important;
+  max-height: 176px !important;
+  overflow: hidden !important;
+  border-radius: 7px !important;
+  background: rgba(255,255,255,0.06) !important;
+  break-inside: avoid !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-title {
+  font-size: 11px !important;
+  margin-bottom: 2px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-subtitle {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+  margin-bottom: 4px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-body {
+  font-size: 10.5px !important;
+  line-height: 1.22 !important;
+}
+
+.capture-mode.capture-export-polish.capture-hide-key .legend-card {
+  display: none !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  top: auto !important;
+  width: auto !important;
+  max-height: 132px !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-header {
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.09em !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-body {
+  display: block !important;
+  max-height: 100px !important;
+  overflow: hidden !important;
+  padding: 7px 10px 8px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 8px !important;
+  align-items: start !important;
+  background: transparent !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 8px 0 9px !important;
+  border-top: 0 !important;
+  border-left: 3px solid rgba(245,179,1,0.72) !important;
+  background: rgba(255,255,255,0.045) !important;
+  border-radius: 5px !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section-title {
+  font-size: 9.5px !important;
+  line-height: 1.05 !important;
+  margin: 4px 0 3px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-row {
+  display: grid !important;
+  grid-template-columns: 13px minmax(64px, 1fr) auto !important;
+  gap: 4px !important;
+  margin: 1px 0 !important;
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-swatch {
+  width: 12px !important;
+  height: 8px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-line {
+  width: 13px !important;
+  border-top-width: 3px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-label {
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-value {
+  font-size: 8.5px !important;
+  white-space: nowrap !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-note {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .capture-mode.capture-export-polish.capture-include-data .data-card {
+    bottom: 150px !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
+    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
+  }
+  .capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+  }
+}
+
+/* ===== RBRTW EXPORT VERIFICATION FINAL: NO-OVERLAP PNG LAYOUT =====
+   This is export-only. It keeps the live map unchanged, but makes the saved PNG
+   use a true lower information band: stacked data summary above, separated map keys below.
+*/
+.capture-mode.capture-export-polish.capture-include-data .data-card {
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 188px !important;
+  width: auto !important;
+  max-height: calc(100vh - 232px) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .data-card .card-body {
+  max-height: calc(100vh - 270px) !important;
+  overflow: hidden !important;
+  padding: 7px 10px 9px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-card-title {
+  font-size: 12px !important;
+  line-height: 1.05 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-card-note {
+  font-size: 9.5px !important;
+  line-height: 1.05 !important;
+  margin-bottom: 5px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap: 6px !important;
+  align-items: stretch !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-section {
+  max-height: 108px !important;
+  min-height: 82px !important;
+  overflow: hidden !important;
+  padding: 6px 7px !important;
+  margin: 0 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-title {
+  font-size: 10px !important;
+  line-height: 1.05 !important;
+  margin-bottom: 1px !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-subtitle {
+  font-size: 9px !important;
+  line-height: 1.08 !important;
+  margin-bottom: 3px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-body {
+  font-size: 9.2px !important;
+  line-height: 1.12 !important;
+}
+
+.capture-mode.capture-export-polish.capture-include-data .stack-data-body br {
+  line-height: 1.05 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card {
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  width: auto !important;
+  max-height: 166px !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-body {
+  max-height: 132px !important;
+  overflow: hidden !important;
+  padding: 6px 8px 7px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap: 6px !important;
+  align-items: start !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section {
+  padding: 0 6px 0 7px !important;
+  min-height: 0 !important;
+  max-height: 124px !important;
+  overflow: hidden !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section-title {
+  font-size: 8.8px !important;
+  line-height: 1 !important;
+  margin: 3px 0 2px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-row {
+  grid-template-columns: 11px minmax(48px, 1fr) auto !important;
+  gap: 3px !important;
+  margin: 0 !important;
+  font-size: 8px !important;
+  line-height: 1.02 !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-swatch {
+  width: 10px !important;
+  height: 7px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-line {
+  width: 11px !important;
+  border-top-width: 2px !important;
+}
+
+.capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-value {
+  font-size: 7.5px !important;
+}
+
+@media (max-width: 760px) {
+  .capture-mode.capture-export-polish.capture-include-data .data-card {
+    bottom: 178px !important;
+    max-height: calc(100vh - 218px) !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .data-card .card-body {
+    max-height: calc(100vh - 254px) !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .stack-data-sections {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)) !important;
+    gap: 5px !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .stack-data-section {
+    max-height: 88px !important;
+    min-height: 70px !important;
+    padding: 5px 6px !important;
+  }
+  .capture-mode.capture-export-polish.capture-include-data .stack-data-body {
+    font-size: 8px !important;
+    line-height: 1.05 !important;
+  }
+  .capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)) !important;
+  }
+}
