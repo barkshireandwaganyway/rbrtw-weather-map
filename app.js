@@ -3345,22 +3345,14 @@ async function runRadarPointFinal(latlng, token) {
   }
 }
 
-/* ===== RBRTW FINAL PATCH: ALERT DATA-CARD GLOW + COMPACT EXPORT LEGENDS =====
-   Added without replacing existing layer logic.
-   - Live legend behavior stays unchanged.
-   - PNG export gets a compact horizontal legend built from all active map keys.
-   - Stacked alert data cards use a full glowing border based on the actual alert type.
+/* ===== RBRTW FINAL ALERT EXPORT CARD PATCH =====
+   Keeps live behavior intact.
+   Improves stacked data-card styling with full glow borders.
+   During PNG export, if alert data is present, the export data card is moved
+   to the upper-left and styled like the app panels with a neon ring matching
+   the alert type.
 */
-function rbrtwHexToRgbaFinal(hex, alpha = 0.42) {
-  const clean = String(hex || "").replace("#", "").trim();
-  if (clean.length !== 6) return `rgba(245,179,1,${alpha})`;
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some(n => Number.isNaN(n))) return `rgba(245,179,1,${alpha})`;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-function rbrtwStackColorForTypeFinal(type, title = "") {
+function stackColorForTypeFinal(type, title = "") {
   if (type === "alerts") return alertColorFromEvent(title);
   if (type === "spc") return "#f5c542";
   if (type === "wpc") return "#9254de";
@@ -3375,22 +3367,36 @@ function rbrtwStackColorForTypeFinal(type, title = "") {
   if (type === "wind") return "#15d5ff";
   return "#f5b301";
 }
+
+function hexToRgbaFinal(hex, alpha = 0.38) {
+  const clean = String(hex || "").replace("#", "").trim();
+  if (clean.length !== 6) return `rgba(245,179,1,${alpha})`;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  if ([r, g, b].some(n => Number.isNaN(n))) return `rgba(245,179,1,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function renderStackedDataCardFinal() {
   const status = document.getElementById("status");
   if (!status) return;
+
   const activeTypes = RBRTW_STACK_DATA_ORDER_FINAL.filter(type => rbrtwDataStackFinal[type]);
   if (!activeTypes.length) {
     status.innerHTML = "Click/tap the map to load checked data-card items.";
     return;
   }
+
   const sections = activeTypes.map(type => {
     const item = rbrtwDataStackFinal[type];
     const label = RBRTW_STACK_DATA_LABELS_FINAL[type] || item.title || type;
-    const color = rbrtwStackColorForTypeFinal(type, item.title || label);
-    const glow = rbrtwHexToRgbaFinal(color, 0.44);
+    const color = stackColorForTypeFinal(type, item.title || label);
+    const glow = hexToRgbaFinal(color, type === "alerts" ? 0.58 : 0.38);
+
     return `
       <div
-        class="stack-data-section stack-data-${sanitizeForPanel(type)}"
+        class="stack-data-section stack-data-${sanitizeForPanel(type)}${type === "alerts" ? " stack-alert-neon" : ""}"
         style="--stack-color:${sanitizeForPanel(color)}; --stack-glow:${sanitizeForPanel(glow)};"
       >
         <div class="stack-data-title">${sanitizeForPanel(label)}</div>
@@ -3399,87 +3405,68 @@ function renderStackedDataCardFinal() {
       </div>
     `;
   }).join("");
+
+  const hasAlert = activeTypes.includes("alerts");
   status.innerHTML = `
     <div class="stack-data-card-title">Selected Point Data</div>
     <div class="stack-data-card-note">${activeTypes.length} checked data item${activeTypes.length === 1 ? "" : "s"} from the latest click/tap.</div>
-    <div class="stack-data-sections">${sections}</div>
+    <div class="stack-data-sections${hasAlert ? " stack-data-sections-has-alert" : ""}">${sections}</div>
   `;
 }
-function rbrtwExportLegendItemsFinal(type) {
-  const titleMap = {
-    radar: "Radar Reflectivity", pastRadar: "Past Radar", hrrr: "HRRR Future Radar",
-    qpf: "QPF Forecast", spc: "SPC Outlook", wpc: "WPC ERO", alerts: "NWS Alerts",
-    temp: tempDisplayMode === "heat" ? "Heat Index" : tempDisplayMode === "windchill" ? "Wind Chill" : "Temperature",
-    wind: "Wind", rainfall: "QPE Rainfall", airQuality: "Air Quality", surface: "Surface Map"
-  };
-  const row = (color, label, value = "", kind = "swatch") => ({ color, label, value, kind });
-  let items = [];
-  if (type === "radar" || type === "pastRadar" || type === "hrrr") items = [
-    row("#44ff44", "Light", "5–20 dBZ"), row("#ffff44", "Moderate", "20–35"), row("#ff5500", "Heavy", "35–50"), row("#ff0000", "Strong", "50–65"), row("#ff00ff", "Extreme", "65+")
-  ];
-  else if (type === "qpf") items = [
-    row("#d8f3dc", "Very light", "0.01–0.10"), row("#95d5b2", "Light", "0.10–0.25"), row("#52b788", "Moderate", "0.25–1.00"), row("#2d6a4f", "Heavy", "1–2"), row("#7209b7", "Very heavy", "2+ in")
-  ];
-  else if (type === "rainfall") items = [
-    row("#e8f7ff", "Trace", "0.01–0.10"), row("#79c8ff", "Light", "0.10–0.50"), row("#0b72ff", "Moderate", "0.50–1"), row("#22c55e", "Heavy", "1–2"), row("#facc15", "Very heavy", "2–4"), row("#ef4444", "Extreme", "4+ in")
-  ];
-  else if (type === "spc") items = [
-    row("#c1e9c1", "T-storm"), row("#66a366", "MRGL", "1/5"), row("#ffe066", "SLGT", "2/5"), row("#ffa366", "ENH", "3/5"), row("#e06666", "MDT", "4/5"), row("#ee99ee", "HIGH", "5/5")
-  ];
-  else if (type === "wpc") items = [
-    row("#66a366", "Marginal", "5%"), row("#ffe066", "Slight", "15%"), row("#e06666", "Moderate", "40%"), row("#ee99ee", "High", "70%")
-  ];
-  else if (type === "alerts") items = [
-    row("#c026d3", "Tornado"), row("#facc15", "Severe T-storm"), row("#16a34a", "Flash Flood"), row("#15803d", "Flood"), row("#ea580c", "Heat"), row("#60a5fa", "Winter/Cold"), row("#dc2626", "Other")
-  ];
-  else if (type === "temp") {
-    if (tempDisplayMode === "heat") items = [row("#facc15", "Caution", "80–89"), row("#f97316", "Extreme Caution", "90–102"), row("#dc2626", "Danger", "103–124"), row("#7f1d1d", "Extreme Danger", "125+")];
-    else if (tempDisplayMode === "windchill") items = [row("#2b1a78", "Extreme cold", "<0"), row("#4338ca", "Very cold", "0–14"), row("#2563eb", "Cold", "15–31"), row("#38bdf8", "Chilly", "32–50")];
-    else items = [row("#4f8cff", "Cold", "<50"), row("#66d9ff", "Cool", "50–69"), row("#7bd88f", "Mild", "70–89"), row("#f5c542", "Warm", "90–99"), row("#ff3b3b", "Hot", "100+")];
+
+async function saveMapPhoto() {
+  const btn = document.getElementById("savePhotoBtn");
+  const legendBody = document.getElementById("legendBody");
+  const dataBody = document.getElementById("dataBody");
+  const dataCard = document.querySelector(".data-card");
+  const includeKey = document.getElementById("photoIncludeKeyCheck")?.checked !== false;
+  const includeData = document.getElementById("photoIncludeDataCheck")?.checked === true;
+  const hasAlertData = includeData && !!(rbrtwDataStackFinal && rbrtwDataStackFinal.alerts);
+
+  try {
+    if (btn) btn.textContent = "Saving...";
+    if (legendBody) legendBody.classList.remove("collapsed");
+    if (dataBody) dataBody.classList.remove("collapsed");
+
+    document.body.classList.add("capture-mode", "capture-export-polish");
+    document.body.classList.toggle("capture-hide-key", !includeKey);
+    document.body.classList.toggle("capture-include-data", includeData);
+    document.body.classList.toggle("capture-has-alert-data", hasAlertData);
+    if (dataCard) dataCard.classList.toggle("capture-priority-alert", hasAlertData);
+
+    renderLegends();
+    if (typeof renderStackedDataCardFinal === "function") renderStackedDataCardFinal();
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
+
+    const canvas = await html2canvas(document.body, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
+    });
+
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.download = `RBRTW-weather-map-${timestamp}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+    rbrtwBaseUpdatePanelFinal("Save as Photo", includeData
+      ? "Map photo saved with stacked selected-point Data card and separated map-key bar."
+      : "Map photo saved with separated map-key bar.");
+  } catch (error) {
+    console.error(error);
+    rbrtwBaseUpdatePanelFinal("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
+  } finally {
+    document.body.classList.remove("capture-mode", "capture-export-polish", "capture-hide-key", "capture-include-data", "capture-has-alert-data");
+    if (dataCard) dataCard.classList.remove("capture-priority-alert");
+    renderLegends();
+    if (btn) btn.textContent = "Save as Photo";
   }
-  else if (type === "airQuality") items = [
-    row("#00e400", "Good", "0–12"), row("#ffff00", "Moderate", "12–35"), row("#ff7e00", "USG", "35–55"), row("#ff0000", "Unhealthy", "55–150"), row("#8f3f97", "Very unhealthy", "150–250"), row("#7e0023", "Hazardous", "250+")
-  ];
-  else if (type === "wind") items = [row("#8fd3ff", "Barb", "downwind", "line"), row("#ffffff", "Number", "mph")];
-  else if (type === "surface") items = [
-    row("#ffffff", "High/Low"), row("#1683ff", "Cold/fronts", "", "line"), row("#ff3434", "Warm front", "", "line"), row("#7c3aed", "Stationary/occluded", "", "line"), row("#8b5a2b", "Trough/dryline", "", "line"), row("#7dd3fc", "Rain/T-storms"), row("#ef4444", "Severe possible"), row("#22c55e", "Heavy rain possible"), row("#f97316", "Fire weather")
-  ];
-  return { title: titleMap[type] || type, items };
 }
-function renderExportLegendsFinal() {
-  const box = document.getElementById("legendContent");
-  if (!box) return;
-  if (document.body.classList.contains("capture-hide-key")) {
-    box.innerHTML = "";
-    return;
-  }
-  const exportTypes = [...activeLegendTypes].filter(type => type !== "county");
-  if (!exportTypes.length) {
-    box.innerHTML = "";
-    return;
-  }
-  box.innerHTML = exportTypes.map(type => {
-    const section = rbrtwExportLegendItemsFinal(type);
-    const chips = section.items.map(item => `
-      <span class="export-key-chip">
-        <span class="${item.kind === "line" ? "export-key-line" : "export-key-swatch"}" style="${item.kind === "line" ? `border-color:${sanitizeForPanel(item.color)}` : `background:${sanitizeForPanel(item.color)}`}"></span>
-        <span class="export-key-label">${sanitizeForPanel(item.label)}</span>
-        ${item.value ? `<span class="export-key-value">${sanitizeForPanel(item.value)}</span>` : ""}
-      </span>
-    `).join("");
-    return `
-      <div class="export-legend-section export-legend-${sanitizeForPanel(type)}">
-        <span class="export-legend-title">${sanitizeForPanel(section.title)}</span>
-        <span class="export-legend-items">${chips}</span>
-      </div>
-    `;
-  }).join("");
-}
-const rbrtwLiveRenderLegendsBeforeCompactExportFinal = renderLegends;
-renderLegends = function() {
-  if (document.body.classList.contains("capture-export-polish")) {
-    renderExportLegendsFinal();
-    return;
-  }
-  rbrtwLiveRenderLegendsBeforeCompactExportFinal();
-};
