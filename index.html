@@ -10,6 +10,7 @@
 <body>
   <header class="app-header">
     <h1>RBRTW Weather Map</h1>
+    <button id="savePhotoBtn" class="save-photo-btn" type="button" onclick="saveMapPhoto()">Save as Photo</button>
   </header>
 
   <div id="map"></div>
@@ -45,19 +46,28 @@
 
       <label><input id="tempCheck" type="checkbox" onchange="toggleTemperatures()" /><span class="dot orange"></span>Temperatures</label>
 
-      <label><input id="rain72Check" type="checkbox" onchange="toggleRainfall72()" /><span class="dot blue"></span>Rainfall Rates / Totals</label>
+      <label><input id="windCheck" type="checkbox" onchange="toggleWindLayer()" /><span class="dot cyan"></span>Wind Barbs</label>
+      <input id="windOpacity" class="opacity-slider" type="range" min="0.05" max="1" step="0.05" value="0.55" oninput="setLayerOpacity('wind')" />
+
+      <label><input id="rain72Check" type="checkbox" onchange="toggleRainfall72()" /><span class="dot blue"></span>Rainfall Totals / QPE</label>
       <div id="rainfallSubToggles" class="sub-toggle-box hidden">
-        <label><input id="rain24Check" type="checkbox" checked onchange="setRainfallPeriod('24')" />Past 24 hr</label>
-        <label><input id="rain48Check" type="checkbox" onchange="setRainfallPeriod('48')" />Past 48 hr</label>
-        <label><input id="rain72SubCheck" type="checkbox" onchange="setRainfallPeriod('72')" />Past 72 hr</label>
+        <label><input id="rain24Check" type="checkbox" checked onchange="setRainfallPeriod('24')" />Past 24 hr Total</label>
+        <label><input id="rain48Check" type="checkbox" onchange="setRainfallPeriod('48')" />Past 48 hr Total</label>
+        <label><input id="rain72SubCheck" type="checkbox" onchange="setRainfallPeriod('72')" />Past 72 hr Total</label>
       </div>
 
       <label><input id="airQualityCheck" type="checkbox" onchange="toggleAirQuality()" /><span class="dot lime"></span>Air Quality</label>
 
       <label><input id="surfaceCheck" type="checkbox" onchange="toggleSurfaceMap()" /><span class="dot pink"></span>Surface Map</label>
+      <div id="surfaceSubToggles" class="sub-toggle-box hidden">
+        <label><input id="surfaceDay1Check" type="checkbox" checked onchange="setSurfaceDay(1)" />Day 1</label>
+        <label><input id="surfaceDay2Check" type="checkbox" onchange="setSurfaceDay(2)" />Day 2</label>
+        <label><input id="surfaceDay3Check" type="checkbox" onchange="setSurfaceDay(3)" />Day 3</label>
+      </div>
 
       <div class="divider"></div>
       <button onclick="refreshActiveLayers()">Refresh Active Layers</button>
+      <div class="scroll-hint">Scroll</div>
     </div>
   </section>
 
@@ -141,6 +151,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
