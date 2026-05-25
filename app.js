@@ -1646,7 +1646,8 @@ function toggleAlerts() {
     return;
   }
 
-  fetch(`https://api.weather.gov/alerts/active?point=${RBRTW_AREA[0]},${RBRTW_AREA[1]}`)
+  fetch("https://api.weather.gov/alerts/active?area=TX")
+  .then(response => {
     .then(response => {
       if (!response.ok) throw new Error("Alerts request failed");
       return response.json();
