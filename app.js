@@ -3107,104 +3107,7 @@ function runPastRadarPointFinal(latlng, token) {
   return true;
 }
 
-// Keep data-card stack presentable in PNG exports when Include data card in PNG is checked.
-const rbrtwSavePhotoStackedFinal = saveMapPhoto;
-saveMapPhoto = async function() {
-  const dataBody = document.getElementById("dataBody");
-  if (dataBody) dataBody.classList.remove("collapsed");
-  await rbrtwSavePhotoStackedFinal();
-};
-
-removeKnownMousemoveProbeHandlersFinal();
-renderLegends();
-
-/* ===== RBRTW EXPORT POLISH FINAL: STACKED DATA CARD + MAP KEY BAR =====
-   Fixes PNG export only. Live map behavior is unchanged.
-   - Export Data card becomes a full-width summary panel above the map-key bar.
-   - Multiple checked data-card items render in a clean grid instead of a cut-off scroll box.
-   - Export map key becomes one full-width bar with each selected key separated into its own readable block.
-*/
-function renderStackedDataCardFinal() {
-  const status = document.getElementById("status");
-  if (!status) return;
-
-  const activeTypes = RBRTW_STACK_DATA_ORDER_FINAL.filter(type => rbrtwDataStackFinal[type]);
-  if (!activeTypes.length) {
-    status.innerHTML = "Click/tap the map to load checked data-card items.";
-    return;
-  }
-
-  const sections = activeTypes.map(type => {
-    const item = rbrtwDataStackFinal[type];
-    const label = RBRTW_STACK_DATA_LABELS_FINAL[type] || item.title || type;
-    return `
-      <div class="stack-data-section stack-data-${sanitizeForPanel(type)}">
-        <div class="stack-data-title">${sanitizeForPanel(label)}</div>
-        <div class="stack-data-subtitle">${sanitizeForPanel(item.title || label)}</div>
-        <div class="stack-data-body">${item.html || ""}</div>
-      </div>
-    `;
-  }).join("");
-
-  status.innerHTML = `
-    <div class="stack-data-card-title">Selected Point Data</div>
-    <div class="stack-data-card-note">${activeTypes.length} checked data item${activeTypes.length === 1 ? "" : "s"} from the latest click/tap.</div>
-    <div class="stack-data-sections">${sections}</div>
-  `;
-}
-
-async function saveMapPhoto() {
-  const btn = document.getElementById("savePhotoBtn");
-  const legendBody = document.getElementById("legendBody");
-  const dataBody = document.getElementById("dataBody");
-  const includeKey = document.getElementById("photoIncludeKeyCheck")?.checked !== false;
-  const includeData = document.getElementById("photoIncludeDataCheck")?.checked === true;
-
-  try {
-    if (btn) btn.textContent = "Saving...";
-    if (legendBody) legendBody.classList.remove("collapsed");
-    if (dataBody) dataBody.classList.remove("collapsed");
-
-    document.body.classList.add("capture-mode", "capture-export-polish");
-    document.body.classList.toggle("capture-hide-key", !includeKey);
-    document.body.classList.toggle("capture-include-data", includeData);
-
-    renderLegends();
-    if (typeof renderStackedDataCardFinal === "function") renderStackedDataCardFinal();
-
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
-
-    const canvas = await html2canvas(document.body, {
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: null,
-      scale: 2,
-      logging: false,
-      windowWidth: document.documentElement.scrollWidth,
-      windowHeight: document.documentElement.scrollHeight
-    });
-
-    const link = document.createElement("a");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    link.download = `RBRTW-weather-map-${timestamp}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-
-    rbrtwBaseUpdatePanelFinal("Save as Photo", includeData
-      ? "Map photo saved with stacked selected-point Data card and separated map-key bar."
-      : "Map photo saved with separated map-key bar.");
-  } catch (error) {
-    console.error(error);
-    rbrtwBaseUpdatePanelFinal("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
-  } finally {
-    document.body.classList.remove("capture-mode", "capture-export-polish", "capture-hide-key", "capture-include-data");
-    renderLegends();
-    if (btn) btn.textContent = "Save as Photo";
-  }
-}
-
+/* Superseded duplicate export wrapper removed during cleanup. */
 
 /* ===== RBRTW RADAR STRICT DBZ FIX =====
    Fixes false severe/hail readings caused by parsing unrelated numbers from
@@ -3344,3 +3247,272 @@ async function runRadarPointFinal(latlng, token) {
     return true;
   }
 }
+
+/* ===== RBRTW FINAL ALERT EXPORT CARD PATCH =====
+   Keeps live behavior intact.
+   Improves stacked data-card styling with full glow borders.
+   During PNG export, if alert data is present, the export data card is moved
+   to the upper-left and styled like the app panels with a neon ring matching
+   the alert type.
+*/
+function stackColorForTypeFinal(type, title = "") {
+  if (type === "alerts") return alertColorFromEvent(title);
+  if (type === "spc") return "#f5c542";
+  if (type === "wpc") return "#9254de";
+  if (type === "radar" || type === "pastRadar") return "#44ff44";
+  if (type === "airQuality") return "#00e400";
+  if (type === "qpf") return "#258dff";
+  if (type === "rainfall") return "#22c55e";
+  if (type === "surface") return "#ff4fd8";
+  if (type === "hrrr") return "#15d5ff";
+  if (type === "county") return "#ffffff";
+  if (type === "temp") return "#ff8c00";
+  if (type === "wind") return "#15d5ff";
+  return "#f5b301";
+}
+
+function hexToRgbaFinal(hex, alpha = 0.38) {
+  const clean = String(hex || "").replace("#", "").trim();
+  if (clean.length !== 6) return `rgba(245,179,1,${alpha})`;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  if ([r, g, b].some(n => Number.isNaN(n))) return `rgba(245,179,1,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderStackedDataCardFinal() {
+  const status = document.getElementById("status");
+  if (!status) return;
+
+  const activeTypes = RBRTW_STACK_DATA_ORDER_FINAL.filter(type => rbrtwDataStackFinal[type]);
+  if (!activeTypes.length) {
+    status.innerHTML = "Click/tap the map to load checked data-card items.";
+    return;
+  }
+
+  const sections = activeTypes.map(type => {
+    const item = rbrtwDataStackFinal[type];
+    const label = RBRTW_STACK_DATA_LABELS_FINAL[type] || item.title || type;
+    const color = stackColorForTypeFinal(type, item.title || label);
+    const glow = hexToRgbaFinal(color, type === "alerts" ? 0.58 : 0.38);
+
+    return `
+      <div
+        class="stack-data-section stack-data-${sanitizeForPanel(type)}${type === "alerts" ? " stack-alert-neon" : ""}"
+        style="--stack-color:${sanitizeForPanel(color)}; --stack-glow:${sanitizeForPanel(glow)};"
+      >
+        <div class="stack-data-title">${sanitizeForPanel(label)}</div>
+        <div class="stack-data-subtitle">${sanitizeForPanel(item.title || label)}</div>
+        <div class="stack-data-body">${item.html || ""}</div>
+      </div>
+    `;
+  }).join("");
+
+  const hasAlert = activeTypes.includes("alerts");
+  status.innerHTML = `
+    <div class="stack-data-card-title">Selected Point Data</div>
+    <div class="stack-data-card-note">${activeTypes.length} checked data item${activeTypes.length === 1 ? "" : "s"} from the latest click/tap.</div>
+    <div class="stack-data-sections${hasAlert ? " stack-data-sections-has-alert" : ""}">${sections}</div>
+  `;
+}
+
+/* Superseded duplicate saveMapPhoto implementation removed during cleanup. */
+
+/* ===== RBRTW FINAL RECOVERY PATCH: CLICKS, NO WHITE ALERT POPUPS, TRUE EXPORT KEYS =====
+   This block is intentionally last and does not remove existing layer logic.
+   Fixes:
+   1) NWS/SPC/WPC polygon clicks write to the DATA card and do NOT open Leaflet's white popup.
+   2) PNG export keys are rebuilt from layers currently ON, not from the last clicked data item.
+   3) PNG export keys use a compact horizontal layout for one or many active keyed layers.
+*/
+function rbrtwLayerIsOnFinal(type) {
+  if (type === "radar") return !!radarLayer;
+  if (type === "pastRadar") return !!pastRadarLayer || radarFrames.length > 0;
+  if (type === "alerts") return !!alertLayer;
+  if (type === "qpf") return !!qpfLayer;
+  if (type === "spc") return !!spcLayer;
+  if (type === "wpc") return !!wpcLayer;
+  if (type === "hrrr") return !!hrrrLayer || hrrrFrames.length > 0;
+  if (type === "temp") return !!tempLayer;
+  if (type === "wind") return !!windLayer;
+  if (type === "rainfall") return !!rainfallLayer;
+  if (type === "airQuality") return !!airQualityLayer;
+  if (type === "surface") return !!surfaceLayer;
+  return false;
+}
+
+function rbrtwExportKeyTypesFinal() {
+  const order = ["radar", "pastRadar", "alerts", "qpf", "rainfall", "spc", "wpc", "temp", "airQuality", "surface", "hrrr", "wind"];
+  const fromLayers = order.filter(type => rbrtwLayerIsOnFinal(type));
+  const fromLegendSet = [...activeLegendTypes].filter(type => order.includes(type));
+  return order.filter(type => fromLayers.includes(type) || fromLegendSet.includes(type));
+}
+
+function rbrtwLegendTitleFinal(type) {
+  const titleMap = {
+    radar: "Radar Reflectivity",
+    pastRadar: "Past Radar",
+    hrrr: "HRRR Future Radar",
+    qpf: "WPC QPF Forecast",
+    spc: "SPC Outlook",
+    wpc: "WPC Excessive Rainfall",
+    alerts: "NWS Alerts",
+    temp: tempDisplayMode === "heat" ? "Heat Index" : tempDisplayMode === "windchill" ? "Wind Chill" : "Temperature",
+    wind: "Wind Barbs",
+    rainfall: "Rainfall Totals / QPE",
+    airQuality: "Air Quality",
+    surface: "Surface Map"
+  };
+  return titleMap[type] || type;
+}
+
+const rbrtwLiveRenderLegendsFinal = renderLegends;
+renderLegends = function() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  if (!document.body.classList.contains("capture-export-polish")) {
+    rbrtwLiveRenderLegendsFinal();
+    return;
+  }
+
+  if (document.body.classList.contains("capture-hide-key")) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const types = rbrtwExportKeyTypesFinal();
+  const legendCard = document.querySelector(".legend-card");
+  if (legendCard) {
+    legendCard.classList.toggle("export-key-single", types.length === 1);
+    legendCard.classList.toggle("export-key-multi", types.length > 1);
+  }
+
+  if (!types.length) {
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = types.map(type => `
+    <div class="export-key-section export-key-${sanitizeForPanel(type)}" data-key-type="${sanitizeForPanel(type)}">
+      <div class="export-key-title">${sanitizeForPanel(rbrtwLegendTitleFinal(type))}</div>
+      <div class="export-key-items">${legendHtml(type)}</div>
+    </div>
+  `).join("");
+};
+
+function rbrtwSetStackedAlertCardFinal(source, feature, extra = {}) {
+  const properties = feature?.properties || {};
+  const details = hazardPanelHtml(source, properties, extra);
+  const dataType = hazardDataTypeFromSourceFinal(source);
+  if (dataCardEnabledFinal(dataType)) {
+    setStackedDataSectionFinal(dataType, details.title, details.html);
+  }
+  return { details, dataType };
+}
+
+bindHazardFeature = function(layer, source, feature, extra = {}) {
+  const properties = feature?.properties || {};
+  const details = hazardPanelHtml(source, properties, extra);
+  const dataType = hazardDataTypeFromSourceFinal(source);
+
+  if (layer.unbindPopup) {
+    try { layer.unbindPopup(); } catch (error) {}
+  }
+
+  layer.on("click", async e => {
+    if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+    if (map && map.closePopup) map.closePopup();
+
+    removeKnownMousemoveProbeHandlersFinal();
+    clearProbeMarkersFinal("");
+    resetStackedDataCardFinal();
+    const token = ++pointProbeRunIdFinal;
+
+    if (dataCardEnabledFinal(dataType)) {
+      setStackedDataSectionFinal(dataType, details.title, details.html);
+    }
+
+    if (e?.latlng) {
+      await runAllCheckedPointDataFinal(e.latlng, token, [dataType]);
+    }
+  });
+
+  layer.bindTooltip(details.title, {
+    sticky: true,
+    direction: "top",
+    className: "hazard-tooltip"
+  });
+
+  layer.on("mouseover", function() {
+    if (layer.setStyle) layer.setStyle({ weight: 5, opacity: 1 });
+  });
+
+  layer.on("mouseout", function() {
+    if (layer.setStyle) layer.setStyle({ weight: 3, opacity: 1 });
+  });
+};
+
+// Replaces only export behavior; live map remains unchanged.
+saveMapPhoto = async function() {
+  const btn = document.getElementById("savePhotoBtn");
+  const legendBody = document.getElementById("legendBody");
+  const dataBody = document.getElementById("dataBody");
+  const dataCard = document.querySelector(".data-card");
+  const includeKey = document.getElementById("photoIncludeKeyCheck")?.checked !== false;
+  const includeData = document.getElementById("photoIncludeDataCheck")?.checked === true;
+  const hasAlertData = includeData && !!(rbrtwDataStackFinal && rbrtwDataStackFinal.alerts);
+
+  try {
+    if (btn) btn.textContent = "Saving...";
+    if (legendBody) legendBody.classList.remove("collapsed");
+    if (dataBody) dataBody.classList.remove("collapsed");
+    if (map && map.closePopup) map.closePopup();
+
+    document.body.classList.add("capture-mode", "capture-export-polish");
+    document.body.classList.toggle("capture-hide-key", !includeKey);
+    document.body.classList.toggle("capture-include-data", includeData);
+    document.body.classList.toggle("capture-has-alert-data", hasAlertData);
+    if (dataCard) dataCard.classList.toggle("capture-priority-alert", hasAlertData);
+
+    renderLegends();
+    if (includeData && typeof renderStackedDataCardFinal === "function") renderStackedDataCardFinal();
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
+
+    const canvas = await html2canvas(document.body, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
+    });
+
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.download = `RBRTW-weather-map-${timestamp}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+    rbrtwBaseUpdatePanelFinal("Save as Photo", includeData
+      ? "Map photo saved with the selected data card and all currently active map keys."
+      : "Map photo saved with all currently active map keys.");
+  } catch (error) {
+    console.error(error);
+    rbrtwBaseUpdatePanelFinal("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
+  } finally {
+    document.body.classList.remove("capture-mode", "capture-export-polish", "capture-hide-key", "capture-include-data", "capture-has-alert-data");
+    if (dataCard) dataCard.classList.remove("capture-priority-alert");
+    const legendCard = document.querySelector(".legend-card");
+    if (legendCard) legendCard.classList.remove("export-key-single", "export-key-multi");
+    renderLegends();
+    if (btn) btn.textContent = "Save as Photo";
+  }
+};
+
+removeKnownMousemoveProbeHandlersFinal();
+renderLegends();
