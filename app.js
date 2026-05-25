@@ -1647,7 +1647,6 @@ function toggleAlerts() {
   }
 
   fetch("https://api.weather.gov/alerts/active?area=TX")
-  .then(response => {
     .then(response => {
       if (!response.ok) throw new Error("Alerts request failed");
       return response.json();
@@ -3181,3 +3180,4 @@ function clearLegend(type) {
 }
 
 renderLegends();
+
