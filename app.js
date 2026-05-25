@@ -3962,3 +3962,613 @@ renderLegends = function() {
 
 removeKnownMousemoveProbeHandlersFinal();
 renderLegends();
+
+
+/* ===== RBRTW FINAL AUDIT LOCK: TRUE CLICK/TAP ONLY + CLEAN TOGGLE WORDING =====
+   This block is intentionally last. It prevents target data-card probes from using
+   hover/mousemove and cleans the user-facing layer-on messages so no layer says hover.
+*/
+(function enforceClickOnlyFinalAudit(){
+  const blockedProbeEvents = new Set(["mousemove"]);
+  const originalMapOn = map.on.bind(map);
+  map.on = function(type, handler, context) {
+    if (blockedProbeEvents.has(type) && (handler === airQualityProbeHandler || handler === radarProbeHandler || handler === qpfProbeHandler || handler === rainfallProbeHandler)) {
+      return this;
+    }
+    return originalMapOn(type, handler, context);
+  };
+
+  function hardRemoveProbeMousemove() {
+    try { if (airQualityProbeHandler) map.off("mousemove", airQualityProbeHandler); } catch (error) {}
+    try { if (radarProbeHandler) map.off("mousemove", radarProbeHandler); } catch (error) {}
+    try { if (qpfProbeHandler) map.off("mousemove", qpfProbeHandler); } catch (error) {}
+    try { if (rainfallProbeHandler) map.off("mousemove", rainfallProbeHandler); } catch (error) {}
+  }
+
+  // Ensure attach functions never bind hover/mousemove. Shared dispatcher handles click/tap.
+  attachAirQualityProbe = function() { detachAirQualityProbe(); hardRemoveProbeMousemove(); };
+  attachRadarProbe = function() { detachRadarProbe(); hardRemoveProbeMousemove(); };
+  attachQpfProbe = function() { detachQpfProbe(false); hardRemoveProbeMousemove(); };
+  attachRainfallProbe = function() { detachRainfallProbe(false); hardRemoveProbeMousemove(); };
+
+  const auditedToggleRadar = toggleRadar;
+  toggleRadar = function() {
+    const wasOn = !!radarLayer;
+    auditedToggleRadar();
+    hardRemoveProbeMousemove();
+    if (!wasOn && radarLayer) {
+      setActiveClickDataLayerFinal("radar");
+      updatePanel("Radar", `NOAA/NWS MRMS radar layer is on.<br>Target data is click/tap only. Radar data-card feedback is off unless the Radar data-card checkbox is checked.`);
+    }
+  };
+
+  const auditedToggleQpf = toggleQpf;
+  toggleQpf = function() {
+    const wasOn = !!qpfLayer;
+    auditedToggleQpf();
+    hardRemoveProbeMousemove();
+    if (!wasOn && qpfLayer) {
+      setActiveClickDataLayerFinal("qpf");
+      updatePanel("Rainfall / QPF", `WPC QPF layer is on.<br>Target data is click/tap only. Click/tap inside a QPF area to write QPF data to the Data card when QPF data-card is enabled.`);
+    }
+  };
+
+  const auditedToggleRainfall = toggleRainfall72;
+  toggleRainfall72 = function() {
+    const wasOn = !!rainfallLayer;
+    auditedToggleRainfall();
+    hardRemoveProbeMousemove();
+    if (!wasOn && rainfallLayer) {
+      setActiveClickDataLayerFinal("rainfall");
+      updatePanel("Rainfall Totals / QPE", `${rainfallLabel()} MRMS QPE layer is on.<br>Target data is click/tap only. Click/tap inside a colored QPE area to write rainfall total data to the Data card when QPE data-card is enabled.`);
+    }
+  };
+
+  const auditedToggleAirQuality = toggleAirQuality;
+  toggleAirQuality = function() {
+    const wasOn = !!airQualityLayer;
+    auditedToggleAirQuality();
+    hardRemoveProbeMousemove();
+    if (!wasOn && airQualityLayer) {
+      setActiveClickDataLayerFinal("airQuality");
+      updatePanel("Air Quality", `Air Quality PM2.5 guidance layer is on.<br>Target data is click/tap only. Click/tap inside the shaded area to write the category and PM2.5 value to the Data card when Air Quality data-card is enabled.`);
+    }
+  };
+
+  // Keep polygon hazard clicks from falling through to raster probes.
+  const auditedBindHazardFeature = bindHazardFeature;
+  bindHazardFeature = function(layer, source, feature, extra = {}) {
+    auditedBindHazardFeature(layer, source, feature, extra);
+    layer.on("click", e => {
+      if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+    });
+  };
+
+  hardRemoveProbeMousemove();
+})();
+
+
+/* ===== RBRTW COUNTY LINES FINAL FIX =====
+   This function was missing from the stacked patched file. It is intentionally last
+   so the County Lines checkbox always has a real working handler.
+*/
+async function loadTexasCountyGeoJsonFinal() {
+  const sources = [
+    "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
+  ];
+
+  let lastError = null;
+  for (const url of sources) {
+    try {
+      const response = await fetch(`${url}?cache=${Date.now()}`);
+      if (!response.ok) throw new Error(`County source failed: ${response.status}`);
+      const data = await response.json();
+      const features = (data.features || []).filter(feature => {
+        const id = String(feature.id || "");
+        const fips = String(feature.properties?.GEO_ID || feature.properties?.COUNTYFP || feature.properties?.STATEFP || "");
+        return id.startsWith("48") || fips.includes("US48") || feature.properties?.STATEFP === "48";
+      });
+      if (features.length) {
+        return { type: "FeatureCollection", features };
+      }
+    } catch (error) {
+      lastError = error;
+      console.warn("County source failed", url, error);
+    }
+  }
+  throw lastError || new Error("No Texas county features returned.");
+}
+
+function countyNameFinal(feature) {
+  const p = feature?.properties || {};
+  return p.NAME || p.name || p.NAMELSAD || p.COUNTY || p.COUNTY_NAME || "County";
+}
+
+function countyStyleFinal() {
+  const opacity = Number(document.getElementById("countyOpacity")?.value || 0.35);
+  return {
+    color: "#111827",
+    weight: 1.7,
+    opacity,
+    fillOpacity: 0,
+    interactive: true
+  };
+}
+
+async function toggleCountyLines() {
+  if (countyLayer) {
+    map.removeLayer(countyLayer);
+    countyLayer = null;
+    setCheck("countyCheck", false);
+    clearLegend("county");
+    updatePanel("County Lines", "County line layer turned off.");
+    return;
+  }
+
+  try {
+    setCheck("countyCheck", true);
+    updatePanel("County Lines", "Loading Texas county boundaries...");
+
+    const texasCounties = await loadTexasCountyGeoJsonFinal();
+    countyLayer = L.geoJSON(texasCounties, {
+      style: countyStyleFinal,
+      onEachFeature: function(feature, layer) {
+        const name = countyNameFinal(feature);
+        layer.bindTooltip(`${sanitizeForPanel(name)} County`, {
+          sticky: true,
+          direction: "top"
+        });
+        layer.on("click", e => {
+          if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+          if (dataCardEnabledFinal && !dataCardEnabledFinal("county")) return;
+          updatePanel("County Boundary", `${sanitizeForPanel(name)} County<br>Layer: Texas county boundary lines`);
+        });
+      }
+    }).addTo(map);
+
+    if (countyLayer.bringToFront) countyLayer.bringToFront();
+    clearLegend("county");
+    updatePanel("County Lines", `Texas county boundary layer turned on.<br>Counties loaded: ${texasCounties.features.length}<br>Opacity slider controls boundary visibility.`);
+  } catch (error) {
+    console.error(error);
+    countyLayer = null;
+    setCheck("countyCheck", false);
+    updatePanel("County Lines", "Could not load Texas county lines. Check browser console/network access to the county GeoJSON source.");
+  }
+}
+
+// Final opacity override so the County Lines slider works even after all prior setLayerOpacity patches.
+const setLayerOpacityCountyFinal = setLayerOpacity;
+setLayerOpacity = function(type) {
+  if (type === "county" && countyLayer) {
+    countyLayer.setStyle(countyStyleFinal());
+    if (countyLayer.bringToFront) countyLayer.bringToFront();
+    return;
+  }
+  setLayerOpacityCountyFinal(type);
+};
+
+// Keep county lines visible above satellite imagery/reference layers after changing basemaps.
+const setBasemapCountyFinal = setBasemap;
+setBasemap = function(type) {
+  setBasemapCountyFinal(type);
+  if (countyLayer && countyLayer.bringToFront) {
+    setTimeout(() => countyLayer && countyLayer.bringToFront && countyLayer.bringToFront(), 150);
+  }
+};
+
+// Make sure the checkbox starts from the real layer state after reload.
+setCheck("countyCheck", !!countyLayer);
+
+
+/* ===== RBRTW COMPREHENSIVE FEATURE AUDIT PATCH =====
+   Added after full static review of the current project files.
+   Fixes missing runtime functions, restores SPC/WPC/HRRR handlers, keeps all target
+   data-card writes click/tap-only, adds surface/past-radar/HRRR click data behavior,
+   and keeps county lines above satellite/reference layers.
+*/
+
+// Required unit helpers. They were referenced by station layers but were missing.
+function cToF(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return (Number(value) * 9) / 5 + 32;
+}
+
+function mpsToMph(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value) * 2.2369362921;
+}
+
+function safeSetCheckFinal(id, checked) {
+  const el = document.getElementById(id);
+  if (el) el.checked = checked;
+}
+
+function geoJsonAttrFinal(feature) {
+  return feature?.properties || feature?.attributes || {};
+}
+
+function spcRiskColorFinal(feature) {
+  const p = geoJsonAttrFinal(feature);
+  const text = String(p.LABEL || p.label || p.CATEGORICAL || p.outlook || p.RISK || p.risk || p.dn || "").toLowerCase();
+  const dn = Number(p.dn ?? p.DN ?? p.gridcode ?? p.GRIDCODE);
+  if (text.includes("high") || dn === 8) return "#ee99ee";
+  if (text.includes("moderate") || dn === 6) return "#e06666";
+  if (text.includes("enhanced") || dn === 5) return "#ffa366";
+  if (text.includes("slight") || dn === 4) return "#ffe066";
+  if (text.includes("marginal") || dn === 3) return "#66a366";
+  if (text.includes("thunder") || dn === 2) return "#c1e9c1";
+  return "#c1e9c1";
+}
+
+function wpcRiskColorFinal(feature) {
+  const p = geoJsonAttrFinal(feature);
+  const text = String(p.LABEL || p.label || p.CATEGORY || p.category || p.RISK || p.risk || p.dn || "").toLowerCase();
+  const dn = Number(p.dn ?? p.DN ?? p.gridcode ?? p.GRIDCODE);
+  if (text.includes("high") || dn === 4) return "#ee99ee";
+  if (text.includes("moderate") || dn === 3) return "#e06666";
+  if (text.includes("slight") || dn === 2) return "#ffe066";
+  if (text.includes("marginal") || dn === 1) return "#66a366";
+  return "#66a366";
+}
+
+async function fetchArcGisGeoJsonFinal(url, layerId, params = {}) {
+  const q = new URLSearchParams({
+    f: "geojson",
+    where: "1=1",
+    outFields: "*",
+    returnGeometry: "true",
+    outSR: "4326",
+    ...params
+  });
+  const response = await fetch(`${url}/${layerId}/query?${q.toString()}`);
+  if (!response.ok) throw new Error(`ArcGIS query failed for layer ${layerId}`);
+  return await response.json();
+}
+
+const spcOutlookServiceFinal = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
+
+async function toggleSpc() {
+  if (spcLayer) {
+    map.removeLayer(spcLayer);
+    spcLayer = null;
+    safeSetCheckFinal("spcCheck", false);
+    clearLegend("spc");
+    updatePanel("SPC Outlook", "SPC outlook layer turned off.");
+    return;
+  }
+
+  try {
+    updatePanel("SPC Outlook", "Loading SPC outlook polygons...");
+    const data = await fetchArcGisGeoJsonFinal(spcOutlookServiceFinal, 1);
+    const features = (data.features || []).filter(f => f.geometry);
+    spcLayer = L.geoJSON({ type: "FeatureCollection", features }, {
+      style: feature => {
+        const color = spcRiskColorFinal(feature);
+        return {
+          color,
+          weight: 3,
+          opacity: 0.95,
+          fillColor: color,
+          fillOpacity: Number(document.getElementById("spcOpacity")?.value || 0.35)
+        };
+      },
+      onEachFeature: (feature, layer) => bindHazardFeature(layer, "SPC", feature)
+    }).addTo(map);
+    safeSetCheckFinal("spcCheck", true);
+    updateLegend("spc");
+    if (spcLayer.bringToFront) spcLayer.bringToFront();
+    updatePanel("SPC Outlook", `SPC outlook layer turned on.<br>Polygons loaded: ${features.length}<br>Click/tap a polygon to write SPC details to the Data card when SPC data-card is enabled.`);
+  } catch (error) {
+    console.error(error);
+    spcLayer = null;
+    safeSetCheckFinal("spcCheck", false);
+    updatePanel("SPC Outlook", "Could not load SPC outlook polygons.");
+  }
+}
+
+const wpcOutlookServiceFinal = "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer";
+const wpcLayerIdsFinal = [0, 1, 2, 3, 4];
+
+async function toggleWpc() {
+  if (wpcLayer) {
+    map.removeLayer(wpcLayer);
+    wpcLayer = null;
+    safeSetCheckFinal("wpcCheck", false);
+    clearLegend("wpc");
+    updatePanel("WPC Outlook", "WPC outlook layer turned off.");
+    return;
+  }
+
+  try {
+    updatePanel("WPC Outlook", "Loading WPC excessive-rainfall outlook polygons...");
+    wpcLayer = L.layerGroup().addTo(map);
+    let total = 0;
+    for (const id of wpcLayerIdsFinal) {
+      try {
+        const data = await fetchArcGisGeoJsonFinal(wpcOutlookServiceFinal, id);
+        const features = (data.features || []).filter(f => f.geometry);
+        if (!features.length) continue;
+        const layerGroup = L.geoJSON({ type: "FeatureCollection", features }, {
+          style: feature => {
+            const color = wpcRiskColorFinal(feature);
+            return {
+              color,
+              weight: 3,
+              opacity: 0.95,
+              fillColor: color,
+              fillOpacity: Number(document.getElementById("wpcOpacity")?.value || 0.6)
+            };
+          },
+          onEachFeature: (feature, layer) => bindHazardFeature(layer, "WPC", feature, { layerName: `WPC layer ${id}` })
+        });
+        layerGroup.addTo(wpcLayer);
+        total += features.length;
+      } catch (layerError) {
+        console.warn("WPC layer failed", id, layerError);
+      }
+    }
+    safeSetCheckFinal("wpcCheck", true);
+    updateLegend("wpc");
+    if (wpcLayer.bringToFront) wpcLayer.bringToFront();
+    updatePanel("WPC Outlook", `WPC excessive-rainfall outlook layer turned on.<br>Polygons loaded: ${total}<br>Click/tap a polygon to write WPC details to the Data card when WPC data-card is enabled.`);
+  } catch (error) {
+    console.error(error);
+    if (wpcLayer) map.removeLayer(wpcLayer);
+    wpcLayer = null;
+    safeSetCheckFinal("wpcCheck", false);
+    updatePanel("WPC Outlook", "Could not load WPC outlook polygons.");
+  }
+}
+
+async function loadHrrrFramesFinal() {
+  const candidates = [
+    "/public/data/model/hrrr/latest.json",
+    "/data/model/hrrr/latest.json",
+    "public/data/model/hrrr/latest.json",
+    "data/model/hrrr/latest.json"
+  ];
+  let lastError = null;
+  for (const url of candidates) {
+    try {
+      const response = await fetch(`${url}?cache=${Date.now()}`);
+      if (!response.ok) throw new Error(`HRRR index not found: ${url}`);
+      const data = await response.json();
+      const frames = Array.isArray(data) ? data : (data.frames || data.images || data.hours || []);
+      if (!frames.length) throw new Error("HRRR index did not contain frames.");
+      hrrrFrames = frames.map((frame, i) => ({
+        url: assetPath(frame.url || frame.image || frame.path || frame.src || ""),
+        bounds: frame.bounds || data.bounds || [[20, -130], [55, -60]],
+        label: frame.label || frame.hour || frame.forecastHour || frame.fh || `F${String(i).padStart(2, "0")}`,
+        validTime: frame.validTime || frame.valid || frame.time || ""
+      })).filter(frame => frame.url);
+      if (!hrrrFrames.length) throw new Error("HRRR frames did not include image URLs.");
+      return hrrrFrames;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("No HRRR frame index found.");
+}
+
+function showHrrrFrame(index) {
+  if (!hrrrFrames.length) return;
+  if (hrrrLayer) map.removeLayer(hrrrLayer);
+  hrrrIndex = index;
+  if (hrrrIndex < 0) hrrrIndex = hrrrFrames.length - 1;
+  if (hrrrIndex >= hrrrFrames.length) hrrrIndex = 0;
+  const frame = hrrrFrames[hrrrIndex];
+  hrrrBounds = frame.bounds || hrrrBounds || [[20, -130], [55, -60]];
+  hrrrLayer = L.imageOverlay(frame.url, hrrrBounds, {
+    opacity: Number(document.getElementById("hrrrOpacity")?.value || 0.72),
+    attribution: "HRRR simulated reflectivity"
+  }).addTo(map);
+  const slider = document.getElementById("hrrrFrameSlider");
+  if (slider) slider.value = hrrrIndex;
+  const label = document.getElementById("hrrrFrameLabel");
+  if (label) label.textContent = frame.label || `F${String(hrrrIndex).padStart(2, "0")}`;
+}
+
+async function toggleHrrr() {
+  if (hrrrLayer || hrrrFrames.length) {
+    stopHrrrAnimation();
+    if (hrrrLayer) map.removeLayer(hrrrLayer);
+    hrrrLayer = null;
+    hrrrFrames = [];
+    hrrrIndex = 0;
+    const timeline = document.getElementById("hrrrTimeline");
+    if (timeline) timeline.classList.add("hidden");
+    safeSetCheckFinal("hrrrCheck", false);
+    clearLegend("hrrr");
+    if (activeClickDataLayerFinal === "hrrr") setActiveClickDataLayerFinal("");
+    updatePanel("HRRR Future Radar", "HRRR future radar layer turned off.");
+    return;
+  }
+
+  try {
+    updatePanel("HRRR Future Radar", "Loading local HRRR frame index...");
+    await loadHrrrFramesFinal();
+    const slider = document.getElementById("hrrrFrameSlider");
+    if (slider) {
+      slider.min = 0;
+      slider.max = hrrrFrames.length - 1;
+      slider.value = 0;
+    }
+    const timeline = document.getElementById("hrrrTimeline");
+    if (timeline) timeline.classList.remove("hidden");
+    showHrrrFrame(0);
+    safeSetCheckFinal("hrrrCheck", true);
+    updateLegend("hrrr");
+    setActiveClickDataLayerFinal("hrrr");
+    updatePanel("HRRR Future Radar", `HRRR future radar loaded.<br>Frames: ${hrrrFrames.length}<br>Use the timeline slider or play controls. Data-card click/tap can show current HRRR frame info when enabled.`);
+  } catch (error) {
+    console.error(error);
+    hrrrLayer = null;
+    hrrrFrames = [];
+    safeSetCheckFinal("hrrrCheck", false);
+    updatePanel("HRRR Future Radar", "No usable HRRR frame index was found at /public/data/model/hrrr/latest.json or /data/model/hrrr/latest.json.");
+  }
+}
+
+function setHrrrFrameFromSlider() {
+  stopHrrrAnimation();
+  const slider = document.getElementById("hrrrFrameSlider");
+  showHrrrFrame(Number(slider?.value || 0));
+}
+
+function nextHrrrFrame() {
+  showHrrrFrame(hrrrIndex + 1);
+}
+
+function previousHrrrFrame() {
+  showHrrrFrame(hrrrIndex - 1);
+}
+
+function toggleHrrrAnimation() {
+  const playBtn = document.getElementById("hrrrPlayBtn");
+  const loopText = document.getElementById("hrrrLoopText");
+  if (hrrrTimer) {
+    stopHrrrAnimation();
+    return;
+  }
+  if (!hrrrFrames.length) return;
+  hrrrTimer = setInterval(() => showHrrrFrame(hrrrIndex + 1), 800);
+  if (playBtn) playBtn.textContent = "Pause";
+  if (loopText) loopText.textContent = "Loop playing";
+}
+
+function stopHrrrAnimation() {
+  const playBtn = document.getElementById("hrrrPlayBtn");
+  const loopText = document.getElementById("hrrrLoopText");
+  if (hrrrTimer) {
+    clearInterval(hrrrTimer);
+    hrrrTimer = null;
+  }
+  if (playBtn) playBtn.textContent = "Play";
+  if (loopText) loopText.textContent = "Loop paused";
+}
+
+async function identifySurfaceAtFinal(latlng) {
+  if (!surfaceLayer) return null;
+  const size = map.getSize();
+  const b = map.getBounds();
+  const params = new URLSearchParams({
+    f: "json",
+    geometry: `${latlng.lng},${latlng.lat}`,
+    geometryType: "esriGeometryPoint",
+    sr: "4326",
+    layers: `visible:${(surfaceLayerSets[surfaceDay] || surfaceLayerSets[1]).join(",")}`,
+    tolerance: "8",
+    mapExtent: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+    imageDisplay: `${size.x},${size.y},96`,
+    returnGeometry: "false"
+  });
+  const response = await fetch(`${surfaceMapServiceUrl}/identify?${params.toString()}`);
+  if (!response.ok) throw new Error("Surface identify failed");
+  const data = await response.json();
+  return data.results || [];
+}
+
+async function runSurfacePointFinal(latlng, token) {
+  if (!surfaceLayer || !dataCardEnabledFinal("surface")) return false;
+  try {
+    const results = await identifySurfaceAtFinal(latlng);
+    if (token !== pointProbeRunIdFinal) return true;
+    if (!results || !results.length) {
+      updatePanel("Surface Map Point", `No WPC surface-map feature returned at selected point.<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
+      return true;
+    }
+    const rows = results.slice(0, 8).map(result => {
+      const attrs = result.attributes || {};
+      const label = firstValue(attrs, ["name", "Name", "LABEL", "label", "type", "TYPE", "value", "VALUE"], result.layerName || "Surface feature");
+      return `<div class="hazard-detail-row"><span>${sanitizeForPanel(result.layerName || "Layer")}:</span> ${sanitizeForPanel(label)}</div>`;
+    }).join("");
+    updatePanel("Surface Map Point", `WPC Day ${surfaceDay} National Forecast Chart<br><br>${rows}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
+    return true;
+  } catch (error) {
+    if (token === pointProbeRunIdFinal) updatePanel("Surface Map Point", "No surface-map data returned at the selected point.");
+    return true;
+  }
+}
+
+function runHrrrPointFinal(latlng, token) {
+  if (!hrrrLayer || !dataCardEnabledFinal("hrrr")) return false;
+  const frame = hrrrFrames[hrrrIndex] || {};
+  updatePanel("HRRR Future Radar Point", `Current HRRR frame: <strong>${sanitizeForPanel(frame.label || `F${hrrrIndex}`)}</strong><br>${frame.validTime ? `Valid: ${sanitizeForPanel(frame.validTime)}<br>` : ""}Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Note: this local image overlay does not expose a reliable pixel dBZ sample in the browser.`);
+  return true;
+}
+
+function runPastRadarPointFinal(latlng, token) {
+  if (!pastRadarLayer || !dataCardEnabledFinal("pastRadar")) return false;
+  const frame = radarFrames[radarIndex] || {};
+  updatePanel("Past Radar Point", `Current past radar frame: <strong>${frame.time ? sanitizeForPanel(localRadarTime(frame.time)) : "Latest"}</strong><br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Note: RainViewer tile playback does not expose a reliable pixel dBZ sample in this browser map.`);
+  return true;
+}
+
+// Replace the shared click dispatcher with one that covers every clickable data-card layer.
+try { map.off("click", handleSharedMapDataClickFinal); } catch (error) {}
+async function handleSharedMapDataClickFinal(e) {
+  if (!e || !e.latlng) return;
+  const target = e.originalEvent?.target;
+  if (target && target.closest && target.closest(".control-card, .home-btn, .basemap-btn, .basemap-menu, .leaflet-control")) return;
+  removeKnownMousemoveProbeHandlersFinal();
+  const token = ++pointProbeRunIdFinal;
+  const preferred = activeClickDataLayerFinal ? [activeClickDataLayerFinal] : [];
+  const fallback = ["surface", "rainfall", "qpf", "airQuality", "radar", "hrrr", "pastRadar"];
+  const order = [...preferred, ...fallback.filter(type => !preferred.includes(type))];
+  for (const type of order) {
+    if (type === "surface" && await runSurfacePointFinal(e.latlng, token)) return;
+    if (type === "rainfall" && await runRainfallPointFinal(e.latlng, token)) return;
+    if (type === "qpf" && await runQpfPointFinal(e.latlng, token)) return;
+    if (type === "airQuality" && await runAirQualityPointFinal(e.latlng, token)) return;
+    if (type === "radar" && await runRadarPointFinal(e.latlng, token)) return;
+    if (type === "hrrr" && runHrrrPointFinal(e.latlng, token)) return;
+    if (type === "pastRadar" && runPastRadarPointFinal(e.latlng, token)) return;
+  }
+}
+map.on("click", handleSharedMapDataClickFinal);
+
+// Wrap remaining toggles so the active click source follows the last enabled layer.
+const toggleSurfaceMapAuditFinal = toggleSurfaceMap;
+toggleSurfaceMap = function() {
+  const wasOn = !!surfaceLayer;
+  toggleSurfaceMapAuditFinal();
+  if (!wasOn && surfaceLayer) setActiveClickDataLayerFinal("surface");
+  else if (activeClickDataLayerFinal === "surface") setActiveClickDataLayerFinal("");
+};
+
+const togglePastRadarAuditFinal = togglePastRadar;
+togglePastRadar = async function() {
+  const wasOn = !!pastRadarLayer || radarFrames.length > 0;
+  await togglePastRadarAuditFinal();
+  if (!wasOn && (pastRadarLayer || radarFrames.length)) setActiveClickDataLayerFinal("pastRadar");
+  else if (activeClickDataLayerFinal === "pastRadar") setActiveClickDataLayerFinal("");
+};
+
+const toggleHrrrAuditFinal = toggleHrrr;
+toggleHrrr = async function() {
+  const wasOn = !!hrrrLayer || hrrrFrames.length > 0;
+  await toggleHrrrAuditFinal();
+  if (!wasOn && (hrrrLayer || hrrrFrames.length)) setActiveClickDataLayerFinal("hrrr");
+  else if (activeClickDataLayerFinal === "hrrr") setActiveClickDataLayerFinal("");
+};
+
+const toggleSpcAuditFinal = toggleSpc;
+toggleSpc = async function() {
+  const wasOn = !!spcLayer;
+  await toggleSpcAuditFinal();
+  if (!wasOn && spcLayer) setActiveClickDataLayerFinal("spc");
+  else if (activeClickDataLayerFinal === "spc") setActiveClickDataLayerFinal("");
+};
+
+const toggleWpcAuditFinal = toggleWpc;
+toggleWpc = async function() {
+  const wasOn = !!wpcLayer;
+  await toggleWpcAuditFinal();
+  if (!wasOn && wpcLayer) setActiveClickDataLayerFinal("wpc");
+  else if (activeClickDataLayerFinal === "wpc") setActiveClickDataLayerFinal("");
+};
+
+// Final hard check: no data-card target probe binds mousemove after this point.
+removeKnownMousemoveProbeHandlersFinal();
+renderLegends();
