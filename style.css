@@ -1491,3 +1491,154 @@ input[type="checkbox"] {
 .capture-mode.capture-export-polish:not(.capture-hide-key) .mapkey-note {
   display: none !important;
 }
+
+/* ===== RBRTW FINAL PATCH: ALERT DATA-CARD GLOW + COMPACT PNG EXPORT LEGENDS ===== */
+
+/* Full glowing border for stacked data cards. This replaces the old left-stripe feel without changing the live map. */
+.stack-data-section {
+  border: 2px solid var(--stack-color, #f5b301) !important;
+  border-left: 2px solid var(--stack-color, #f5b301) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.07),
+    0 0 12px var(--stack-glow, rgba(245,179,1,0.34)) !important;
+}
+.stack-data-alerts { background: rgba(7, 17, 31, 0.88) !important; }
+.stack-data-spc { --stack-color: #f5c542; --stack-glow: rgba(245,197,66,0.38); }
+.stack-data-wpc { --stack-color: #9254de; --stack-glow: rgba(146,84,222,0.40); }
+.stack-data-radar, .stack-data-pastRadar { --stack-color: #44ff44; --stack-glow: rgba(68,255,68,0.34); }
+.stack-data-airQuality { --stack-color: #00e400; --stack-glow: rgba(0,228,0,0.34); }
+.stack-data-qpf { --stack-color: #258dff; --stack-glow: rgba(37,141,255,0.36); }
+.stack-data-rainfall { --stack-color: #22c55e; --stack-glow: rgba(34,197,94,0.36); }
+.stack-data-surface { --stack-color: #ff4fd8; --stack-glow: rgba(255,79,216,0.36); }
+.stack-data-hrrr { --stack-color: #15d5ff; --stack-glow: rgba(21,213,255,0.36); }
+.stack-data-county { --stack-color: #ffffff; --stack-glow: rgba(255,255,255,0.26); }
+.stack-data-temp { --stack-color: #ff8c00; --stack-glow: rgba(255,140,0,0.36); }
+.stack-data-wind { --stack-color: #15d5ff; --stack-glow: rgba(21,213,255,0.36); }
+
+/* PNG export only: compact horizontal legend/key bar for every active map key. */
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  top: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: 104px !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.55) !important;
+}
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-header {
+  height: 21px !important;
+  min-height: 21px !important;
+  padding: 0 10px !important;
+  font-size: 10px !important;
+  line-height: 21px !important;
+  letter-spacing: 0.08em !important;
+}
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-card .card-body {
+  display: block !important;
+  max-height: 80px !important;
+  padding: 5px 8px 7px !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.965) !important;
+}
+.capture-mode.capture-export-polish:not(.capture-hide-key) #legendContent {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+  gap: 5px 7px !important;
+  width: 100% !important;
+  max-height: 68px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+.capture-mode.capture-export-polish:not(.capture-hide-key) .legend-section { display: none !important; }
+.export-legend-section {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 28px !important;
+  padding: 2px 7px !important;
+  margin: 0 !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-left: 3px solid rgba(245,179,1,0.88) !important;
+  border-radius: 5px !important;
+  background: rgba(255,255,255,0.055) !important;
+  overflow: hidden !important;
+  flex: 0 1 auto !important;
+}
+.export-legend-title {
+  flex: 0 0 auto !important;
+  color: #f5b301 !important;
+  font-size: 8.5px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  max-width: 95px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.export-legend-items {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
+.export-key-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  max-width: 122px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  flex: 0 1 auto !important;
+}
+.export-key-swatch {
+  width: 9px !important;
+  height: 8px !important;
+  flex: 0 0 9px !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  border-radius: 2px !important;
+}
+.export-key-line {
+  width: 13px !important;
+  height: 0 !important;
+  flex: 0 0 13px !important;
+  border-top: 3px solid #ffffff;
+  border-radius: 3px !important;
+}
+.export-key-label {
+  color: #ffffff !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  min-width: 0 !important;
+  max-width: 70px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.export-key-value {
+  color: rgba(255,255,255,0.72) !important;
+  font-size: 7.5px !important;
+  line-height: 1 !important;
+  min-width: 0 !important;
+  max-width: 48px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
