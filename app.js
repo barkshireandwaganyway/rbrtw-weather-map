@@ -4946,3 +4946,90 @@ saveMapPhoto = async function() {
 
 removeKnownMousemoveProbeHandlersFinal();
 renderLegends();
+
+/* ===== RBRTW EXPORT POLISH FINAL: STACKED DATA CARD + MAP KEY BAR =====
+   Fixes PNG export only. Live map behavior is unchanged.
+   - Export Data card becomes a full-width summary panel above the map-key bar.
+   - Multiple checked data-card items render in a clean grid instead of a cut-off scroll box.
+   - Export map key becomes one full-width bar with each selected key separated into its own readable block.
+*/
+function renderStackedDataCardFinal() {
+  const status = document.getElementById("status");
+  if (!status) return;
+
+  const activeTypes = RBRTW_STACK_DATA_ORDER_FINAL.filter(type => rbrtwDataStackFinal[type]);
+  if (!activeTypes.length) {
+    status.innerHTML = "Click/tap the map to load checked data-card items.";
+    return;
+  }
+
+  const sections = activeTypes.map(type => {
+    const item = rbrtwDataStackFinal[type];
+    const label = RBRTW_STACK_DATA_LABELS_FINAL[type] || item.title || type;
+    return `
+      <div class="stack-data-section stack-data-${sanitizeForPanel(type)}">
+        <div class="stack-data-title">${sanitizeForPanel(label)}</div>
+        <div class="stack-data-subtitle">${sanitizeForPanel(item.title || label)}</div>
+        <div class="stack-data-body">${item.html || ""}</div>
+      </div>
+    `;
+  }).join("");
+
+  status.innerHTML = `
+    <div class="stack-data-card-title">Selected Point Data</div>
+    <div class="stack-data-card-note">${activeTypes.length} checked data item${activeTypes.length === 1 ? "" : "s"} from the latest click/tap.</div>
+    <div class="stack-data-sections">${sections}</div>
+  `;
+}
+
+async function saveMapPhoto() {
+  const btn = document.getElementById("savePhotoBtn");
+  const legendBody = document.getElementById("legendBody");
+  const dataBody = document.getElementById("dataBody");
+  const includeKey = document.getElementById("photoIncludeKeyCheck")?.checked !== false;
+  const includeData = document.getElementById("photoIncludeDataCheck")?.checked === true;
+
+  try {
+    if (btn) btn.textContent = "Saving...";
+    if (legendBody) legendBody.classList.remove("collapsed");
+    if (dataBody) dataBody.classList.remove("collapsed");
+
+    document.body.classList.add("capture-mode", "capture-export-polish");
+    document.body.classList.toggle("capture-hide-key", !includeKey);
+    document.body.classList.toggle("capture-include-data", includeData);
+
+    renderLegends();
+    if (typeof renderStackedDataCardFinal === "function") renderStackedDataCardFinal();
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    if (typeof html2canvas !== "function") throw new Error("html2canvas did not load");
+
+    const canvas = await html2canvas(document.body, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
+    });
+
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.download = `RBRTW-weather-map-${timestamp}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+    rbrtwBaseUpdatePanelFinal("Save as Photo", includeData
+      ? "Map photo saved with stacked selected-point Data card and separated map-key bar."
+      : "Map photo saved with separated map-key bar.");
+  } catch (error) {
+    console.error(error);
+    rbrtwBaseUpdatePanelFinal("Save as Photo", "Could not save the map image. Some external map tiles may block browser screenshot export.");
+  } finally {
+    document.body.classList.remove("capture-mode", "capture-export-polish", "capture-hide-key", "capture-include-data");
+    renderLegends();
+    if (btn) btn.textContent = "Save as Photo";
+  }
+}
