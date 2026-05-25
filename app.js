@@ -707,18 +707,53 @@ function toggleRainfall72() {
 function mapExtent3857() { const b = map.getBounds(); const sw = L.CRS.EPSG3857.project(b.getSouthWest()); const ne = L.CRS.EPSG3857.project(b.getNorthEast()); return `${sw.x},${sw.y},${ne.x},${ne.y}`; }
 function normalizePrecipInches(rawValue) { const raw = asNumber(rawValue); if (raw === null || raw < 0) return null; if ((state.rainfallPeriod === '48' || state.rainfallPeriod === '72') && raw > 8) return raw / 25.4; if (state.rainfallPeriod === '24' && raw > 12) return raw / 25.4; if (raw > 30) return null; return raw; }
 function extractRawRasterValue(obj) { if (!obj) return null; if (Array.isArray(obj.samples)) { for (const s of obj.samples) { const n = asNumber(s.value ?? s.Value ?? s.pixelValue ?? s.PixelValue ?? s.attributes?.value); if (n !== null) return n; } } const direct = obj.value ?? obj.Value ?? obj.pixelValue ?? obj.PixelValue ?? obj.properties?.value; const n = asNumber(direct); if (n !== null) return n; if (Array.isArray(obj.results)) { for (const r of obj.results) { const rn = asNumber(r.value ?? r.attributes?.value ?? r.attributes?.PixelValue); if (rn !== null) return rn; } } return null; }
-async function identifyRainfallAt(latlng) {
+async function sampleRainfallAt(latlng, sourceLabel = 'selected point') {
   const p = L.CRS.EPSG3857.project(latlng);
-  const params = new URLSearchParams({ f: 'json', geometry: `${p.x},${p.y}`, geometryType: 'esriGeometryPoint', inSR: '102100', returnGeometry: 'false', returnFirstValueOnly: 'true', sampleDistance: '1000', outFields: '*', renderingRule: JSON.stringify(rainfallRenderingRule()) });
+  const params = new URLSearchParams({ f: 'json', geometry: `${p.x},${p.y}`, geometryType: 'esriGeometryPoint', inSR: '102100', returnGeometry: 'false', returnFirstValueOnly: 'true', sampleDistance: '1500', outFields: '*', renderingRule: JSON.stringify(rainfallRenderingRule()) });
   try {
     const data = await fetch(`${rainfallServiceUrl}/getSamples?${params}`).then(r => { if (!r.ok) throw new Error('getSamples failed'); return r.json(); });
-    const raw = extractRawRasterValue(data); return { raw, inches: normalizePrecipInches(raw), source: 'getSamples' };
+    const raw = extractRawRasterValue(data);
+    return { raw, inches: normalizePrecipInches(raw), source: `getSamples ${sourceLabel}` };
   } catch (_) {
     const size = map.getSize();
     const idParams = new URLSearchParams({ f: 'json', geometry: `${p.x},${p.y}`, geometryType: 'esriGeometryPoint', sr: '102100', returnGeometry: 'false', returnCatalogItems: 'false', pixelSize: '1000,1000', mapExtent: mapExtent3857(), imageDisplay: `${size.x},${size.y},96`, renderingRule: JSON.stringify(rainfallRenderingRule()) });
     const data = await fetch(`${rainfallServiceUrl}/identify?${idParams}`).then(r => { if (!r.ok) throw new Error('identify failed'); return r.json(); });
-    const raw = extractRawRasterValue(data); return { raw, inches: normalizePrecipInches(raw), source: 'identify' };
+    const raw = extractRawRasterValue(data);
+    return { raw, inches: normalizePrecipInches(raw), source: `identify ${sourceLabel}` };
   }
+}
+async function identifyRainfallAt(latlng) {
+  const samples = [];
+  const first = await sampleRainfallAt(latlng, 'selected point');
+  samples.push(first);
+  const firstVal = asNumber(first.inches);
+  if (firstVal !== null && firstVal > 0.005) return { ...first, nearbyChecked: 0 };
+
+  // MRMS raster sampling can return 0 on an edge/transparent pixel even where the visible layer is colored.
+  // Check a very small ring around the selected point and use the highest non-zero nearby value.
+  const offsets = [0.01, -0.01, 0.02, -0.02, 0.04, -0.04];
+  const nearby = [];
+  for (const dLat of offsets) nearby.push(L.latLng(latlng.lat + dLat, latlng.lng));
+  for (const dLng of offsets) nearby.push(L.latLng(latlng.lat, latlng.lng + dLng));
+  for (const dLat of [0.015, -0.015, 0.035, -0.035]) {
+    for (const dLng of [0.015, -0.015, 0.035, -0.035]) nearby.push(L.latLng(latlng.lat + dLat, latlng.lng + dLng));
+  }
+
+  for (const point of nearby) {
+    try {
+      const result = await sampleRainfallAt(point, 'nearby check');
+      samples.push(result);
+    } catch (_) {}
+  }
+
+  const best = samples
+    .filter(item => asNumber(item.inches) !== null)
+    .sort((a, b) => Number(b.inches) - Number(a.inches))[0];
+
+  if (best && Number(best.inches) > Number(first.inches || 0)) {
+    return { ...best, source: `${best.source}; selected point returned ${first.raw ?? '0'}`, nearbyChecked: nearby.length };
+  }
+  return { ...first, nearbyChecked: nearby.length };
 }
 async function runRainfallPoint(latlng) {
   if (!state.rainfallLayer || !dataEnabled('rainfall')) return false;
@@ -726,7 +761,8 @@ async function runRainfallPoint(latlng) {
   const text = formatInches(result.inches);
   addMarkerToGroup(state.markers.rainfall, latlng, text, 'rainfall');
   const norm = asNumber(result.raw) !== null && asNumber(result.raw) > 8 ? '<br>Large raw sample was normalized to prevent unrealistic inch totals.' : '';
-  setStack('rainfall', 'Rainfall Total Point', `<strong>${rainfallLabel()}</strong><br>Estimated observed rainfall total: <strong>${text}</strong><br>Raw sample: ${sanitizeForPanel(result.raw ?? 'N/A')}${norm}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS MRMS QPE.`);
+  const nearby = result.nearbyChecked ? `<br>Nearby checks used: ${result.nearbyChecked}` : '';
+  setStack('rainfall', 'Rainfall Total Point', `<strong>${rainfallLabel()}</strong><br>Estimated observed rainfall total: <strong>${text}</strong><br>Raw sample: ${sanitizeForPanel(result.raw ?? 'N/A')}${norm}${nearby}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS MRMS QPE (${sanitizeForPanel(result.source || 'sample')}).`);
   return true;
 }
 
@@ -823,10 +859,33 @@ async function toggleCountyLines() {
 
 function setSurfaceChecks(day) { setCheck('surfaceDay1Check', day === 1); setCheck('surfaceDay2Check', day === 2); setCheck('surfaceDay3Check', day === 3); }
 function createSurfaceLayer(day = state.surfaceDay) { return L.esri.dynamicMapLayer({ url: surfaceMapServiceUrl, layers: surfaceLayerSets[day] || surfaceLayerSets[1], opacity: Number($('surfaceOpacity')?.value || 0.78) }); }
-function setSurfaceDay(day) { state.surfaceDay = Number(day); setSurfaceChecks(state.surfaceDay); if (state.surfaceLayer) { map.removeLayer(state.surfaceLayer); state.surfaceLayer = createSurfaceLayer(state.surfaceDay).addTo(map); updateLegend('surface'); updatePanel('Surface Map', `WPC Day ${state.surfaceDay} surface map is on.`); } }
+function setSurfaceDay(day) {
+  state.surfaceDay = Number(day) || 1;
+  setSurfaceChecks(state.surfaceDay);
+  $('surfaceSubToggles')?.classList.remove('hidden');
+  if (state.surfaceLayer) {
+    map.removeLayer(state.surfaceLayer);
+    state.surfaceLayer = createSurfaceLayer(state.surfaceDay).addTo(map);
+    updateLegend('surface');
+    updatePanel('Surface Map', `WPC Day ${state.surfaceDay} surface map is on.`);
+  }
+}
 function toggleSurfaceMap() {
-  if (state.surfaceLayer) { removeLayerSafe(state.surfaceLayer); state.surfaceLayer = null; $('surfaceSubToggles')?.classList.add('hidden'); setCheck('surfaceCheck', false); clearLegend('surface'); updatePanel('Surface Map', 'Surface map layer turned off.'); return; }
-  state.surfaceDay = 1; setSurfaceChecks(1); state.surfaceLayer = createSurfaceLayer(1).addTo(map); $('surfaceSubToggles')?.classList.remove('hidden'); setCheck('surfaceCheck', true); updateLegend('surface'); updatePanel('Surface Map', 'WPC Day 1 surface map is on.<br>Use Day 1, Day 2, or Day 3 to switch the forecast layer.');
+  $('surfaceSubToggles')?.classList.remove('hidden');
+  if (state.surfaceLayer) {
+    removeLayerSafe(state.surfaceLayer);
+    state.surfaceLayer = null;
+    setCheck('surfaceCheck', false);
+    clearLegend('surface');
+    updatePanel('Surface Map', 'Surface map layer turned off. Day 1 / Day 2 / Day 3 options remain available for the next time you turn it on.');
+    return;
+  }
+  if (![1, 2, 3].includes(Number(state.surfaceDay))) state.surfaceDay = 1;
+  setSurfaceChecks(state.surfaceDay);
+  state.surfaceLayer = createSurfaceLayer(state.surfaceDay).addTo(map);
+  setCheck('surfaceCheck', true);
+  updateLegend('surface');
+  updatePanel('Surface Map', `WPC Day ${state.surfaceDay} surface map is on.<br>Use Day 1, Day 2, or Day 3 to switch the forecast layer.`);
 }
 async function identifySurfaceAt(latlng) {
   const size = map.getSize(); const b = map.getBounds();
@@ -843,7 +902,23 @@ async function runSurfacePoint(latlng) {
   return true;
 }
 
-function assetPath(path) { if (!path) return ''; return path.startsWith('/') ? path : `/${path}`; }
+function normalizeHrrrBounds(bounds) {
+  if (!bounds) return [[20, -130], [55, -60]];
+  if (Array.isArray(bounds)) return bounds;
+  if (bounds.south !== undefined && bounds.west !== undefined && bounds.north !== undefined && bounds.east !== undefined) {
+    return [[Number(bounds.south), Number(bounds.west)], [Number(bounds.north), Number(bounds.east)]];
+  }
+  return [[20, -130], [55, -60]];
+}
+function normalizeHrrrAssetPath(path, indexUrl = '') {
+  if (!path) return '';
+  let p = String(path).trim();
+  if (/^https?:\/\//i.test(p) || p.startsWith('data:')) return p;
+  p = p.replace(/^\.\//, '').replace(/^\//, '');
+  if (indexUrl.includes('/data/model/hrrr/') && p.startsWith('public/data/')) p = p.replace(/^public\//, '');
+  if (!indexUrl.includes('/data/model/hrrr/') && p.startsWith('data/model/hrrr/')) p = `public/${p}`;
+  return `/${p}`;
+}
 async function loadHrrrFrames() {
   const paths = ['/public/data/model/hrrr/latest.json', '/data/model/hrrr/latest.json', 'public/data/model/hrrr/latest.json', 'data/model/hrrr/latest.json'];
   let lastError = null;
@@ -851,17 +926,30 @@ async function loadHrrrFrames() {
     try {
       const data = await fetch(`${url}?cache=${Date.now()}`).then(r => { if (!r.ok) throw new Error('HRRR index not found'); return r.json(); });
       const frames = Array.isArray(data) ? data : (data.frames || data.images || data.hours || []);
-      state.hrrrFrames = frames.map((frame, i) => ({ url: assetPath(frame.url || frame.image || frame.path || frame.src || ''), bounds: frame.bounds || data.bounds || [[20, -130], [55, -60]], label: frame.label || frame.hour || frame.forecastHour || frame.fh || `F${String(i).padStart(2, '0')}`, validTime: frame.validTime || frame.valid || frame.time || '' })).filter(f => f.url);
+      state.hrrrFrames = frames.map((frame, i) => {
+        const rawPath = frame.file || frame.url || frame.image || frame.path || frame.src || '';
+        return {
+          url: normalizeHrrrAssetPath(rawPath, url),
+          bounds: normalizeHrrrBounds(frame.bounds || data.bounds),
+          label: frame.label || (frame.hour !== undefined ? `F${String(frame.hour).padStart(2, '0')}` : '') || frame.forecastHour || frame.fh || `F${String(i + 1).padStart(2, '0')}`,
+          validTime: frame.validTime || frame.valid || frame.time || ''
+        };
+      }).filter(f => f.url);
       if (state.hrrrFrames.length) return;
     } catch (error) { lastError = error; }
   }
   throw lastError || new Error('No HRRR frame index found');
 }
 function showHrrrFrame(index) {
-  if (!state.hrrrFrames.length) return; removeLayerSafe(state.hrrrLayer);
-  state.hrrrIndex = (index + state.hrrrFrames.length) % state.hrrrFrames.length; const frame = state.hrrrFrames[state.hrrrIndex];
-  state.hrrrLayer = L.imageOverlay(frame.url, frame.bounds, { opacity: Number($('hrrrOpacity')?.value || 0.72), attribution: 'HRRR simulated reflectivity' }).addTo(map);
-  if ($('hrrrFrameSlider')) $('hrrrFrameSlider').value = state.hrrrIndex; if ($('hrrrFrameLabel')) $('hrrrFrameLabel').textContent = frame.label;
+  if (!state.hrrrFrames.length) return;
+  removeLayerSafe(state.hrrrLayer);
+  state.hrrrIndex = (index + state.hrrrFrames.length) % state.hrrrFrames.length;
+  const frame = state.hrrrFrames[state.hrrrIndex];
+  state.hrrrLayer = L.imageOverlay(frame.url, frame.bounds, { opacity: Number($('hrrrOpacity')?.value || 0.72), attribution: 'HRRR simulated reflectivity', interactive: false }).addTo(map);
+  const img = state.hrrrLayer.getElement?.();
+  if (img) img.crossOrigin = 'anonymous';
+  if ($('hrrrFrameSlider')) $('hrrrFrameSlider').value = state.hrrrIndex;
+  if ($('hrrrFrameLabel')) $('hrrrFrameLabel').textContent = frame.label;
 }
 async function toggleHrrr() {
   if (state.hrrrLayer || state.hrrrFrames.length) { stopHrrrAnimation(); removeLayerSafe(state.hrrrLayer); state.hrrrLayer = null; state.hrrrFrames = []; $('hrrrTimeline')?.classList.add('hidden'); setCheck('hrrrCheck', false); clearLegend('hrrr'); updatePanel('HRRR Future Radar', 'HRRR future radar layer turned off.'); return; }
@@ -900,19 +988,41 @@ async function saveMapPhoto() {
   const button = $('savePhotoBtn');
   const includeKey = checked('photoIncludeKeyCheck');
   const includeData = checked('photoIncludeDataCheck');
+  let exportDataCard = null;
   try {
     if (button) { button.disabled = true; button.textContent = 'Saving...'; }
+    const dataBody = $('dataBody');
+    if (dataBody) dataBody.classList.remove('collapsed');
+
+    if (includeData) {
+      const statusHtml = $('status')?.innerHTML || '<strong>DATA</strong><br><br>No data card content available.';
+      exportDataCard = document.createElement('section');
+      exportDataCard.id = 'exportDataCard';
+      exportDataCard.className = 'export-data-card';
+      exportDataCard.innerHTML = `<div class="export-data-header">DATA</div><div class="export-data-body">${statusHtml}</div>`;
+      document.body.appendChild(exportDataCard);
+    }
+
     document.body.classList.add('capture-mode', 'capture-export-polish');
     document.body.classList.toggle('capture-hide-key', !includeKey);
     document.body.classList.toggle('capture-include-data', includeData);
-    map.closePopup(); renderLegends();
-    await new Promise(resolve => setTimeout(resolve, 700));
+    document.body.classList.toggle('capture-use-export-data', includeData);
+    map.closePopup();
+    renderLegends();
+    map.invalidateSize(false);
+    await new Promise(resolve => setTimeout(resolve, 900));
     const canvas = await html2canvas(document.body, { backgroundColor: '#07111f', useCORS: true, allowTaint: false, logging: false, width: window.innerWidth, height: window.innerHeight, windowWidth: window.innerWidth, windowHeight: window.innerHeight, scrollX: 0, scrollY: 0, scale: Math.min(2, window.devicePixelRatio || 1.5) });
-    const link = document.createElement('a'); link.download = `RBRTW_weather_map_${new Date().toISOString().slice(0,19).replace(/[:T]/g, '-')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+    const link = document.createElement('a');
+    link.download = `RBRTW_weather_map_${new Date().toISOString().slice(0,19).replace(/[:T]/g, '-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   } catch (error) {
     console.error(error); alert('Photo export failed. This is usually caused by a browser blocking an outside map tile/layer during screenshot export.');
   } finally {
-    document.body.classList.remove('capture-mode', 'capture-export-polish', 'capture-hide-key', 'capture-include-data'); renderLegends(); if (button) { button.disabled = false; button.textContent = 'Save as Photo'; }
+    if (exportDataCard) exportDataCard.remove();
+    document.body.classList.remove('capture-mode', 'capture-export-polish', 'capture-hide-key', 'capture-include-data', 'capture-use-export-data');
+    renderLegends();
+    if (button) { button.disabled = false; button.textContent = 'Save as Photo'; }
   }
 }
 
