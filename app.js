@@ -1642,7 +1642,7 @@ function toggleAlerts() {
     alertLayer = null;
     setCheck("alertsCheck", false);
     clearLegend("alerts");
-    updatePanel("NWS Alerts", "Alert layer turned off.");
+    updatePanel("NWS Alerts / Statements", "Alert / statement polygon layer turned off.");
     return;
   }
 
@@ -1652,7 +1652,9 @@ function toggleAlerts() {
       return response.json();
     })
     .then(data => {
-      alertLayer = L.geoJSON(data, {
+      const features = (data.features || []).filter(feature => feature.geometry);
+
+      alertLayer = L.geoJSON({ type: "FeatureCollection", features }, {
         style: function (feature) {
           const color = alertColorFromEvent(feature.properties?.event || "");
           return {
@@ -1664,23 +1666,24 @@ function toggleAlerts() {
           };
         },
         onEachFeature: function (feature, layer) {
-          bindHazardFeature(layer, "NWS Alert", feature);
+          bindHazardFeature(layer, "NWS Alert / Statement", feature);
         }
       }).addTo(map);
 
       setCheck("alertsCheck", true);
       updateLegend("alerts");
 
-      const alertList = data.features.map(feature => {
-        const p = feature.properties;
-        return `<div style="margin-bottom:10px;"><strong>${sanitizeForPanel(p.event)}</strong><br><small>${sanitizeForPanel(p.areaDesc || "")}</small></div>`;
+      const visibleCount = features.length;
+      const alertList = features.slice(0, 30).map(feature => {
+        const p = feature.properties || {};
+        return `<div style="margin-bottom:10px;"><strong>${sanitizeForPanel(p.event || "NWS Product")}</strong><br><small>${sanitizeForPanel(p.areaDesc || "")}</small></div>`;
       }).join("");
 
-      updatePanel("Active NWS Alerts", `${alertList || "No active alerts for RBRTW AREA."}<br><br>Updated: ${new Date().toLocaleTimeString()}`);
+      updatePanel("Active NWS Alerts / Statements", `${alertList || "No active polygon alerts/statements returned for Texas."}<br><br>Polygon products loaded: ${visibleCount}<br>Updated: ${new Date().toLocaleTimeString()}`);
     })
     .catch(error => {
       setCheck("alertsCheck", false);
-      updatePanel("NWS Alerts", "Could not load alerts.");
+      updatePanel("NWS Alerts / Statements", "Could not load alerts/statements.");
       console.error(error);
     });
 }
@@ -3181,3 +3184,397 @@ function clearLegend(type) {
 
 renderLegends();
 
+
+/* ===== RBRTW FINAL POINT-DATA + QPE UNITS + COMPLETE SURFACE KEY FIX ===== */
+// MRMS QPE ImageServer samples are treated as millimeters, then converted to inches.
+// This prevents values like 19.20 from displaying as 19.20 inches when the service value is really 19.20 mm.
+function normalizeQpeRawToInches(rawValue) {
+  const n = Number(rawValue);
+  if (!Number.isFinite(n) || n < 0 || n > 10000) return null;
+  return n / 25.4;
+}
+
+function formatQpeInches(rawValue) {
+  const inches = normalizeQpeRawToInches(rawValue);
+  if (inches === null) return "No data";
+  if (inches < 0.005) return "Trace/0.00 in";
+  return `${inches.toFixed(2)} in`;
+}
+
+function qpeRawNote(rawValue) {
+  const n = Number(rawValue);
+  if (!Number.isFinite(n)) return "";
+  return `<br><small>Raw raster sample: ${n.toFixed(2)} mm converted to inches.</small>`;
+}
+
+// Override rainfall/QPE probe so click/tap markers use converted inches instead of raw raster units.
+function attachRainfallProbe() {
+  detachRainfallProbe(false);
+
+  rainfallProbeHandler = e => {
+    const isClick = e.type === "click";
+    clearTimeout(rainfallProbeDebounce);
+
+    const runProbe = async () => {
+      if (!rainfallLayer) return;
+      if (!isClick) showRainfallHoverMarker(e.latlng, "+");
+
+      try {
+        const rawValue = await getRainfallSampleValue(e.latlng);
+        const text = formatQpeInches(rawValue);
+        if (isClick) addRainfallPermanentMarker(e.latlng, text);
+        else showRainfallHoverMarker(e.latlng, text);
+
+        updatePanel("Rainfall Total Point", `
+          <strong>${rainfallLabel()}</strong><br><br>
+          Estimated observed rainfall total at selected point: <strong>${text}</strong><br>
+          Source: NOAA/NWS MRMS QPE Image Service<br>
+          Note: this is radar-only estimated accumulation, not rainfall rate.${qpeRawNote(rawValue)}
+        `);
+      } catch (error) {
+        if (isClick) addRainfallPermanentMarker(e.latlng, "No data");
+        else showRainfallHoverMarker(e.latlng, "No data");
+      }
+    };
+
+    if (isClick) runProbe();
+    else rainfallProbeDebounce = setTimeout(runProbe, 180);
+  };
+
+  map.on("mousemove", rainfallProbeHandler);
+  map.on("click", rainfallProbeHandler);
+}
+
+/* Air quality point identify / tap feedback */
+const airQualityServiceUrlFinal = "https://mapservices.weather.noaa.gov/raster/rest/services/air_quality/ndgd_mpm25_hr01/ImageServer";
+let airQualityProbeHandler = null;
+let airQualityMarker = null;
+let airQualityDebounce = null;
+
+function pm25Category(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v)) return { label: "No data", color: "#ffffff", range: "" };
+  if (v <= 12.0) return { label: "Good", color: "#00e400", range: "PM2.5 0.0–12.0 µg/m³" };
+  if (v <= 35.4) return { label: "Moderate", color: "#ffff00", range: "PM2.5 12.1–35.4 µg/m³" };
+  if (v <= 55.4) return { label: "Unhealthy for Sensitive Groups", color: "#ff7e00", range: "PM2.5 35.5–55.4 µg/m³" };
+  if (v <= 150.4) return { label: "Unhealthy", color: "#ff0000", range: "PM2.5 55.5–150.4 µg/m³" };
+  if (v <= 250.4) return { label: "Very Unhealthy", color: "#8f3f97", range: "PM2.5 150.5–250.4 µg/m³" };
+  return { label: "Hazardous", color: "#7e0023", range: "PM2.5 250.5+ µg/m³" };
+}
+
+function aqMapExtentParam() {
+  const b = map.getBounds();
+  const sw = L.CRS.EPSG3857.project(b.getSouthWest());
+  const ne = L.CRS.EPSG3857.project(b.getNorthEast());
+  return `${sw.x},${sw.y},${ne.x},${ne.y}`;
+}
+
+async function identifyAirQualityAt(latlng) {
+  const point = L.CRS.EPSG3857.project(latlng);
+  const size = map.getSize();
+  const sampleParams = new URLSearchParams({
+    f: "json",
+    geometry: `${point.x},${point.y}`,
+    geometryType: "esriGeometryPoint",
+    inSR: "102100",
+    returnGeometry: "false",
+    returnFirstValueOnly: "true",
+    sampleDistance: "1000",
+    outFields: "*"
+  });
+
+  let response = await fetch(`${airQualityServiceUrlFinal}/getSamples?${sampleParams.toString()}`);
+  if (response.ok) {
+    const data = await response.json();
+    const value = extractLikelyPrecipValue(data);
+    if (value !== null) return value;
+  }
+
+  const identifyParams = new URLSearchParams({
+    f: "json",
+    geometry: `${point.x},${point.y}`,
+    geometryType: "esriGeometryPoint",
+    sr: "102100",
+    returnGeometry: "false",
+    returnCatalogItems: "false",
+    pixelSize: "1000,1000",
+    mapExtent: aqMapExtentParam(),
+    imageDisplay: `${size.x},${size.y},96`
+  });
+  response = await fetch(`${airQualityServiceUrlFinal}/identify?${identifyParams.toString()}`);
+  if (!response.ok) throw new Error("Air quality identify failed");
+  const data = await response.json();
+  return extractLikelyPrecipValue(data);
+}
+
+function showAirQualityMarker(latlng, text, color = "#ffffff") {
+  if (airQualityMarker) map.removeLayer(airQualityMarker);
+  airQualityMarker = L.marker(latlng, {
+    icon: L.divIcon({
+      className: "air-probe-icon",
+      html: `<div class="air-dot" style="background:${color}">AQ</div><div class="air-value">${sanitizeForPanel(text)}</div>`,
+      iconSize: [96, 48],
+      iconAnchor: [48, 24]
+    }),
+    interactive: false
+  }).addTo(map);
+}
+
+function attachAirQualityProbe() {
+  detachAirQualityProbe(false);
+  airQualityProbeHandler = e => {
+    const isClick = e.type === "click";
+    clearTimeout(airQualityDebounce);
+    const runProbe = async () => {
+      if (!airQualityLayer) return;
+      try {
+        const value = await identifyAirQualityAt(e.latlng);
+        const cat = pm25Category(value);
+        const text = Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} µg/m³` : "No data";
+        showAirQualityMarker(e.latlng, text, cat.color);
+        updatePanel("Air Quality Point", `
+          <strong>${sanitizeForPanel(cat.label)}</strong><br><br>
+          PM2.5 guidance value at selected point: <strong>${text}</strong><br>
+          ${sanitizeForPanel(cat.range)}<br>
+          Source: NOAA/NWS Air Quality Guidance Image Service
+        `);
+      } catch (error) {
+        showAirQualityMarker(e.latlng, "No data");
+      }
+    };
+    if (isClick) runProbe();
+    else airQualityDebounce = setTimeout(runProbe, 220);
+  };
+  map.on("mousemove", airQualityProbeHandler);
+  map.on("click", airQualityProbeHandler);
+}
+
+function detachAirQualityProbe(clearMarker = true) {
+  if (airQualityProbeHandler) {
+    map.off("mousemove", airQualityProbeHandler);
+    map.off("click", airQualityProbeHandler);
+    airQualityProbeHandler = null;
+  }
+  if (clearMarker && airQualityMarker) {
+    map.removeLayer(airQualityMarker);
+    airQualityMarker = null;
+  }
+}
+
+function toggleAirQuality() {
+  if (airQualityLayer) {
+    map.removeLayer(airQualityLayer);
+    airQualityLayer = null;
+    detachAirQualityProbe(true);
+    setCheck("airQualityCheck", false);
+    clearLegend("airQuality");
+    updatePanel("Air Quality", "Air quality layer turned off.");
+    return;
+  }
+
+  airQualityLayer = L.esri.imageMapLayer({
+    url: airQualityServiceUrlFinal,
+    opacity: 0.62,
+    useCors: false,
+    attribution: "NOAA/NWS Air Quality Guidance"
+  }).addTo(map);
+
+  attachAirQualityProbe();
+  setCheck("airQualityCheck", true);
+  updateLegend("airQuality");
+  updatePanel("Air Quality", "Air quality PM2.5 guidance layer turned on.<br>Hover with a mouse or tap/click to get the value at that point.");
+}
+
+/* Radar point identify / tap feedback */
+let radarProbeHandler = null;
+let radarProbeMarker = null;
+let radarProbeDebounce = null;
+
+function radarDbzCategory(dbz) {
+  const v = Number(dbz);
+  if (!Number.isFinite(v)) return { label: "No radar data", color: "#ffffff" };
+  if (v < 5) return { label: "No/light return", color: "#9ca3af" };
+  if (v < 20) return { label: "Light precipitation", color: "#44ff44" };
+  if (v < 35) return { label: "Moderate precipitation", color: "#ffff44" };
+  if (v < 50) return { label: "Heavy precipitation", color: "#ff5500" };
+  if (v < 65) return { label: "Strong storm core", color: "#ff0000" };
+  return { label: "Extreme / possible hail core", color: "#ff00ff" };
+}
+
+function radarMapBbox3857() {
+  const b = map.getBounds();
+  const sw = L.CRS.EPSG3857.project(b.getSouthWest());
+  const ne = L.CRS.EPSG3857.project(b.getNorthEast());
+  return `${sw.x},${sw.y},${ne.x},${ne.y}`;
+}
+
+async function identifyRadarAt(latlng) {
+  const size = map.getSize();
+  const pt = map.latLngToContainerPoint(latlng);
+  const params = new URLSearchParams({
+    SERVICE: "WMS",
+    VERSION: "1.1.1",
+    REQUEST: "GetFeatureInfo",
+    LAYERS: "conus_bref_qcd",
+    QUERY_LAYERS: "conus_bref_qcd",
+    STYLES: "",
+    BBOX: radarMapBbox3857(),
+    FEATURE_COUNT: "1",
+    HEIGHT: String(size.y),
+    WIDTH: String(size.x),
+    FORMAT: "image/png",
+    INFO_FORMAT: "application/json",
+    SRS: "EPSG:3857",
+    X: String(Math.round(pt.x)),
+    Y: String(Math.round(pt.y))
+  });
+
+  const url = `https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Radar identify failed");
+  const data = await response.json();
+  let value = extractLikelyPrecipValue(data);
+  if (value === null && Array.isArray(data.features) && data.features[0]?.properties) {
+    value = extractLikelyPrecipValue(data.features[0].properties);
+  }
+  return value;
+}
+
+function showRadarProbeMarker(latlng, text, color = "#ffffff") {
+  if (radarProbeMarker) map.removeLayer(radarProbeMarker);
+  radarProbeMarker = L.marker(latlng, {
+    icon: L.divIcon({
+      className: "radar-probe-icon",
+      html: `<div class="radar-dot" style="background:${color}">R</div><div class="radar-value">${sanitizeForPanel(text)}</div>`,
+      iconSize: [96, 48],
+      iconAnchor: [48, 24]
+    }),
+    interactive: false
+  }).addTo(map);
+}
+
+function attachRadarProbe() {
+  detachRadarProbe(false);
+  radarProbeHandler = e => {
+    const isClick = e.type === "click";
+    clearTimeout(radarProbeDebounce);
+    const runProbe = async () => {
+      if (!radarLayer) return;
+      try {
+        const dbz = await identifyRadarAt(e.latlng);
+        const cat = radarDbzCategory(dbz);
+        const text = Number.isFinite(Number(dbz)) ? `${Number(dbz).toFixed(1)} dBZ` : "No data";
+        showRadarProbeMarker(e.latlng, text, cat.color);
+        updatePanel("Radar Point", `
+          <strong>${sanitizeForPanel(cat.label)}</strong><br><br>
+          Radar reflectivity at selected point: <strong>${text}</strong><br>
+          Product: NOAA/NWS MRMS Base Reflectivity<br>
+          Note: dBZ is radar return intensity. It is not a direct rainfall total.
+        `);
+      } catch (error) {
+        showRadarProbeMarker(e.latlng, "No identify");
+      }
+    };
+    if (isClick) runProbe();
+    else radarProbeDebounce = setTimeout(runProbe, 220);
+  };
+  map.on("mousemove", radarProbeHandler);
+  map.on("click", radarProbeHandler);
+}
+
+function detachRadarProbe(clearMarker = true) {
+  if (radarProbeHandler) {
+    map.off("mousemove", radarProbeHandler);
+    map.off("click", radarProbeHandler);
+    radarProbeHandler = null;
+  }
+  if (clearMarker && radarProbeMarker) {
+    map.removeLayer(radarProbeMarker);
+    radarProbeMarker = null;
+  }
+}
+
+function toggleRadar() {
+  if (radarLayer) {
+    map.removeLayer(radarLayer);
+    radarLayer = null;
+    detachRadarProbe(true);
+    setCheck("radarCheck", false);
+    clearLegend("radar");
+    updatePanel("Radar", "NOAA/NWS MRMS radar layer turned off.");
+    return;
+  }
+
+  if (pastRadarLayer || radarFrames.length) {
+    turnOffPastRadar(false);
+  }
+
+  radarLayer = L.tileLayer.wms(
+    "https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows",
+    {
+      layers: "conus_bref_qcd",
+      format: "image/png",
+      transparent: true,
+      opacity: Number(document.getElementById("radarOpacity").value),
+      attribution: "NOAA/NWS/NCEP MRMS Radar"
+    }
+  ).addTo(map);
+
+  attachRadarProbe();
+  setCheck("radarCheck", true);
+  setCheck("pastRadarCheck", false);
+  updateLegend("radar");
+  updatePanel("Radar", `NOAA/NWS MRMS radar layer on.<br>Tap/click or hover the radar return to request dBZ point feedback.<br>Updated: ${new Date().toLocaleTimeString()}`);
+}
+
+function turnOffPastRadar(updateMessage = true) {
+  stopRadarAnimation();
+  if (pastRadarLayer) map.removeLayer(pastRadarLayer);
+  pastRadarLayer = null;
+  radarFrames = [];
+  radarHost = "";
+  detachRadarProbe(true);
+  const timeline = document.getElementById("radarTimeline");
+  if (timeline) timeline.classList.add("hidden");
+  setCheck("pastRadarCheck", false);
+  clearLegend("pastRadar");
+  if (updateMessage) updatePanel("Past Radar", "Past radar playback turned off.");
+}
+
+function surfaceKeyHtml() {
+  return `
+    ${keyLine("#1683ff", "Cold front", "Blue triangles")}
+    ${keyLine("#ff3434", "Warm front", "Red semicircles")}
+    ${keyLine("#b05cff", "Occluded front", "Purple symbols")}
+    ${keyLine("#ff5aa5", "Stationary front", "Alternating red/blue")}
+    ${keyLine("#8b5a2b", "Trough / dryline", "Brown/orange line")}
+    ${keyLine("#16a34a", "Squall / convergence line", "Green line")}
+    ${keyRow("#ffffff", "High / Low", "Pressure centers")}
+    ${keyRow("#7dd3fc", "Rain / showers", "Green/blue areas")}
+    ${keyRow("#3b82f6", "Thunderstorms", "Storm areas")}
+    ${keyRow("#ef4444", "Heavy rain / severe", "Red areas")}
+    ${keyRow("#dbeafe", "Snow", "Light blue/white")}
+    ${keyRow("#c084fc", "Mixed / freezing precip", "Purple/pink")}
+    ${keyRow("#f97316", "Fire / dry / wind area", "Orange/red hatch")}
+    ${keyRow("#9ca3af", "Fog / reduced visibility", "Gray areas")}
+    ${keyNote("Expanded WPC national forecast chart key for items that may be visible anywhere on the U.S. surface map.")}
+  `;
+}
+
+function legendHtml(type) {
+  if (type === "radar") return radarKeyHtml("NOAA/NWS MRMS radar reflectivity. Tap/click for dBZ point data when supported.");
+  if (type === "pastRadar") return radarKeyHtml("RainViewer past radar playback; point identify is not available on this tile feed.");
+  if (type === "hrrr") return radarKeyHtml("HRRR simulated reflectivity forecast.");
+  if (type === "qpf") return qpfKeyHtml();
+  if (type === "spc") return spcKeyHtml();
+  if (type === "wpc") return wpcKeyHtml();
+  if (type === "alerts") return alertKeyHtml();
+  if (type === "temp") return tempLegendHtml();
+  if (type === "wind") return windKeyHtml();
+  if (type === "rainfall") return rainfallKeyHtml();
+  if (type === "airQuality") return airQualityKeyHtml();
+  if (type === "surface") return surfaceKeyHtml();
+  return "";
+}
+
+renderLegends();
