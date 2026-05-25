@@ -582,30 +582,50 @@ function toggleRadarAnimation() { if (state.radarTimer) { stopRadarAnimation(); 
 function stopRadarAnimation() { if (state.radarTimer) clearInterval(state.radarTimer); state.radarTimer = null; if ($('radarPlayBtn')) $('radarPlayBtn').textContent = 'Play'; if ($('radarLoopText')) $('radarLoopText').textContent = 'Loop paused'; }
 
 function extractRadarDbzValue(raw) {
-  const valid = value => { const n = Number(value); return Number.isFinite(n) && n >= -35 && n <= 75 ? n : null; };
-  const keys = ['GRAY_INDEX','gray_index','grid_value','GRID_VALUE','pixelValue','PixelValue','value','Value','VALUE','reflectivity','Reflectivity','dbz','dBZ','DBZ'];
-  function keyedText(text) {
+  const valid = value => {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= -35 && n <= 80 ? n : null;
+  };
+  const strongKeys = ['GRAY_INDEX','gray_index','grid_value','GRID_VALUE','pixelValue','PixelValue','value','Value','VALUE','reflectivity','Reflectivity','dbz','dBZ','DBZ','Band1','BAND1','PALETTE_INDEX','palette_index'];
+  function parseKnownText(text) {
     const s = String(text || '');
-    for (const key of keys) {
-      const re = new RegExp(`${key}\\s*[=:]\\s*(-?\\d+(?:\\.\\d+)?)`, 'i');
-      const m = s.match(re); if (m) { const n = valid(m[1]); if (n !== null) return n; }
+    for (const key of strongKeys) {
+      const re = new RegExp(`${key}\\s*(?:=|:|</th>\\s*<td>|</td>\\s*<td>)\\s*[^-0-9]*(-?\\d+(?:\\.\\d+)?)`, 'i');
+      const m = s.match(re);
+      if (m) {
+        const n = valid(m[1]);
+        if (n !== null) return n;
+      }
     }
+    const labelDbz = s.match(/(-?\d+(?:\.\d+)?)\s*(?:dBZ|dbz)/i);
+    if (labelDbz) return valid(labelDbz[1]);
     return null;
   }
   function walk(obj, depth = 0) {
     if (obj === null || obj === undefined || depth > 8) return null;
-    if (typeof obj === 'string') return keyedText(obj);
+    if (typeof obj === 'string') return parseKnownText(obj);
     if (typeof obj === 'number') return null;
-    if (Array.isArray(obj)) { for (const item of obj) { const n = walk(item, depth + 1); if (n !== null) return n; } return null; }
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        const n = walk(item, depth + 1);
+        if (n !== null) return n;
+      }
+      return null;
+    }
     if (typeof obj === 'object') {
       for (const container of [obj.properties, obj.attributes, obj].filter(Boolean)) {
         for (const [k, v] of Object.entries(container)) {
-          if (!keys.some(key => key.toLowerCase() === String(k).toLowerCase())) continue;
-          const n = valid(v); if (n !== null) return n;
-          const tn = keyedText(v); if (tn !== null) return tn;
+          if (!strongKeys.some(key => key.toLowerCase() === String(k).toLowerCase())) continue;
+          const n = valid(v);
+          if (n !== null) return n;
+          const tn = parseKnownText(v);
+          if (tn !== null) return tn;
         }
       }
-      for (const v of Object.values(obj)) { const n = walk(v, depth + 1); if (n !== null) return n; }
+      for (const v of Object.values(obj)) {
+        const n = walk(v, depth + 1);
+        if (n !== null) return n;
+      }
     }
     return null;
   }
@@ -620,39 +640,156 @@ function radarCategory(value) {
   if (n >= 20) return { label: 'Moderate', color: '#ffff44' };
   return { label: 'Light', color: '#44ff44' };
 }
+async 
+function radarEstimateFromPixelColor(r, g, b, a) {
+  if (!Number.isFinite(a) || a < 18) return null;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max < 35 || max - min < 10) return null;
+  const palette = [
+    { value: 12, label: 'Light', color: '#44ff44', rgb: [68, 255, 68] },
+    { value: 27, label: 'Moderate', color: '#ffff44', rgb: [255, 255, 68] },
+    { value: 42, label: 'Heavy', color: '#ff5500', rgb: [255, 85, 0] },
+    { value: 57, label: 'Strong', color: '#ff0000', rgb: [255, 0, 0] },
+    { value: 67, label: 'Extreme / possible hail core', color: '#ff00ff', rgb: [255, 0, 255] },
+    { value: 18, label: 'Light', color: '#66d9ff', rgb: [102, 217, 255] }
+  ];
+  let best = null;
+  for (const item of palette) {
+    const d = Math.hypot(r - item.rgb[0], g - item.rgb[1], b - item.rgb[2]);
+    if (!best || d < best.distance) best = { ...item, distance: d };
+  }
+  if (!best || best.distance > 210) return null;
+  return best;
+}
+
+async function estimateRadarFromRenderedPixel(latlng) {
+  const delta = 0.035;
+  const bbox = `${latlng.lng - delta},${latlng.lat - delta},${latlng.lng + delta},${latlng.lat + delta}`;
+  const params = new URLSearchParams({
+    service: 'WMS',
+    version: '1.1.1',
+    request: 'GetMap',
+    layers: 'conus_bref_qcd',
+    styles: '',
+    bbox,
+    width: '5',
+    height: '5',
+    srs: 'EPSG:4326',
+    format: 'image/png',
+    transparent: 'true'
+  });
+  const url = `https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params.toString()}`;
+  try {
+    const blob = await fetch(url, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('radar pixel fallback failed'); return r.blob(); });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bitmap, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let best = null;
+    for (let i = 0; i < data.length; i += 4) {
+      const est = radarEstimateFromPixelColor(data[i], data[i + 1], data[i + 2], data[i + 3]);
+      if (!est) continue;
+      if (!best || est.value > best.value) best = est;
+    }
+    if (!best) return null;
+    return {
+      value: best.value,
+      method: 'Rendered radar color fallback',
+      estimated: true,
+      estimatedLabel: best.label,
+      estimatedColor: best.color
+    };
+  } catch (error) {
+    console.warn('Radar rendered-pixel fallback failed', error);
+    return null;
+  }
+}
+
 async function identifyRadarAt(latlng) {
   const size = map.getSize();
   const pt = map.latLngToContainerPoint(latlng);
   const b = map.getBounds();
-  const sw = L.CRS.EPSG3857.project(b.getSouthWest());
-  const ne = L.CRS.EPSG3857.project(b.getNorthEast());
+  const sw3857 = L.CRS.EPSG3857.project(b.getSouthWest());
+  const ne3857 = L.CRS.EPSG3857.project(b.getNorthEast());
   const attempts = [
-    { version: '1.1.1', srs: 'EPSG:3857', bbox: `${sw.x},${sw.y},${ne.x},${ne.y}`, x: Math.round(pt.x), y: Math.round(pt.y) },
-    { version: '1.1.1', srs: 'EPSG:4326', bbox: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`, x: Math.round(pt.x), y: Math.round(pt.y) }
+    { version: '1.1.1', crsKey: 'srs', crs: 'EPSG:3857', bbox: `${sw3857.x},${sw3857.y},${ne3857.x},${ne3857.y}`, xKey: 'x', yKey: 'y', x: Math.round(pt.x), y: Math.round(pt.y) },
+    { version: '1.1.1', crsKey: 'srs', crs: 'EPSG:4326', bbox: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`, xKey: 'x', yKey: 'y', x: Math.round(pt.x), y: Math.round(pt.y) },
+    { version: '1.3.0', crsKey: 'crs', crs: 'EPSG:3857', bbox: `${sw3857.x},${sw3857.y},${ne3857.x},${ne3857.y}`, xKey: 'i', yKey: 'j', x: Math.round(pt.x), y: Math.round(pt.y) },
+    { version: '1.3.0', crsKey: 'crs', crs: 'EPSG:4326', bbox: `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`, xKey: 'i', yKey: 'j', x: Math.round(pt.x), y: Math.round(pt.y) }
   ];
-  for (const a of attempts) {
-    for (const info_format of ['application/json', 'text/plain', 'text/html']) {
-      const params = new URLSearchParams({ service: 'WMS', version: a.version, request: 'GetFeatureInfo', layers: 'conus_bref_qcd', query_layers: 'conus_bref_qcd', styles: '', bbox: a.bbox, height: String(size.y), width: String(size.x), srs: a.srs, format: 'image/png', feature_count: '10', x: String(a.x), y: String(a.y), info_format });
-      try {
-        const res = await fetch(`https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params}`);
-        if (!res.ok) continue;
-        const raw = info_format.includes('json') ? await res.json() : await res.text();
-        const value = extractRadarDbzValue(raw);
-        if (value !== null) return { value, raw, method: `${a.srs} ${info_format}` };
-      } catch (_) {}
+  const layerNames = ['conus_bref_qcd', 'conus:conus_bref_qcd'];
+  const formats = ['application/json', 'text/plain', 'text/html'];
+
+  for (const layerName of layerNames) {
+    for (const a of attempts) {
+      for (const info_format of formats) {
+        const params = new URLSearchParams({
+          service: 'WMS',
+          version: a.version,
+          request: 'GetFeatureInfo',
+          layers: layerName,
+          query_layers: layerName,
+          styles: '',
+          bbox: a.bbox,
+          height: String(size.y),
+          width: String(size.x),
+          format: 'image/png',
+          transparent: 'true',
+          feature_count: '10',
+          info_format
+        });
+        params.set(a.crsKey, a.crs);
+        params.set(a.xKey, String(a.x));
+        params.set(a.yKey, String(a.y));
+        try {
+          const res = await fetch(`https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?${params.toString()}`);
+          if (!res.ok) continue;
+          const raw = info_format.includes('json') ? await res.json() : await res.text();
+          const value = extractRadarDbzValue(raw);
+          if (value !== null) return { value, raw, method: `${layerName} ${a.version} ${a.crs} ${info_format}`, estimated: false };
+        } catch (_) {}
+      }
     }
   }
-  return { value: null, method: 'No trusted dBZ value returned' };
+
+  const estimated = await estimateRadarFromRenderedPixel(latlng);
+  if (estimated) return estimated;
+  return { value: null, method: 'No trusted dBZ value returned', estimated: false };
 }
 async function runRadarPoint(latlng) {
   if (!state.radarLayer || !dataEnabled('radar')) return false;
   const result = await identifyRadarAt(latlng);
   const value = result.value;
-  const cat = radarCategory(value);
-  const text = value === null ? 'No dBZ' : `${value.toFixed(1)} dBZ`;
+  const cat = result.estimated && result.estimatedLabel
+    ? { label: result.estimatedLabel, color: result.estimatedColor || '#44ff44' }
+    : radarCategory(value);
+  const text = value === null
+    ? 'Radar return selected'
+    : result.estimated
+      ? `${cat.label} return`
+      : `${value.toFixed(1)} dBZ`;
   removeLayerSafe(state.markers.radar);
-  state.markers.radar = L.marker(latlng, { icon: L.divIcon({ className: 'radar-probe-icon', html: `<div class="radar-dot" style="background:${cat.color}">R</div><div class="radar-value">${sanitizeForPanel(text)}</div>`, iconSize: [92, 48], iconAnchor: [46, 24] }), interactive: false }).addTo(map);
-  setStack('radar', 'Radar Point', `Reflectivity: <strong>${sanitizeForPanel(text)}</strong><br>Category: ${sanitizeForPanel(cat.label)}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS/NCEP MRMS Radar<br>${value === null ? 'No trusted dBZ value was returned by the source at this point.' : 'Radar wording is based only on a trusted dBZ field.'}`);
+  state.markers.radar = L.marker(latlng, {
+    icon: L.divIcon({
+      className: 'radar-probe-icon',
+      html: `<div class="radar-dot" style="background:${cat.color}">R</div><div class="radar-value">${sanitizeForPanel(text)}</div>`,
+      iconSize: [124, 48],
+      iconAnchor: [62, 24]
+    }),
+    interactive: false
+  }).addTo(map);
+  const methodText = result.method ? `<br>Method: ${sanitizeForPanel(result.method)}` : '';
+  const estimateNote = result.estimated
+    ? '<br>Numeric dBZ was not returned by the source, so this is a category estimate from the rendered radar color.'
+    : '';
+  const noValueNote = value === null
+    ? '<br>The radar layer was clicked, but the source did not return a usable numeric dBZ value at this point.'
+    : '';
+  setStack('radar', 'Radar Point', `Reflectivity: <strong>${sanitizeForPanel(text)}</strong><br>Category: ${sanitizeForPanel(cat.label)}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS/NCEP MRMS Radar${methodText}${estimateNote}${noValueNote}`);
   return true;
 }
 function runPastRadarPoint(latlng) {
@@ -915,26 +1052,48 @@ function normalizeHrrrAssetPath(path, indexUrl = '') {
   let p = String(path).trim();
   if (/^https?:\/\//i.test(p) || p.startsWith('data:')) return p;
   p = p.replace(/^\.\//, '').replace(/^\//, '');
-  if (indexUrl.includes('/data/model/hrrr/') && p.startsWith('public/data/')) p = p.replace(/^public\//, '');
-  if (!indexUrl.includes('/data/model/hrrr/') && p.startsWith('data/model/hrrr/')) p = `public/${p}`;
+  if (p.startsWith('public/data/')) return `/data/${p.replace(/^public\/data\//, '')}`;
+  if (p.startsWith('data/')) return `/${p}`;
   return `/${p}`;
 }
+
+function hrrrCandidateUrls(rawPath) {
+  if (!rawPath) return [];
+  let p = String(rawPath).trim().replace(/^\.\//, '').replace(/^\//, '');
+  if (/^https?:\/\//i.test(p) || p.startsWith('data:')) return [p];
+  const list = [];
+  const add = value => { if (value && !list.includes(value)) list.push(value); };
+  if (p.startsWith('public/data/')) {
+    add(`/data/${p.replace(/^public\/data\//, '')}`);
+    add(`/${p}`);
+  } else if (p.startsWith('data/')) {
+    add(`/${p}`);
+    add(`/public/${p}`);
+  } else {
+    add(`/${p}`);
+    add(`/data/model/hrrr/${p.split('/').pop()}`);
+    add(`/public/data/model/hrrr/${p.split('/').pop()}`);
+  }
+  return list;
+}
 async function loadHrrrFrames() {
-  const paths = ['/public/data/model/hrrr/latest.json', '/data/model/hrrr/latest.json', 'public/data/model/hrrr/latest.json', 'data/model/hrrr/latest.json'];
+  const paths = ['/data/model/hrrr/latest.json', '/public/data/model/hrrr/latest.json', 'data/model/hrrr/latest.json', 'public/data/model/hrrr/latest.json'];
   let lastError = null;
   for (const url of paths) {
     try {
-      const data = await fetch(`${url}?cache=${Date.now()}`).then(r => { if (!r.ok) throw new Error('HRRR index not found'); return r.json(); });
+      const data = await fetch(`${url}?cache=${Date.now()}`).then(r => { if (!r.ok) throw new Error(`HRRR index not found at ${url}`); return r.json(); });
       const frames = Array.isArray(data) ? data : (data.frames || data.images || data.hours || []);
       state.hrrrFrames = frames.map((frame, i) => {
         const rawPath = frame.file || frame.url || frame.image || frame.path || frame.src || '';
+        const candidates = hrrrCandidateUrls(rawPath);
         return {
-          url: normalizeHrrrAssetPath(rawPath, url),
+          url: candidates[0] || normalizeHrrrAssetPath(rawPath, url),
+          candidates,
           bounds: normalizeHrrrBounds(frame.bounds || data.bounds),
           label: frame.label || (frame.hour !== undefined ? `F${String(frame.hour).padStart(2, '0')}` : '') || frame.forecastHour || frame.fh || `F${String(i + 1).padStart(2, '0')}`,
           validTime: frame.validTime || frame.valid || frame.time || ''
         };
-      }).filter(f => f.url);
+      }).filter(f => f.url || (f.candidates && f.candidates.length));
       if (state.hrrrFrames.length) return;
     } catch (error) { lastError = error; }
   }
@@ -945,9 +1104,34 @@ function showHrrrFrame(index) {
   removeLayerSafe(state.hrrrLayer);
   state.hrrrIndex = (index + state.hrrrFrames.length) % state.hrrrFrames.length;
   const frame = state.hrrrFrames[state.hrrrIndex];
-  state.hrrrLayer = L.imageOverlay(frame.url, frame.bounds, { opacity: Number($('hrrrOpacity')?.value || 0.72), attribution: 'HRRR simulated reflectivity', interactive: false }).addTo(map);
-  const img = state.hrrrLayer.getElement?.();
-  if (img) img.crossOrigin = 'anonymous';
+  const candidates = frame.candidates && frame.candidates.length ? frame.candidates.slice() : [frame.url];
+  let candidateIndex = 0;
+  const useCandidate = () => {
+    const url = candidates[candidateIndex] || frame.url;
+    state.hrrrLayer = L.imageOverlay(url, frame.bounds, {
+      opacity: Number($('hrrrOpacity')?.value || 0.72),
+      attribution: 'HRRR simulated reflectivity',
+      interactive: false,
+      crossOrigin: true
+    }).addTo(map);
+    state.hrrrLayer.once('error', () => {
+      removeLayerSafe(state.hrrrLayer);
+      candidateIndex += 1;
+      if (candidateIndex < candidates.length) {
+        useCandidate();
+      } else {
+        console.warn('HRRR image failed for all candidate paths', candidates);
+        setCheck('hrrrCheck', true);
+        updatePanel('HRRR Future Radar', `HRRR frame index loaded, but the image for ${sanitizeForPanel(frame.label)} did not load.<br>Checked: ${candidates.map(sanitizeForPanel).join('<br>')}`);
+      }
+    });
+    state.hrrrLayer.once('load', () => {
+      frame.url = url;
+      setCheck('hrrrCheck', true);
+      updateLegend('hrrr');
+    });
+  };
+  useCandidate();
   if ($('hrrrFrameSlider')) $('hrrrFrameSlider').value = state.hrrrIndex;
   if ($('hrrrFrameLabel')) $('hrrrFrameLabel').textContent = frame.label;
 }
@@ -986,8 +1170,9 @@ async function refreshActiveLayers() {
 
 async function saveMapPhoto() {
   const button = $('savePhotoBtn');
+  const hasVisibleData = !!document.querySelector('#status .stack-data-section') || /Map Click\s*\/\s*Tap Data/i.test($('status')?.textContent || '');
   const includeKey = checked('photoIncludeKeyCheck');
-  const includeData = checked('photoIncludeDataCheck');
+  const includeData = checked('photoIncludeDataCheck') || hasVisibleData;
   let exportDataCard = null;
   try {
     if (button) { button.disabled = true; button.textContent = 'Saving...'; }
@@ -999,7 +1184,24 @@ async function saveMapPhoto() {
       exportDataCard = document.createElement('section');
       exportDataCard.id = 'exportDataCard';
       exportDataCard.className = 'export-data-card';
+      exportDataCard.setAttribute('data-export-card', 'true');
       exportDataCard.innerHTML = `<div class="export-data-header">DATA</div><div class="export-data-body">${statusHtml}</div>`;
+      Object.assign(exportDataCard.style, {
+        display: 'block',
+        position: 'fixed',
+        zIndex: '2147483000',
+        top: '72px',
+        left: '12px',
+        right: '12px',
+        maxHeight: '45vh',
+        overflow: 'hidden',
+        background: 'rgba(7,17,31,0.988)',
+        color: '#ffffff',
+        border: '1px solid rgba(255,255,255,0.30)',
+        borderRadius: '8px',
+        boxShadow: '0 6px 24px rgba(0,0,0,0.58)',
+        boxSizing: 'border-box'
+      });
       document.body.appendChild(exportDataCard);
     }
 
@@ -1010,14 +1212,28 @@ async function saveMapPhoto() {
     map.closePopup();
     renderLegends();
     map.invalidateSize(false);
-    await new Promise(resolve => setTimeout(resolve, 900));
-    const canvas = await html2canvas(document.body, { backgroundColor: '#07111f', useCORS: true, allowTaint: false, logging: false, width: window.innerWidth, height: window.innerHeight, windowWidth: window.innerWidth, windowHeight: window.innerHeight, scrollX: 0, scrollY: 0, scale: Math.min(2, window.devicePixelRatio || 1.5) });
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const canvas = await html2canvas(document.body, {
+      backgroundColor: '#07111f',
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      scrollX: 0,
+      scrollY: 0,
+      scale: Math.min(2, window.devicePixelRatio || 1.5),
+      ignoreElements: el => el?.classList?.contains('leaflet-tooltip') || el?.classList?.contains('leaflet-popup')
+    });
     const link = document.createElement('a');
     link.download = `RBRTW_weather_map_${new Date().toISOString().slice(0,19).replace(/[:T]/g, '-')}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (error) {
-    console.error(error); alert('Photo export failed. This is usually caused by a browser blocking an outside map tile/layer during screenshot export.');
+    console.error(error);
+    alert('Photo export failed. This is usually caused by a browser blocking an outside map tile/layer during screenshot export.');
   } finally {
     if (exportDataCard) exportDataCard.remove();
     document.body.classList.remove('capture-mode', 'capture-export-polish', 'capture-hide-key', 'capture-include-data', 'capture-use-export-data');
