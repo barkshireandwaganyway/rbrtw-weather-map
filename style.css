@@ -935,3 +935,184 @@ input[type="checkbox"] {
     bottom: 54px !important;
   }
 }
+
+
+/* ===== RBRTW DATA CARD + COMPACT MAP KEY + TEMP SUBMENU FIX ===== */
+.legend-card {
+  width: 230px !important;
+  right: 10px !important;
+  bottom: 10px !important;
+  background: rgba(7, 17, 31, 0.90) !important;
+  background-color: rgba(7, 17, 31, 0.90) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.38) !important;
+}
+
+.legend-card .card-header {
+  height: 26px !important;
+  padding: 0 9px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+  background: rgba(10, 31, 52, 0.96) !important;
+}
+
+.legend-card .card-header span:first-child::after {
+  content: " / MAP KEY";
+}
+
+.legend-card .card-body {
+  padding: 7px 9px !important;
+  max-height: 176px !important;
+  overflow-y: auto !important;
+  background: rgba(7, 17, 31, 0.90) !important;
+  background-color: rgba(7, 17, 31, 0.90) !important;
+}
+
+.legend-section {
+  padding: 5px 0 !important;
+  background: transparent !important;
+}
+
+.legend-section-title {
+  font-size: 10px !important;
+  margin: 0 0 4px !important;
+  color: #f5b301 !important;
+}
+
+.legend-row {
+  gap: 6px !important;
+  margin: 3px 0 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+}
+
+.legend-swatch {
+  width: 16px !important;
+  height: 9px !important;
+}
+
+#legendContent {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.key-gradient {
+  height: 10px;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 3px;
+  margin: 3px 0 4px;
+}
+
+.key-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.84);
+  line-height: 1.1;
+}
+
+.temp-key-gradient {
+  background: linear-gradient(90deg, #4338ca, #2563eb, #38bdf8, #22c55e, #facc15, #f97316, #dc2626, #7f1d1d);
+}
+
+.heat-key-gradient {
+  background: linear-gradient(90deg, #facc15, #f97316, #dc2626, #7f1d1d);
+}
+
+.windchill-key-gradient {
+  background: linear-gradient(90deg, #2b1a78, #4338ca, #2563eb, #38bdf8, #dbeafe);
+}
+
+.radar-key-gradient {
+  background: linear-gradient(90deg, #44ff44, #ffff44, #ff4444, #ff44ff);
+}
+
+.qpf-key-gradient {
+  background: linear-gradient(90deg, #d8f3dc, #95d5b2, #52b788, #2d6a4f, #7209b7);
+}
+
+.rain-key-gradient {
+  background: linear-gradient(90deg, #e8f7ff, #79c8ff, #0b72ff, #22c55e, #facc15, #ef4444);
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.data-row span:first-child {
+  color: #f5b301;
+  font-weight: 800;
+}
+
+.data-row span:last-child {
+  text-align: right;
+}
+
+.data-section-title {
+  margin: 10px 0 5px;
+  color: #f5b301;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .data-card {
+    display: block !important;
+    top: auto !important;
+    right: 8px !important;
+    bottom: 244px !important;
+    width: min(270px, calc(100vw - 16px)) !important;
+    max-height: 24vh !important;
+  }
+
+  .data-card .card-body {
+    max-height: calc(24vh - 36px) !important;
+    overflow-y: auto !important;
+  }
+
+  .legend-card {
+    left: auto !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: min(230px, calc(100vw - 76px)) !important;
+    max-height: 168px !important;
+  }
+
+  .legend-card .card-body {
+    max-height: 132px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .data-card {
+    display: block !important;
+    right: 8px !important;
+    bottom: 188px !important;
+    width: min(255px, calc(100vw - 16px)) !important;
+    max-height: 23vh !important;
+  }
+
+  .data-card .card-body {
+    max-height: calc(23vh - 36px) !important;
+  }
+
+  .legend-card {
+    left: 100px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-height: 150px !important;
+  }
+
+  .legend-card .card-body {
+    max-height: 116px !important;
+  }
+}
