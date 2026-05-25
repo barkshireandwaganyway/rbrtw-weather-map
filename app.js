@@ -2415,3 +2415,394 @@ function toggleRainfall72() {
     Use the 24/48/72 hour sub toggles. Hover with a mouse to preview. Tap/click to leave small saved point markers.
   `);
 }
+
+
+/* ===== RBRTW LEGEND FILTER + TEMP/HI/WC DATA CARD OVERRIDES ===== */
+var tempDisplayMode = "temp";
+const allowedMapKeyTypes = new Set(["radar", "pastRadar", "qpf", "rainfall", "temp"]);
+
+function legendHtml(type) {
+  if (type === "pastRadar") type = "radar";
+
+  const legends = {
+    radar: `
+      <div class="key-gradient radar-key-gradient"></div>
+      <div class="key-label-row"><span>Light</span><span>Moderate</span><span>Heavy</span><span>Core</span></div>
+    `,
+    qpf: `
+      <div class="key-gradient qpf-key-gradient"></div>
+      <div class="key-label-row"><span>Light</span><span>Mod</span><span>Heavy</span><span>Extreme</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Tap/click leaves point value</div>
+    `,
+    rainfall: `
+      <div class="key-gradient rain-key-gradient"></div>
+      <div class="key-label-row"><span>T</span><span>0.5</span><span>1</span><span>2</span><span>4+</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Radar QPE inches</div>
+    `,
+    temp: tempLegendHtml()
+  };
+
+  return legends[type] || "";
+}
+
+function tempLegendHtml() {
+  if (tempDisplayMode === "heat") {
+    return `
+      <div class="key-gradient heat-key-gradient"></div>
+      <div class="key-label-row"><span>80</span><span>90</span><span>103</span><span>125+</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#f97316"></span>Heat index where applicable</div>
+    `;
+  }
+
+  if (tempDisplayMode === "windchill") {
+    return `
+      <div class="key-gradient windchill-key-gradient"></div>
+      <div class="key-label-row"><span>&lt;0</span><span>0</span><span>15</span><span>32</span><span>50</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#60a5fa"></span>Wind chill where applicable</div>
+    `;
+  }
+
+  return `
+    <div class="key-gradient temp-key-gradient"></div>
+    <div class="key-label-row"><span>&lt;32</span><span>50</span><span>70</span><span>90</span><span>100+</span></div>
+    <div class="legend-row"><span class="legend-swatch" style="background:#ffffff"></span>Station air temperature</div>
+  `;
+}
+
+function renderLegends() {
+  const box = document.getElementById("legendContent");
+  if (!box) return;
+
+  const visibleTypes = [...activeLegendTypes].filter(type => allowedMapKeyTypes.has(type));
+
+  if (!visibleTypes.length) {
+    box.innerHTML = "No map key needed for active layers.";
+    return;
+  }
+
+  const titleMap = {
+    radar: "Radar",
+    pastRadar: "Radar",
+    qpf: "QPF Forecast",
+    rainfall: "Rainfall QPE",
+    temp: tempDisplayMode === "heat" ? "Heat Index" : tempDisplayMode === "windchill" ? "Wind Chill" : "Temperature"
+  };
+
+  box.innerHTML = visibleTypes.map(type => `
+    <div class="legend-section">
+      <div class="legend-section-title">${titleMap[type] || type}</div>
+      ${legendHtml(type)}
+    </div>
+  `).join("");
+}
+
+function updateLegend(type) {
+  if (!allowedMapKeyTypes.has(type)) {
+    activeLegendTypes.delete(type);
+    renderLegends();
+    return;
+  }
+
+  if (type === "pastRadar") {
+    activeLegendTypes.delete("radar");
+  }
+  if (type === "radar") {
+    activeLegendTypes.delete("pastRadar");
+  }
+
+  activeLegendTypes.add(type);
+  renderLegends();
+}
+
+function clearLegend(type) {
+  activeLegendTypes.delete(type);
+  renderLegends();
+}
+
+function setTempMode(mode) {
+  tempDisplayMode = mode || "temp";
+
+  setCheck("tempModeTempCheck", tempDisplayMode === "temp");
+  setCheck("tempModeHeatCheck", tempDisplayMode === "heat");
+  setCheck("tempModeWindCheck", tempDisplayMode === "windchill");
+
+  const tempMaster = document.getElementById("tempCheck");
+  if (tempMaster && !tempMaster.checked) {
+    tempMaster.checked = true;
+  }
+
+  if (tempLayer) {
+    map.removeLayer(tempLayer);
+    tempLayer = null;
+  }
+
+  toggleTemperatures();
+  updateLegend("temp");
+}
+
+function formatMaybe(value, suffix = "", decimals = 0) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return `${Number(value).toFixed(decimals)}${suffix}`;
+}
+
+function metersToMiles(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value) * 0.000621371;
+}
+
+function metersToInches(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value) * 39.3701;
+}
+
+function pascalToInHg(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value) * 0.0002953;
+}
+
+function metersToFeet(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value) * 3.28084;
+}
+
+function stationDataRow(label, value) {
+  if (value === null || value === undefined || value === "" || value === "N/A") return "";
+  return `<div class="data-row"><span>${sanitizeForPanel(label)}</span><span>${sanitizeForPanel(value)}</span></div>`;
+}
+
+function tempClassForValue(value, mode = tempDisplayMode) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "temp-mild";
+  const n = Number(value);
+
+  if (mode === "heat") {
+    if (n >= 125) return "temp-extreme-heat";
+    if (n >= 103) return "temp-danger-heat";
+    if (n >= 90) return "temp-caution-heat";
+    return "temp-hot";
+  }
+
+  if (mode === "windchill") {
+    if (n <= 0) return "temp-extreme-cold";
+    if (n <= 32) return "temp-windchill";
+    return "temp-cool";
+  }
+
+  return tempMarkerClass(n, "");
+}
+
+function buildStationPanel(station, obs, calculated) {
+  const p = obs.properties || {};
+  const stationId = station.properties?.stationIdentifier || station.id.split("/").pop();
+  const stationName = station.properties?.name || stationId;
+
+  const tempF = calculated.tempF;
+  const dewF = cToF(p.dewpoint?.value ?? null);
+  const humidity = p.relativeHumidity?.value ?? null;
+  const windMph = mpsToMph(p.windSpeed?.value ?? null);
+  const gustMph = mpsToMph(p.windGust?.value ?? null);
+  const pressureInHg = pascalToInHg(p.barometricPressure?.value ?? null);
+  const seaPressureInHg = pascalToInHg(p.seaLevelPressure?.value ?? null);
+  const visibilityMiles = metersToMiles(p.visibility?.value ?? null);
+  const elevFt = metersToFeet(station.properties?.elevation?.value ?? null);
+  const precip1 = metersToInches(p.precipitationLastHour?.value ?? null);
+  const precip3 = metersToInches(p.precipitationLast3Hours?.value ?? null);
+  const precip6 = metersToInches(p.precipitationLast6Hours?.value ?? null);
+
+  const cloudLayers = Array.isArray(p.cloudLayers)
+    ? p.cloudLayers.map(layer => `${layer.amount || "Cloud"}${layer.base?.value ? ` @ ${Math.round(metersToFeet(layer.base.value))} ft` : ""}`).join(", ")
+    : "";
+
+  return `
+    <div class="big-temp">${Math.round(tempF)}°F</div>
+    ${sanitizeForPanel(p.textDescription || "Latest observation")}<br>
+    ${stationDataRow("Station", stationName)}
+    ${stationDataRow("Station ID", stationId)}
+    ${stationDataRow("Temperature", formatMaybe(tempF, "°F"))}
+    ${stationDataRow("Dew Point", formatMaybe(dewF, "°F"))}
+    ${stationDataRow("Humidity", formatMaybe(humidity, "%"))}
+    ${stationDataRow("Heat Index", calculated.showHeatIndex ? `${Math.round(calculated.heatIndex)}°F` : "")}
+    ${stationDataRow("Wind Chill", calculated.showWindChill ? `${Math.round(calculated.windChill)}°F` : "")}
+    <div class="data-section-title">Wind</div>
+    ${stationDataRow("Wind Speed", formatMaybe(windMph, " mph"))}
+    ${stationDataRow("Wind Gust", formatMaybe(gustMph, " mph"))}
+    ${stationDataRow("Wind Direction", p.windDirection?.value !== null && p.windDirection?.value !== undefined ? `${Math.round(p.windDirection.value)}°` : "")}
+    <div class="data-section-title">Pressure / Visibility</div>
+    ${stationDataRow("Pressure", formatMaybe(pressureInHg, " inHg", 2))}
+    ${stationDataRow("Sea Level Pressure", formatMaybe(seaPressureInHg, " inHg", 2))}
+    ${stationDataRow("Visibility", formatMaybe(visibilityMiles, " mi", 1))}
+    ${stationDataRow("Elevation", formatMaybe(elevFt, " ft"))}
+    <div class="data-section-title">Rain / Clouds</div>
+    ${stationDataRow("Precip 1 Hour", formatMaybe(precip1, " in", 2))}
+    ${stationDataRow("Precip 3 Hours", formatMaybe(precip3, " in", 2))}
+    ${stationDataRow("Precip 6 Hours", formatMaybe(precip6, " in", 2))}
+    ${stationDataRow("Cloud Layers", cloudLayers)}
+    <div class="data-section-title">Observation</div>
+    ${stationDataRow("Updated", p.timestamp ? new Date(p.timestamp).toLocaleString() : "")}
+    ${stationDataRow("Raw Station URL", station.id)}
+  `;
+}
+
+async function toggleTemperatures() {
+  const subBox = document.getElementById("tempSubToggles");
+
+  if (tempLayer) {
+    map.removeLayer(tempLayer);
+    tempLayer = null;
+    if (subBox) subBox.classList.add("hidden");
+    setCheck("tempCheck", false);
+    clearLegend("temp");
+    updatePanel("Temperatures", "Temperature layer turned off.");
+    return;
+  }
+
+  try {
+    tempLayer = L.layerGroup().addTo(map);
+    if (subBox) subBox.classList.remove("hidden");
+
+    const point = await getNwsPointData();
+    const stationsResponse = await fetch(point.properties.observationStations);
+    if (!stationsResponse.ok) throw new Error("Observation stations request failed");
+
+    const stationsData = await stationsResponse.json();
+    const stations = (stationsData.features || []).slice(0, 22);
+
+    const obsResults = await Promise.allSettled(stations.map(async station => {
+      const obsResponse = await fetch(`${station.id}/observations/latest`);
+      if (!obsResponse.ok) throw new Error("Latest observation failed");
+      const obs = await obsResponse.json();
+      return { station, obs };
+    }));
+
+    let plotted = 0;
+
+    obsResults.forEach(result => {
+      if (result.status !== "fulfilled") return;
+
+      const { station, obs } = result.value;
+      const coords = station.geometry?.coordinates;
+      const p = obs.properties || {};
+      if (!coords || !p.temperature) return;
+
+      const tempF = cToF(p.temperature.value);
+      if (tempF === null || Number.isNaN(tempF)) return;
+
+      const humidity = p.relativeHumidity?.value ?? null;
+      const windMph = mpsToMph(p.windSpeed?.value ?? null);
+
+      const officialHeatIndex = p.heatIndex?.value !== null && p.heatIndex?.value !== undefined ? cToF(p.heatIndex.value) : null;
+      const officialWindChill = p.windChill?.value !== null && p.windChill?.value !== undefined ? cToF(p.windChill.value) : null;
+
+      const hi = officialHeatIndex !== null ? officialHeatIndex : heatIndexF(tempF, humidity);
+      const wc = officialWindChill !== null ? officialWindChill : windChillF(tempF, windMph);
+
+      const showHeatIndex = hi !== null && hi >= 80;
+      const showWindChill = wc !== null && wc <= 50;
+
+      let displayValue = tempF;
+      let displayLabel = `${Math.round(tempF)}°`;
+      let classMode = "temp";
+      let tooltipLabel = "Temp";
+
+      if (tempDisplayMode === "heat" && showHeatIndex) {
+        displayValue = hi;
+        displayLabel = `${Math.round(hi)}°`;
+        classMode = "heat";
+        tooltipLabel = "Heat Index";
+      }
+
+      if (tempDisplayMode === "windchill" && showWindChill) {
+        displayValue = wc;
+        displayLabel = `${Math.round(wc)}°`;
+        classMode = "windchill";
+        tooltipLabel = "Wind Chill";
+      }
+
+      const stationId = station.properties?.stationIdentifier || station.id.split("/").pop();
+      const calculated = { tempF, heatIndex: hi, windChill: wc, showHeatIndex, showWindChill };
+      const panelHtml = buildStationPanel(station, obs, calculated);
+
+      const icon = L.divIcon({
+        className: "temp-div-icon",
+        html: `<div class="temp-badge ${tempClassForValue(displayValue, classMode)}">${displayLabel}</div>`,
+        iconSize: [44, 28],
+        iconAnchor: [22, 14]
+      });
+
+      L.marker([coords[1], coords[0]], { icon })
+        .bindTooltip(`${stationId}: ${tooltipLabel} ${Math.round(displayValue)}°F`, { sticky: true })
+        .on("click", () => updatePanel(`Station: ${sanitizeForPanel(stationId)}`, panelHtml))
+        .addTo(tempLayer);
+
+      plotted++;
+    });
+
+    setCheck("tempCheck", true);
+    setCheck("tempModeTempCheck", tempDisplayMode === "temp");
+    setCheck("tempModeHeatCheck", tempDisplayMode === "heat");
+    setCheck("tempModeWindCheck", tempDisplayMode === "windchill");
+    updateLegend("temp");
+
+    const modeText = tempDisplayMode === "heat" ? "Heat index display is selected. Stations without applicable heat index still show air temperature." : tempDisplayMode === "windchill" ? "Wind chill display is selected. Stations without applicable wind chill still show air temperature." : "Air temperature display is selected.";
+
+    updatePanel("Temperatures", `Current station markers loaded.<br>Stations plotted: ${plotted}<br>${modeText}<br>Click a station for all available observation data.`);
+  } catch (error) {
+    if (tempLayer) map.removeLayer(tempLayer);
+    tempLayer = null;
+    if (subBox) subBox.classList.add("hidden");
+    setCheck("tempCheck", false);
+    updatePanel("Temperatures", "Could not load temperature stations.");
+    console.error(error);
+  }
+}
+
+function refreshActiveLayers() {
+  const radarWasOn = !!radarLayer;
+  const pastRadarWasOn = !!pastRadarLayer || radarFrames.length > 0;
+  const alertsWasOn = !!alertLayer;
+  const qpfWasOn = !!qpfLayer;
+  const spcWasOn = !!spcLayer;
+  const wpcWasOn = !!wpcLayer;
+  const countyWasOn = !!countyLayer;
+  const hrrrWasOn = !!hrrrLayer;
+  const tempWasOn = !!tempLayer;
+  const windWasOn = !!windLayer;
+  const rainfallWasOn = !!rainfallLayer;
+  const airQualityWasOn = !!airQualityLayer;
+  const surfaceWasOn = !!surfaceLayer;
+  const previousTempMode = tempDisplayMode;
+
+  if (radarWasOn) toggleRadar();
+  if (pastRadarWasOn) turnOffPastRadar(false);
+  if (alertsWasOn) toggleAlerts();
+  if (qpfWasOn) toggleQpf();
+  if (spcWasOn) toggleSpc();
+  if (wpcWasOn) toggleWpc();
+  if (countyWasOn) toggleCountyLines();
+  if (hrrrWasOn) toggleHrrr();
+  if (tempWasOn) toggleTemperatures();
+  if (windWasOn) toggleWindLayer();
+  if (rainfallWasOn) toggleRainfall72();
+  if (airQualityWasOn) toggleAirQuality();
+  if (surfaceWasOn) toggleSurfaceMap();
+
+  setTimeout(() => {
+    tempDisplayMode = previousTempMode;
+    if (radarWasOn) toggleRadar();
+    if (pastRadarWasOn) togglePastRadar();
+    if (alertsWasOn) toggleAlerts();
+    if (qpfWasOn) toggleQpf();
+    if (spcWasOn) toggleSpc();
+    if (wpcWasOn) toggleWpc();
+    if (countyWasOn) toggleCountyLines();
+    if (hrrrWasOn) toggleHrrr();
+    if (tempWasOn) toggleTemperatures();
+    if (windWasOn) toggleWindLayer();
+    if (rainfallWasOn) toggleRainfall72();
+    if (airQualityWasOn) toggleAirQuality();
+    if (surfaceWasOn) toggleSurfaceMap();
+  }, 500);
+
+  updatePanel("Refresh", `Refreshing active layers...<br>${new Date().toLocaleTimeString()}`);
+}
+
+renderLegends();
