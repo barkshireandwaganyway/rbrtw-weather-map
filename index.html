@@ -71,29 +71,6 @@
     </div>
   </section>
 
-  <section class="control-card basemap-card">
-    <div class="card-header" onclick="toggleCard('basemapBody')">
-      <span>BASEMAP</span><span>⌃</span>
-    </div>
-    <div id="basemapBody" class="card-body">
-      <button onclick="setBasemap('standard')">Standard</button>
-      <button onclick="setBasemap('dark')">Dark</button>
-      <button onclick="setBasemap('satellite')">Satellite</button>
-    </div>
-  </section>
-
-  <section class="control-card focus-card">
-    <div class="card-header" onclick="toggleCard('focusBody')">
-      <span>FOCUS</span><span>⌃</span>
-    </div>
-    <div id="focusBody" class="card-body">
-      <button onclick="focusArea()">RBRTW AREA</button>
-      <button onclick="focusCounty('bexar')">Bexar County</button>
-      <button onclick="focusCounty('medina')">Medina County</button>
-      <button onclick="focusCounty('atascosa')">Atascosa County</button>
-    </div>
-  </section>
-
   <section class="control-card data-card">
     <div class="card-header" onclick="toggleCard('dataBody')">
       <span>DATA</span><span>⌃</span>
@@ -147,7 +124,13 @@
     </div>
   </section>
 
-  <button class="home-btn" onclick="focusArea()">⌂</button>
+  <button class="home-btn" onclick="focusArea()" title="Home">⌂</button>
+  <button class="basemap-btn" onclick="toggleBasemapMenu()" title="Basemap / Map style">▦</button>
+  <div id="basemapMenu" class="basemap-menu hidden">
+    <button onclick="setBasemap('standard')">Standard</button>
+    <button onclick="setBasemap('dark')">Dark</button>
+    <button onclick="setBasemap('satellite')">Satellite</button>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
