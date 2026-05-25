@@ -342,7 +342,7 @@ function keyRow(color, label, value = '') { return `<div class="mapkey-row"><spa
 function keyLine(color, label, value = '') { return `<div class="mapkey-row"><span class="mapkey-line" style="border-color:${color}"></span><span class="mapkey-label">${label}</span><span class="mapkey-value">${value}</span></div>`; }
 function keyNote(text) { return `<div class="mapkey-note">${sanitizeForPanel(text)}</div>`; }
 
-function radarKeyHtml(sourceName) { return `${keyRow('#44ff44','Light','5–20 dBZ')}${keyRow('#ffff44','Moderate','20–35 dBZ')}${keyRow('#ff5500','Heavy','35–50 dBZ')}${keyRow('#ff0000','Strong','50–65 dBZ')}${keyRow('#ff00ff','Extreme / hail core','65+ dBZ')}${keyNote(sourceName)}`; }
+function radarKeyHtml(sourceName) { return `${keyRow('#44ff44','Light','5–20 dBZ')}${keyRow('#ffff44','Moderate','20–35 dBZ')}${keyRow('#ff5500','Heavy','35–50 dBZ')}${keyRow('#ff0000','Strong','50–65 dBZ')}${keyRow('#ff00ff','Very intense','65–75 dBZ')}${keyRow('#ffffff','Extreme / possible hail core','75+ dBZ')}${keyNote(sourceName)}`; }
 function qpfKeyHtml() { return `${keyRow('#d8f3dc','Very light','0.01–0.10 in')}${keyRow('#95d5b2','Light','0.10–0.25 in')}${keyRow('#52b788','Moderate','0.25–1.00 in')}${keyRow('#2d6a4f','Heavy','1.00–2.00 in')}${keyRow('#7209b7','Very heavy','2.00+ in')}`; }
 function rainfallKeyHtml() { return `${keyRow('#e8f7ff','Trace','0.01–0.10 in')}${keyRow('#79c8ff','Light','0.10–0.50 in')}${keyRow('#0b72ff','Moderate','0.50–1.00 in')}${keyRow('#22c55e','Heavy','1.00–2.00 in')}${keyRow('#facc15','Very heavy','2.00–4.00 in')}${keyRow('#ef4444','Extreme','4.00+ in')}`; }
 function spcKeyHtml() { return `${keyRow('#c1e9c1','General Thunder','Non-severe storms')}${keyRow('#66a366','Marginal','Level 1 of 5')}${keyRow('#ffe066','Slight','Level 2 of 5')}${keyRow('#ffa366','Enhanced','Level 3 of 5')}${keyRow('#e06666','Moderate','Level 4 of 5')}${keyRow('#ee99ee','High','Level 5 of 5')}`; }
@@ -634,25 +634,36 @@ function extractRadarDbzValue(raw) {
 function radarCategory(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return { label: 'No dBZ value', color: '#ffffff' };
-  if (n >= 65) return { label: 'Extreme / possible hail core', color: '#ff00ff' };
+  if (n >= 75) return { label: 'Extreme / possible hail core', color: '#ffffff' };
+  if (n >= 65) return { label: 'Very intense', color: '#ff00ff' };
   if (n >= 50) return { label: 'Strong', color: '#ff0000' };
   if (n >= 35) return { label: 'Heavy', color: '#ff5500' };
   if (n >= 20) return { label: 'Moderate', color: '#ffff44' };
   return { label: 'Light', color: '#44ff44' };
 }
-async 
 function radarEstimateFromPixelColor(r, g, b, a) {
   if (!Number.isFinite(a) || a < 18) return null;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  if (max < 35 || max - min < 10) return null;
+  if (max < 35) return null;
+
+  // White / near-white is the top of the RBRTW radar key.
+  // Treat it as extreme reflectivity / possible hail core, not confirmed hail.
+  if (r >= 230 && g >= 230 && b >= 230) {
+    return { value: 78, label: 'Extreme / possible hail core', color: '#ffffff', rgb: [255, 255, 255], distance: 0 };
+  }
+
+  // Ignore gray basemap/label pixels; radar returns should have a meaningful color bias.
+  if (max - min < 10) return null;
+
   const palette = [
     { value: 12, label: 'Light', color: '#44ff44', rgb: [68, 255, 68] },
+    { value: 18, label: 'Light', color: '#66d9ff', rgb: [102, 217, 255] },
     { value: 27, label: 'Moderate', color: '#ffff44', rgb: [255, 255, 68] },
     { value: 42, label: 'Heavy', color: '#ff5500', rgb: [255, 85, 0] },
     { value: 57, label: 'Strong', color: '#ff0000', rgb: [255, 0, 0] },
-    { value: 67, label: 'Extreme / possible hail core', color: '#ff00ff', rgb: [255, 0, 255] },
-    { value: 18, label: 'Light', color: '#66d9ff', rgb: [102, 217, 255] }
+    { value: 70, label: 'Very intense', color: '#ff00ff', rgb: [255, 0, 255] },
+    { value: 75, label: 'Very intense', color: '#8b00ff', rgb: [139, 0, 255] }
   ];
   let best = null;
   for (const item of palette) {
