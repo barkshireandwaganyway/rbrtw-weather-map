@@ -16,7 +16,6 @@ html, body {
 .app-header {
   height: 58px;
   background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
-  border-bottom: 3px solid #f5b301;
   color: #ffffff;
   display: flex;
   align-items: center;
