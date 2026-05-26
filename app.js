@@ -383,7 +383,7 @@ function wpcKeyHtml() { return `${keyRow('#66a366','Marginal','At least 5%')}${k
 function alertKeyHtml() { return `${keyRow('#c026d3','Tornado','Warning/watch')}${keyRow('#facc15','Severe Thunderstorm','Warning/watch')}${keyRow('#16a34a','Flash Flood','Warning/watch')}${keyRow('#15803d','Flood','Warning/watch/advisory')}${keyRow('#ea580c','Heat','Watch/warning/advisory')}${keyRow('#60a5fa','Winter / Cold','Warning/advisory')}${keyRow('#dc2626','Other Alert','Active hazard')}`; }
 function windKeyHtml() { return `${keyLine('#8fd3ff','Wind barb','Arrow points downwind')}${keyRow('#ffffff','Number','Wind speed mph')}`; }
 function airQualityKeyHtml() { return `${keyRow('#00e400','Good','0.0–12.0')}${keyRow('#ffff00','Moderate','12.1–35.4')}${keyRow('#ff7e00','USG','35.5–55.4')}${keyRow('#ff0000','Unhealthy','55.5–150.4')}${keyRow('#8f3f97','Very Unhealthy','150.5–250.4')}${keyRow('#7e0023','Hazardous','250.5+')}`; }
-function surfaceKeyHtml() { return `${keyRow('#ffffff','Highs / Lows','Pressure centers')}${keyLine('#1683ff','Cold Front','Boundary')}${keyLine('#ff3434','Warm Front','Boundary')}${keyLine('#7c3aed','Stationary / Occluded','Boundary')}${keyLine('#8b5a2b','Trough / Dryline','Boundary')}${keyRow('#7dd3fc','Rain / Thunderstorms','WPC')}${keyRow('#ef4444','Severe Possible','Hazard area')}${keyRow('#22c55e','Heavy Rain / Flood','Hazard area')}${keyRow('#f97316','Critical Fire Weather','Hazard area')}${keyRow('#93c5fd','Freezing Rain','Hazard area')}${keyRow('#e0f2fe','Heavy Snow','Hazard area')}`; }
+function surfaceKeyHtml() { return `${keyRow('#ffffff','Highs / Lows','Pressure centers')}${keyLine('#1683ff','Cold Front','Boundary')}${keyLine('#ff3434','Warm Front','Boundary')}${keyLine('#7c3aed','Stationary Front','Boundary')}${keyLine('#9333ea','Occluded Front','Boundary')}${keyLine('#8b5a2b','Trough / Dryline','Boundary')}${keyRow('#7dd3fc','Rain / Thunderstorms','WPC area')}${keyRow('#fbbf24','Snow / Wintry Mix','WPC area')}${keyRow('#ef4444','Severe Possible','Hazard area')}${keyRow('#22c55e','Heavy Rain / Flood','Hazard area')}${keyRow('#f97316','Critical Fire Weather','Hazard area')}${keyRow('#93c5fd','Freezing Rain / Ice','Hazard area')}${keyRow('#e0f2fe','Heavy Snow','Hazard area')}${keyRow('#d8b4fe','Fog / Low Visibility','Hazard area')}`; }
 function tempKeyHtml() {
   if (state.tempDisplayMode === 'heat') return `${keyRow('#facc15','Caution','80–89°F')}${keyRow('#f97316','Extreme Caution','90–102°F')}${keyRow('#dc2626','Danger','103–124°F')}${keyRow('#7f1d1d','Extreme Danger','125°F+')}`;
   if (state.tempDisplayMode === 'windchill') return `${keyRow('#2b1a78','Extreme cold','Below 0°F')}${keyRow('#4338ca','Very cold','0–14°F')}${keyRow('#2563eb','Cold','15–31°F')}${keyRow('#38bdf8','Chilly','32–50°F')}`;
@@ -436,25 +436,28 @@ function riskLabelFromDn(dn, source) {
   return '';
 }
 
+// Plain-English explanations for SPC categorical risk levels.
+// General wording only — no specific hazard claims without actual hazard-probability data.
 function spcRiskExplanation(labelOrDn) {
   const s = String(labelOrDn || '').toLowerCase();
   const n = Number(labelOrDn);
-  const disclaimer = 'Specific hazard types (e.g. wind, hail, tornadoes) depend on individual storm mode and are detailed in the SPC forecast discussion at SPC.NOAA.gov. This card reflects categorical outlook risk only.';
-  if (s.includes('high') || n === 8)     return `HIGH (Level 5 of 5): A major severe weather outbreak is expected. This is a rare SPC designation used only when high confidence exists in a widespread, significant event. ${disclaimer}`;
-  if (s.includes('moderate') || n === 6) return `MODERATE (Level 4 of 5): Widespread severe thunderstorms are likely. Multiple significant severe weather events are expected across the outlook area. ${disclaimer}`;
-  if (s.includes('enhanced') || n === 5) return `ENHANCED (Level 3 of 5): Numerous severe thunderstorms are possible. This is an above-normal risk with well-organized storm potential. ${disclaimer}`;
+  const disclaimer = 'Specific hazard types (wind, hail, tornadoes) vary by storm mode and location — check the SPC forecast discussion at spc.noaa.gov for details. This card reflects categorical outlook risk only, not a warning or watch.';
+  if (s.includes('high') || n === 8)     return `HIGH (Level 5 of 5): A major severe weather outbreak is expected. This is a rare designation used only when high confidence exists in a widespread, significant event. ${disclaimer}`;
+  if (s.includes('moderate') || n === 6) return `MODERATE (Level 4 of 5): Widespread severe thunderstorms are likely across the outlook area. ${disclaimer}`;
+  if (s.includes('enhanced') || n === 5) return `ENHANCED (Level 3 of 5): Numerous severe thunderstorms are possible. An above-normal risk with well-organized storm potential. ${disclaimer}`;
   if (s.includes('slight') || n === 4)   return `SLIGHT (Level 2 of 5): Scattered severe thunderstorms are possible. ${disclaimer}`;
   if (s.includes('marginal') || n === 3) return `MARGINAL (Level 1 of 5): Isolated severe thunderstorms are possible. Hazards are limited in coverage or intensity. ${disclaimer}`;
-  if (s.includes('thunder') || n === 2)  return `GENERAL THUNDER: Non-severe thunderstorms are the primary threat. Hazards may include lightning, gusty winds, and locally heavy rain. ${disclaimer}`;
+  if (s.includes('thunder') || n === 2)  return `GENERAL THUNDER: Non-severe thunderstorms are the primary threat. May include lightning, gusty winds, and locally heavy rain. ${disclaimer}`;
   return '';
 }
+// WPC Excessive Rainfall Outlook explanations — focused on flash flooding probability.
 function wpcRiskExplanation(labelOrDn) {
   const s = String(labelOrDn || '').toLowerCase();
   const n = Number(labelOrDn);
-  if (s.includes('high') || n === 4)     return 'HIGH excessive rainfall risk (70%+ probability): Life-threatening flash flooding is likely. This is a very rare WPC designation for extreme rainfall events.';
-  if (s.includes('moderate') || n === 3) return 'MODERATE excessive rainfall risk (40–70% probability): Flash flooding is a significant concern. Locally heavy rainfall is likely to produce flooding.';
-  if (s.includes('slight') || n === 2)   return 'SLIGHT excessive rainfall risk (15–40% probability): Flash flooding is possible, particularly in areas with poor drainage, urban areas, or where soils are already saturated.';
-  if (s.includes('marginal') || n === 1) return 'MARGINAL excessive rainfall risk (5–15% probability): Isolated flash flooding is possible from brief, intense convective rainfall.';
+  if (s.includes('high') || n === 4)     return 'HIGH excessive rainfall risk (≥70% probability): Life-threatening flash flooding is likely. This is a very rare WPC designation for extreme rainfall events. Not a warning or watch — check NWS local offices for official warnings.';
+  if (s.includes('moderate') || n === 3) return 'MODERATE excessive rainfall risk (≥40% probability): Flash flooding is a significant concern. Locally heavy rainfall is likely to produce flooding in susceptible areas.';
+  if (s.includes('slight') || n === 2)   return 'SLIGHT excessive rainfall risk (≥15% probability): Flash flooding is possible, particularly in poor-drainage areas, urban zones, or where soils are already saturated.';
+  if (s.includes('marginal') || n === 1) return 'MARGINAL excessive rainfall risk (≥5% probability): Isolated flash flooding is possible from brief, intense convective rainfall.';
   return '';
 }
 
@@ -464,29 +467,19 @@ function hazardPanel(source, properties = {}, extra = {}) {
   const riskRaw = firstValueCI(properties, ['LABEL2','label2','outlook','label','LABEL','risk','category','CATEGORY'], '');
   const dnVal   = ciProp(properties,'dn') ?? ciProp(properties,'DN') ?? ciProp(properties,'gridcode') ?? ciProp(properties,'GRIDCODE');
   const risk    = riskRaw || riskLabelFromDn(dnVal, source);
-
   const rows = [];
   if (extra.layerName) rows.push(['Layer', extra.layerName]);
   if (extra.dayLabel)  rows.push(['Forecast Day', extra.dayLabel]);
-
-  // ALWAYS show Risk / Category — do not gate on risk !== product.
-  // SPC/WPC product and risk are often the same string; the row must still appear.
+  // Always show Risk / Category — even when it equals the product title
   const displayRisk = risk || product;
   if (displayRisk) rows.push(['Risk / Category', displayRisk]);
-
-  // Add general plain-English explanation for SPC and WPC outlooks
+  // Add plain-English "What this means" for SPC and WPC outlooks
   const isSpc = String(source).toLowerCase().includes('spc');
   const isWpc = String(source).toLowerCase().includes('wpc');
-  if (isSpc) {
-    const exp = spcRiskExplanation(displayRisk || dnVal);
-    if (exp) rows.push(['What this means', exp]);
-  } else if (isWpc) {
-    const exp = wpcRiskExplanation(displayRisk || dnVal);
-    if (exp) rows.push(['What this means', exp]);
-  }
-
+  if (isSpc) { const exp = spcRiskExplanation(displayRisk || dnVal); if (exp) rows.push(['What this means', exp]); }
+  else if (isWpc) { const exp = wpcRiskExplanation(displayRisk || dnVal); if (exp) rows.push(['What this means', exp]); }
   ['severity','urgency','certainty'].forEach(k => { const v = ciProp(properties, k); if (v) rows.push([k[0].toUpperCase() + k.slice(1), String(v)]); });
-  const area = firstValueCI(properties, ['areaDesc','area','location','states'], '');
+  const area    = firstValueCI(properties, ['areaDesc','area','location','states'], '');
   if (area) rows.push(['Area', area]);
   const headline = firstValueCI(properties, ['headline','HEADLINE'], '');
   if (headline && headline !== product) rows.push(['Headline', headline]);
@@ -661,7 +654,15 @@ async function toggleWpc() {
 function setLayerOpacity(type) {
   const value = Number($(`${type}Opacity`)?.value || 0.65);
   if (type === 'radar') { if (state.radarLayer) state.radarLayer.setOpacity(value); if (state.pastRadarLayer) state.pastRadarLayer.setOpacity(value); }
-  if (type === 'qpf' && state.qpfLayer) state.qpfLayer.setOpacity(value);
+  if (type === 'qpf' && state.qpfLayer) {
+    // QPF is now a GeoJSON layer — must use setStyle, not setOpacity
+    state.qpfLayer.setStyle(f => {
+      const v = extractQpfValue({ attributes: f.properties, properties: f.properties });
+      const s = qpfStyle(v);
+      if (!s) return { fillOpacity: 0, weight: 0 };
+      return { fillColor: s.fill, color: s.stroke, fillOpacity: value, weight: 1, opacity: 0.9 };
+    });
+  }
   if (type === 'spc' && state.spcLayer) state.spcLayer.setStyle({ fillOpacity: value, opacity: 0.98 });
   if (type === 'wpc' && state.wpcLayer) state.wpcLayer.eachLayer(layer => layer.setStyle && layer.setStyle({ fillOpacity: value, opacity: 0.98 }));
   if (type === 'county' && state.countyLayer) state.countyLayer.setStyle(countyStyle());
@@ -952,98 +953,140 @@ function runPastRadarPoint(latlng) {
 const qpfDayLayerIds = { 1: 1, 2: 2, 3: 3 }; // 1=24hr Day1, 2=24hr Day2, 3=24hr Day3
 const qpfDayNames   = { 1: 'QPF 24-Hour Day 1', 2: 'QPF 24-Hour Day 2', 3: 'QPF 24-Hour Day 3' };
 function setQpfChecks(day) { setCheck('qpfDay1Check', day === 1); setCheck('qpfDay2Check', day === 2); setCheck('qpfDay3Check', day === 3); }
-function setQpfDay(day) {
+
+// Color scale matches qpfKeyHtml() exactly so map and legend are always in sync
+function qpfStyle(inchesVal) {
+  const v = asNumber(inchesVal);
+  if (v === null || v < 0.01) return null; // no fill for no-data or 0
+  let fill, stroke;
+  if (v >= 2.0)  { fill = '#7209b7'; stroke = '#5c0899'; } // Very heavy
+  else if (v >= 1.0) { fill = '#2d6a4f'; stroke = '#1e4d38'; } // Heavy
+  else if (v >= 0.25){ fill = '#52b788'; stroke = '#3d9e6f'; } // Moderate
+  else if (v >= 0.10){ fill = '#95d5b2'; stroke = '#74c29a'; } // Light
+  else               { fill = '#d8f3dc'; stroke = '#b5dcba'; } // Very light
+  return { fill, stroke };
+}
+
+async function _loadQpfGeoJson() {
+  const layerId  = qpfDayLayerIds[state.qpfDay] || 1;
+  const dayName  = qpfDayNames[state.qpfDay] || `QPF Day ${state.qpfDay}`;
+  const opacity  = Number($('qpfOpacity')?.value || 0.65);
+  let features   = [];
+  let usedLayer  = layerId;
+  try {
+    const data = await fetchArcGisGeoJson(qpfServiceUrl, layerId);
+    features = (data.features || []).filter(f => f.geometry);
+  } catch (_) {}
+  // If the day-specific layer is empty or fails, try the 72-hr combined layer
+  if (!features.length && layerId !== 9) {
+    try {
+      const data = await fetchArcGisGeoJson(qpfServiceUrl, 9);
+      features = (data.features || []).filter(f => f.geometry);
+      usedLayer = 9;
+    } catch (_) {}
+  }
+  if (!features.length) {
+    updatePanel('Rainfall / QPF', `WPC ${dayName} loaded but no polygon data is available for this period.<br>Try again later or select a different day.`);
+    return;
+  }
+  state.qpfLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
+    style: f => {
+      const val = extractQpfValue({ attributes: f.properties, properties: f.properties });
+      const s   = qpfStyle(val);
+      if (!s) return { fillOpacity: 0, weight: 0, color: 'transparent' };
+      return { color: s.stroke, weight: 1, opacity: 0.9, fillColor: s.fill, fillOpacity: opacity };
+    },
+    onEachFeature: (feature, layer) => {
+      const val   = extractQpfValue({ attributes: feature.properties, properties: feature.properties });
+      const text  = formatInches(val);
+      const dn    = usedLayer;
+      const lName = qpfNames[dn] || dayName;
+      layer.bindTooltip(`${dayName}: ${text}`, { sticky: true, direction: 'top' });
+      layer.on('click', e => {
+        lastPolygonClickTime = Date.now();
+        if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+        clearProbeMarkers();
+        resetDataStack();
+        addMarkerToGroup(state.markers.qpf, e.latlng, text, 'qpf');
+        const compact = `${dayName}: <strong>${text}</strong>`;
+        const fallNote = usedLayer !== layerId ? `<br><em>Showing combined QPF layer (${sanitizeForPanel(qpfNames[9] || 'Layer 9')}) — selected day had no data.</em>` : '';
+        setStackForce('qpf', 'QPF Forecast Point',
+          `Selected: <strong>${sanitizeForPanel(dayName)}</strong><br>Product: <strong>${sanitizeForPanel(lName)}</strong><br>Forecast precipitation: <strong>${text}</strong>${fallNote}<br>Location: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`,
+          compact);
+      });
+    }
+  }).addTo(map);
+}
+
+async function setQpfDay(day) {
   state.qpfDay = Number(day) || 1;
   setQpfChecks(state.qpfDay);
   $('qpfDayToggles')?.classList.remove('hidden');
   if (!state.qpfLayer) return;
-  removeLayerSafe(state.qpfLayer);
-  state.qpfLayer = createQpfLayer().addTo(map);
-  updatePanel('Rainfall / QPF', `WPC QPF ${qpfDayNames[state.qpfDay] || 'Day ' + state.qpfDay} layer is on.`);
+  removeLayerSafe(state.qpfLayer); state.qpfLayer = null;
+  if (state.markers.qpf) state.markers.qpf.clearLayers();
+  updatePanel('Rainfall / QPF', `Loading WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay}…`);
+  await _loadQpfGeoJson();
+  updateLegend('qpf');
+  updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} is on.<br>Click/tap a colored polygon to write data to the DATA card.`);
 }
-function createQpfLayer() { return L.esri.dynamicMapLayer({ url: qpfServiceUrl, layers: [qpfDayLayerIds[state.qpfDay] || 9], opacity: Number($('qpfOpacity')?.value || 0.65) }); }
-function toggleQpf() {
+
+async function toggleQpf() {
   if (state.qpfLayer) {
     removeLayerSafe(state.qpfLayer); state.qpfLayer = null; setCheck('qpfCheck', false); clearLegend('qpf');
     $('qpfDayToggles')?.classList.add('hidden');
+    if (state.markers.qpf) state.markers.qpf.clearLayers();
     updatePanel('Rainfall / QPF', 'QPF layer turned off.'); return;
   }
-  $('qpfDayToggles')?.classList.remove('hidden');
-  setQpfChecks(state.qpfDay);
-  state.qpfLayer = createQpfLayer().addTo(map);
-  setCheck('qpfCheck', true); updateLegend('qpf');
-  updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} layer is on.<br>Click/tap to write point data to the DATA card.`);
+  try {
+    $('qpfDayToggles')?.classList.remove('hidden');
+    setQpfChecks(state.qpfDay);
+    updatePanel('Rainfall / QPF', `Loading WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay}…`);
+    await _loadQpfGeoJson();
+    if (!state.qpfLayer) return; // load failed with no features
+    setCheck('qpfCheck', true); updateLegend('qpf');
+    updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} is on.<br>Click/tap a colored polygon to write data to the DATA card.`);
+  } catch (error) {
+    console.error(error); removeLayerSafe(state.qpfLayer); state.qpfLayer = null;
+    setCheck('qpfCheck', false); $('qpfDayToggles')?.classList.add('hidden');
+    updatePanel('Rainfall / QPF', 'Could not load WPC QPF layer.');
+  }
 }
 const qpfLayerOrder = [9, 8, 1, 2, 3, 10, 11, 7, 4, 5];
 const qpfNames = { 1: 'QPF 24 Hour Day 1', 2: 'QPF 24 Hour Day 2', 3: 'QPF 24 Hour Day 3', 4: 'QPF 48 Hour Day 4-5', 5: 'QPF 48 Hour Day 6-7', 7: 'QPF 6 Hours Day 1', 8: 'QPF 48 Hour Day 1-2', 9: 'QPF 72 Hour Day 1-3', 10: 'QPF 120 Hour Day 1-5', 11: 'QPF 168 Hour Day 1-7' };
 function qpfMapExtentParam4326() { const b = map.getBounds(); return `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`; }
 function imageDisplayParam() { const s = map.getSize(); return `${s.x},${s.y},96`; }
 function extractQpfValue(result) { const attrs = result?.attributes || result?.properties || {}; for (const key of ['qpf','QPF','qpf_in','QPF_IN','INCHES','inches','AMOUNT','amount','VALUE','value','gridcode','GRIDCODE','label','LABEL','Contour','contour']) { const n = asNumber(attrs[key]); if (n !== null) return n; } return asNumber(result?.value); }
+async function identifyQpfLayerAt(latlng, layerId) {
+  const params = new URLSearchParams({ f: 'json', geometry: `${latlng.lng},${latlng.lat}`, geometryType: 'esriGeometryPoint', sr: '4326', layers: `visible:${layerId}`, tolerance: '8', mapExtent: qpfMapExtentParam4326(), imageDisplay: imageDisplayParam(), returnGeometry: 'false' });
+  const data = await fetch(`${qpfServiceUrl}/identify?${params}`).then(r => { if (!r.ok) throw new Error('QPF identify failed'); return r.json(); });
+  return (data.results || []).map(result => ({ layerId, layerName: result.layerName || qpfNames[layerId] || `QPF Layer ${layerId}`, value: extractQpfValue(result) })).filter(item => item.value !== null && Number.isFinite(item.value) && item.value >= 0);
+}
+async function identifyQpfAt(latlng) {
+  const all = [];
+  for (const id of qpfLayerOrder) { try { all.push(...await identifyQpfLayerAt(latlng, id)); } catch (_) {} }
+  if (!all.length) return { value: null, layerName: 'No QPF polygon at selected point', matches: [] };
+  const preferred = all.find(item => item.layerId === 9) || all.sort((a, b) => b.value - a.value)[0];
+  return { value: preferred.value, layerName: preferred.layerName, matches: all };
+}
 function addMarkerToGroup(group, latlng, text, type) {
   L.marker(latlng, { icon: L.divIcon({ className: type === 'qpf' ? 'qpf-probe-icon' : 'rain-probe-icon', html: `<div class="${type === 'qpf' ? 'qpf-plus' : 'qpe-plus'}">+</div><div class="${type === 'qpf' ? 'qpf-value' : 'qpe-value'}">${sanitizeForPanel(text)}</div>`, iconSize: [92, 48], iconAnchor: [46, 24] }), interactive: false }).addTo(group);
 }
-
-async function identifyQpfLayerAt(latlng, layerId) {
-  // Query the specific layer ID using 'visible:' so we only match that layer.
-  // Wider tolerance (12px) catches thin contour/polygon edges.
-  const params = new URLSearchParams({
-    f: 'json',
-    geometry: `${latlng.lng},${latlng.lat}`,
-    geometryType: 'esriGeometryPoint',
-    sr: '4326',
-    layers: `visible:${layerId}`,
-    tolerance: '12',
-    mapExtent: qpfMapExtentParam4326(),
-    imageDisplay: imageDisplayParam(),
-    returnGeometry: 'false',
-    outFields: '*'
-  });
-  const data = await fetch(`${qpfServiceUrl}/identify?${params}`).then(r => { if (!r.ok) throw new Error('QPF identify failed'); return r.json(); });
-  return (data.results || [])
-    .map(result => ({ layerId: result.layerId ?? layerId, layerName: result.layerName || qpfNames[layerId] || `QPF Layer ${layerId}`, value: extractQpfValue(result) }))
-    .filter(item => item.value !== null && Number.isFinite(item.value) && item.value >= 0);
-}
-
 async function runQpfPoint(latlng) {
   if (!state.qpfLayer || !dataEnabled('qpf')) return false;
-  const dayLayerId = qpfDayLayerIds[state.qpfDay] || 9;
-  const dayName    = qpfDayNames[state.qpfDay] || `QPF Day ${state.qpfDay}`;
-
-  // Try selected day's layer first
-  let results = [];
-  let usedFallback = false;
-  let fallbackName = '';
-  try { results = await identifyQpfLayerAt(latlng, dayLayerId); } catch (_) {}
-
-  // If day-specific layer returned nothing, try nearby fallback layers (not 'all')
-  if (!results.length) {
-    const fallbackOrder = [9, 8, 1, 2, 3].filter(id => id !== dayLayerId);
-    for (const id of fallbackOrder) {
-      try {
-        const r = await identifyQpfLayerAt(latlng, id);
-        if (r.length) { results = r; usedFallback = true; fallbackName = qpfNames[id] || `Layer ${id}`; break; }
-      } catch (_) {}
-    }
-  }
-
-  const best = results.length ? results.sort((a, b) => b.value - a.value)[0] : null;
-  const text = formatInches(best?.value ?? null);
+  const layerId = qpfDayLayerIds[state.qpfDay] || 9;
+  const all = [];
+  try { all.push(...await identifyQpfLayerAt(latlng, layerId)); } catch (_) {}
+  // If day-specific layer returned nothing, also try the combined 72hr layer
+  if (!all.length) { try { all.push(...await identifyQpfLayerAt(latlng, 9)); } catch (_) {} }
+  const result = all.length
+    ? { value: all.sort((a,b)=>b.value-a.value)[0].value, layerName: all[0].layerName, matches: all }
+    : { value: null, layerName: qpfDayNames[state.qpfDay] || 'No QPF polygon at selected point', matches: [] };
+  const text = formatInches(result.value);
   addMarkerToGroup(state.markers.qpf, latlng, text, 'qpf');
-
-  const productLine = best
-    ? `Product: <strong>${sanitizeForPanel(best.layerName)}</strong>`
-    : `Product: ${sanitizeForPanel(dayName)} — no QPF polygon at this location`;
-  const fallbackNote = usedFallback
-    ? `<br><em>Day ${state.qpfDay} layer returned no result. Showing <strong>${sanitizeForPanel(fallbackName)}</strong> as fallback — this may not match the selected day.</em>`
-    : '';
-  const matchNote = results.length > 1
-    ? `<br>Secondary matches: ${results.slice(1,3).map(m => `${sanitizeForPanel(m.layerName)} ${formatInches(m.value)}`).join('; ')}`
-    : '';
-
-  const compact = `${dayName}: <strong>${text}</strong>`;
-  setStack('qpf', 'QPF Forecast Point',
-    `Selected: <strong>${sanitizeForPanel(dayName)}</strong><br>${productLine}<br>Forecast precipitation: <strong>${text}</strong>${fallbackNote}${matchNote}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
-    compact);
+  const compact = `${qpfDayNames[state.qpfDay] || 'QPF Day '+state.qpfDay}: <strong>${text}</strong>`;
+  const matchText = result.matches?.length > 1 ? `<br>Also matched: ${result.matches.slice(1).map(m=>`${sanitizeForPanel(m.layerName)} ${formatInches(m.value)}`).join('; ')}` : '';
+  setStack('qpf', 'QPF Forecast Point', `<strong>${sanitizeForPanel(result.layerName)}</strong><br>Forecast precipitation: <strong>${text}</strong><br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}${matchText}`, compact);
   return true;
 }
 
@@ -1055,26 +1098,7 @@ function toggleRainfall72() {
   state.rainfallPeriod = '24'; setRainfallPeriod('24'); state.rainfallLayer = createRainfallLayer().addTo(map); $('rainfallSubToggles')?.classList.remove('hidden'); setCheck('rain72Check', true); updateLegend('rainfall'); updatePanel('Rainfall Totals / QPE', `${rainfallLabel()} MRMS QPE layer is on.<br>Click/tap to write point data to the DATA card.`);
 }
 function mapExtent3857() { const b = map.getBounds(); const sw = L.CRS.EPSG3857.project(b.getSouthWest()); const ne = L.CRS.EPSG3857.project(b.getNorthEast()); return `${sw.x},${sw.y},${ne.x},${ne.y}`; }
-function normalizePrecipInches(rawValue) {
-  // The NOAA/NWS MRMS QPE ImageServer official service description states QPE
-  // mosaics are provided in INCHES. Treat the raw sampled value as inches by
-  // default. Only convert if the value is clearly too large to be a plausible
-  // rainfall amount in inches (> 50 in), which would indicate the raster
-  // function returned raw mm values instead.
-  //
-  // Examples:
-  //   raw=4.00  → 4.00 in (treated as inches, no conversion)
-  //   raw=152.4 → 6.00 in (clearly mm, divide by 25.4)
-  //   raw=0.50  → 0.50 in (trace/light, treated as inches)
-  const raw = asNumber(rawValue);
-  if (raw === null || raw < 0) return null;
-  if (raw === 0) return 0;
-  if (raw > 50) {
-    // Exceeds realistic single-period inches; treat as millimeters
-    return Math.min(raw / 25.4, 50);
-  }
-  return raw; // treat as inches
-}
+function normalizePrecipInches(rawValue) { const raw = asNumber(rawValue); if (raw === null || raw < 0) return null; if ((state.rainfallPeriod === '48' || state.rainfallPeriod === '72') && raw > 8) return raw / 25.4; if (state.rainfallPeriod === '24' && raw > 12) return raw / 25.4; if (raw > 30) return null; return raw; }
 function extractRawRasterValue(obj) { if (!obj) return null; if (Array.isArray(obj.samples)) { for (const s of obj.samples) { const n = asNumber(s.value ?? s.Value ?? s.pixelValue ?? s.PixelValue ?? s.attributes?.value); if (n !== null) return n; } } const direct = obj.value ?? obj.Value ?? obj.pixelValue ?? obj.PixelValue ?? obj.properties?.value; const n = asNumber(direct); if (n !== null) return n; if (Array.isArray(obj.results)) { for (const r of obj.results) { const rn = asNumber(r.value ?? r.attributes?.value ?? r.attributes?.PixelValue); if (rn !== null) return rn; } } return null; }
 async function sampleRainfallAt(latlng, sourceLabel = 'selected point') {
   const p = L.CRS.EPSG3857.project(latlng);
@@ -1122,22 +1146,14 @@ async function runRainfallPoint(latlng) {
   const result = await identifyRainfallAt(latlng);
   const text = formatInches(result.inches);
   addMarkerToGroup(state.markers.rainfall, latlng, text, 'rainfall');
-  const rawVal = asNumber(result.raw);
-  // Explain the unit assumption in the DATA card so the user can verify
-  let unitNote = '';
-  if (rawVal === null || rawVal === undefined) {
-    unitNote = '<br>Raw raster value: not returned.';
-  } else if (rawVal > 50) {
-    unitNote = `<br>Raw raster value: ${rawVal.toFixed(2)} — value exceeds 50, interpreted as millimeters and converted to inches (÷ 25.4).`;
-  } else {
-    unitNote = `<br>Raw raster value: ${rawVal.toFixed(2)} — interpreted as inches per NOAA MRMS QPE service specification.`;
-  }
+  const rawMm = asNumber(result.raw);
+  const unitNote = rawMm !== null && rawMm > 25 ? `<br>Raw raster: ${rawMm.toFixed(1)} mm → converted to inches.` : (rawMm !== null ? `<br>Raw sample: ${rawMm.toFixed(2)}` : '');
   const srcNote = result.usedNearby
-    ? `<br><strong>Nearby area max used</strong> (exact clicked point returned ${formatInches(result.exactPointInches)}).<br>MRMS raster resolution can under-sample a single pixel edge.`
-    : '<br>Value from exact clicked point.';
+    ? `<br><strong>Nearby area max used</strong> (exact point: ${formatInches(result.exactPointInches)}).<br>MRMS raster can under-sample a single pixel edge.`
+    : '<br>Sampled from exact clicked point.';
   const compact = `${rainfallLabel()}: <strong>${text}</strong>${result.usedNearby ? ' (area max)' : ''}`;
   setStack('rainfall', 'Rainfall Total Point',
-    `<strong>Period: ${rainfallLabel()}</strong><br>MRMS QPE estimated total: <strong>${text}</strong>${unitNote}${srcNote}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS MRMS QPE — ${sanitizeForPanel(result.source || 'sample')}.`,
+    `<strong>${rainfallLabel()}</strong><br>MRMS QPE estimated total: <strong>${text}</strong>${unitNote}${srcNote}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}<br>Source: NOAA/NWS MRMS QPE (${sanitizeForPanel(result.source || 'sample')}).`,
     compact);
   return true;
 }
@@ -1262,8 +1278,8 @@ async function toggleCountyLines() {
   try {
     updatePanel('County Lines', 'Loading Texas county boundaries...'); const data = await loadTexasCountyGeoJson();
     state.countyLayer = L.geoJSON(data, {
-      // renderer: L.canvas() prevents the SVG-transform/html2canvas offset bug
-      // where county lines appear at wrong geographic positions in exported PNGs.
+      // L.canvas() renderer prevents SVG-transform/html2canvas mismatch
+      // that makes county lines appear at wrong positions in exported PNGs.
       renderer: L.canvas(),
       style: countyStyle,
       onEachFeature: (feature, layer) => {
@@ -1286,42 +1302,24 @@ async function discoverSurfaceLayerGroups() {
   try {
     const meta = await fetch(`${surfaceMapServiceUrl}?f=json`).then(r => { if (!r.ok) throw new Error(); return r.json(); });
     const layers = meta.layers || [];
-
-    // Build a parent→children map for recursive leaf-ID collection
     const childrenOf = {};
-    for (const l of layers) {
-      const pid = l.parentLayerId ?? -1;
-      if (!childrenOf[pid]) childrenOf[pid] = [];
-      childrenOf[pid].push(l);
-    }
-    function leafIds(parentId) {
-      const out = [];
-      for (const l of (childrenOf[parentId] || [])) {
-        if (l.type === 'Group Layer') out.push(...leafIds(l.id));
-        else out.push(l.id);
-      }
-      return out;
-    }
-
+    for (const l of layers) { const pid = l.parentLayerId ?? -1; if (!childrenOf[pid]) childrenOf[pid] = []; childrenOf[pid].push(l); }
+    function leafIds(parentId) { const out = []; for (const l of (childrenOf[parentId] || [])) { if (l.type === 'Group Layer') out.push(...leafIds(l.id)); else out.push(l.id); } return out; }
     const groups = { 1: [], 2: [], 3: [] };
     let matched = false;
     for (const layer of layers) {
       if (layer.type !== 'Group Layer') continue;
       const n = String(layer.name || '').toLowerCase().replace(/[_\-]/g, ' ');
       let day = 0;
-      if (/\bday\s*1\b|\btoday\b|\bperiod\s*1\b/.test(n))    day = 1;
+      if (/\bday\s*1\b|\btoday\b|\bperiod\s*1\b/.test(n))     day = 1;
       else if (/\bday\s*2\b|\btomorrow\b|\bperiod\s*2\b/.test(n)) day = 2;
-      else if (/\bday\s*3\b|\bperiod\s*3\b/.test(n))             day = 3;
+      else if (/\bday\s*3\b|\bperiod\s*3\b/.test(n))              day = 3;
       if (!day) continue;
       const ids = leafIds(layer.id);
       if (ids.length) { groups[day] = ids; matched = true; }
     }
-
-    // Fall back to hardcoded surfaceLayerSets if metadata didn't match
     _surfaceLayerGroups = matched ? groups : surfaceLayerSets;
-  } catch (_) {
-    _surfaceLayerGroups = surfaceLayerSets;
-  }
+  } catch (_) { _surfaceLayerGroups = surfaceLayerSets; }
   return _surfaceLayerGroups;
 }
 
@@ -1331,12 +1329,12 @@ function createSurfaceLayer(layerIds) {
   return L.esri.dynamicMapLayer(opts);
 }
 
-function setSurfaceDay(day) {
+async function setSurfaceDay(day) {
   state.surfaceDay = Number(day) || 1;
   setSurfaceChecks(state.surfaceDay);
   $('surfaceSubToggles')?.classList.remove('hidden');
   if (!state.surfaceLayer) return;
-  const groups = _surfaceLayerGroups || surfaceLayerSets;
+  const groups = _surfaceLayerGroups || await discoverSurfaceLayerGroups();
   const dayIds = groups[state.surfaceDay] || [];
   map.removeLayer(state.surfaceLayer);
   state.surfaceLayer = createSurfaceLayer(dayIds).addTo(map);
@@ -1358,10 +1356,9 @@ async function toggleSurfaceMap() {
   const dayIds = groups[state.surfaceDay] || [];
   state.surfaceLayer = createSurfaceLayer(dayIds).addTo(map);
   setCheck('surfaceCheck', true); updateLegend('surface');
-  const note = dayIds.length ? `(Day ${state.surfaceDay} — ${dayIds.length} sub-layers)` : '(using service defaults)';
-  updatePanel('Surface Map', `WPC National Forecast Chart is on ${note}.<br>Use Day 1/2/3 to switch forecast day. Click/tap visible features to write details to the DATA card.`);
+  const note = dayIds.length ? `Day ${state.surfaceDay} — ${dayIds.length} sub-layers` : 'using service defaults';
+  updatePanel('Surface Map', `WPC National Forecast Chart is on (${note}).<br>Click/tap visible features (fronts, highs, lows, weather areas) to write details to the DATA card.`);
 }
-
 async function identifySurfaceAt(latlng) {
   const size = map.getSize(); const b = map.getBounds();
   const baseParams = {
@@ -1372,7 +1369,7 @@ async function identifySurfaceAt(latlng) {
     imageDisplay: `${size.x},${size.y},96`,
     returnGeometry: 'false', outFields: '*'
   };
-  // Query selected day's layers first
+  // Try selected-day layers first, then fall back to 'all'
   const groups = _surfaceLayerGroups || surfaceLayerSets;
   const dayIds = groups[state.surfaceDay] || [];
   if (dayIds.length) {
@@ -1389,28 +1386,28 @@ async function identifySurfaceAt(latlng) {
     return { results: data.results || [], usedFallback: true };
   } catch (_) { return { results: [], usedFallback: false }; }
 }
-
 async function runSurfacePoint(latlng) {
-  if (!state.surfaceLayer || !dataEnabled('surface')) return false;
+  if (!state.surfaceLayer) return false;
+  // setStackForce — surface map clicks always populate DATA card regardless of data-card sub-checkbox
   const { results, usedFallback } = await identifySurfaceAt(latlng);
   if (!results.length) {
-    setStack('surface', 'Surface Map Point',
-      `Day ${state.surfaceDay} selected.<br>No WPC surface feature found at this point.<br>Try clicking directly on a visible front line, high, or low symbol.<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
+    setStackForce('surface', 'Surface Map Point',
+      `Day ${state.surfaceDay} selected.<br>No WPC surface feature found at this point.<br>Try clicking directly on a visible front line, high/low symbol, or hatched weather area.<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
     return true;
   }
   const rows = results.slice(0, 10).map(result => {
-    const attrs = result.attributes || {};
-    const label = firstValueCI(attrs, ['name','Name','LABEL','label','featureType','FeatureType','type','TYPE','value','VALUE'], result.layerName || 'Surface feature');
+    const attrs    = result.attributes || {};
+    const label    = firstValueCI(attrs, ['name','Name','LABEL','label','featureType','FeatureType','type','TYPE','value','VALUE'], result.layerName || 'Surface feature');
     const validStr = firstValueCI(attrs, ['VALID','valid','validTime','expire','EXPIRE'], '');
     const validNote = validStr ? ` — ${sanitizeForPanel(formatDateValue(validStr))}` : '';
     return `<div class="hazard-detail-row"><span>${sanitizeForPanel(result.layerName || 'Layer')}:</span> ${sanitizeForPanel(label)}${validNote}</div>`;
   }).join('');
-  const fallbackNote = usedFallback ? `<br><em>Day ${state.surfaceDay} layer returned no result — showing all-layer fallback results.</em>` : '';
+  const fallbackNote = usedFallback ? `<br><em>Day ${state.surfaceDay} layers returned no result — showing all-layer fallback.</em>` : '';
   const compact = results.slice(0, 3).map(r => {
     const a = r.attributes || {};
     return sanitizeForPanel(`${r.layerName || ''}: ${firstValueCI(a, ['name','LABEL','label','type','TYPE'], r.layerName || 'Feature')}`);
   }).join('<br>');
-  setStack('surface', 'Surface Map Point',
+  setStackForce('surface', 'Surface Map Point',
     `WPC Day ${state.surfaceDay} National Forecast Chart${fallbackNote}<br>${rows}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
     compact || `Day ${state.surfaceDay} surface feature`);
   return true;
