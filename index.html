@@ -394,6 +394,24 @@
     Satellite
    </button>
 </div>
+
+<!-- ===== ADVANCED LAYERS CARD =====
+     Must appear BEFORE <script src="app.js"> so #advancedLayersBody
+     is in the DOM when initAdvancedLayersPanel() runs at end of app.js. -->
+<section class="control-card adv-layers-card">
+  <div class="card-header" onclick="toggleCard('advLayersBody')">
+    <span>ADVANCED LAYERS</span>
+    <span>⌃</span>
+  </div>
+  <div class="card-body" id="advLayersBody">
+    <div id="advancedLayersBody">
+      <div style="color:rgba(255,255,255,0.55);font-size:12px;padding:4px 0;">
+        Loading advanced layer registry…
+      </div>
+    </div>
+  </div>
+</section>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js">
