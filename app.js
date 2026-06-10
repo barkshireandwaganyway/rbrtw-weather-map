@@ -39,6 +39,11 @@ const state = {
   hrrrIndex: 0,
   hrrrTimer: null,
   tempDisplayMode: 'temp',
+  goesLayer: null,
+  goesProduct: 'GEOCOLOR',
+  goesSector: 'CONUS',
+  goesRefreshTimer: null,
+  goesLastLoaded: null,
   clickRunId: 0,
   dataStack: {},
   markers: {
@@ -108,10 +113,11 @@ const stackLabels = {
   wind: 'Wind Station',
   rainfall: 'Rainfall Totals / QPE',
   airQuality: 'Air Quality',
-  surface: 'Surface Map'
+  surface: 'Surface Map',
+  goes: 'GOES Satellite'
 };
 
-const stackOrder = ['alerts', 'spc', 'wpc', 'airQuality', 'radar', 'qpf', 'rainfall', 'surface', 'hrrr', 'pastRadar', 'county', 'temp', 'wind'];
+const stackOrder = ['alerts', 'spc', 'wpc', 'airQuality', 'radar', 'qpf', 'rainfall', 'surface', 'hrrr', 'pastRadar', 'county', 'temp', 'wind', 'goes'];
 const legendTypes = new Set();
 
 const rainfallServiceUrl = 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer';
@@ -163,7 +169,8 @@ function isLayerOn(type) {
     wind: !!state.windLayer,
     rainfall: !!state.rainfallLayer,
     airQuality: !!state.airQualityLayer,
-    surface: !!state.surfaceLayer
+    surface: !!state.surfaceLayer,
+    goes: !!state.goesLayer
   }[type];
 }
 
@@ -383,7 +390,7 @@ function wpcKeyHtml() { return `${keyRow('#66a366','Marginal','At least 5%')}${k
 function alertKeyHtml() { return `${keyRow('#c026d3','Tornado','Warning/watch')}${keyRow('#facc15','Severe Thunderstorm','Warning/watch')}${keyRow('#16a34a','Flash Flood','Warning/watch')}${keyRow('#15803d','Flood','Warning/watch/advisory')}${keyRow('#ea580c','Heat','Watch/warning/advisory')}${keyRow('#60a5fa','Winter / Cold','Warning/advisory')}${keyRow('#dc2626','Other Alert','Active hazard')}`; }
 function windKeyHtml() { return `${keyLine('#8fd3ff','Wind barb','Arrow points downwind')}${keyRow('#ffffff','Number','Wind speed mph')}`; }
 function airQualityKeyHtml() { return `${keyRow('#00e400','Good','0.0–12.0')}${keyRow('#ffff00','Moderate','12.1–35.4')}${keyRow('#ff7e00','USG','35.5–55.4')}${keyRow('#ff0000','Unhealthy','55.5–150.4')}${keyRow('#8f3f97','Very Unhealthy','150.5–250.4')}${keyRow('#7e0023','Hazardous','250.5+')}`; }
-function surfaceKeyHtml() { return `${keyRow('#ffffff','Highs / Lows','Pressure centers')}${keyLine('#1683ff','Cold Front','Boundary')}${keyLine('#ff3434','Warm Front','Boundary')}${keyLine('#7c3aed','Stationary Front','Boundary')}${keyLine('#9333ea','Occluded Front','Boundary')}${keyLine('#8b5a2b','Trough / Dryline','Boundary')}${keyRow('#7dd3fc','Rain / Thunderstorms','WPC area')}${keyRow('#fbbf24','Snow / Wintry Mix','WPC area')}${keyRow('#ef4444','Severe Possible','Hazard area')}${keyRow('#22c55e','Heavy Rain / Flood','Hazard area')}${keyRow('#f97316','Critical Fire Weather','Hazard area')}${keyRow('#93c5fd','Freezing Rain / Ice','Hazard area')}${keyRow('#e0f2fe','Heavy Snow','Hazard area')}${keyRow('#d8b4fe','Fog / Low Visibility','Hazard area')}`; }
+function surfaceKeyHtml() { return `${keyRow('#ffffff','Highs / Lows','Pressure centers')}${keyLine('#1683ff','Cold Front','Boundary')}${keyLine('#ff3434','Warm Front','Boundary')}${keyLine('#7c3aed','Stationary / Occluded','Boundary')}${keyLine('#8b5a2b','Trough / Dryline','Boundary')}${keyRow('#7dd3fc','Rain / Thunderstorms','WPC')}${keyRow('#ef4444','Severe Possible','Hazard area')}${keyRow('#22c55e','Heavy Rain / Flood','Hazard area')}${keyRow('#f97316','Critical Fire Weather','Hazard area')}${keyRow('#93c5fd','Freezing Rain','Hazard area')}${keyRow('#e0f2fe','Heavy Snow','Hazard area')}`; }
 function tempKeyHtml() {
   if (state.tempDisplayMode === 'heat') return `${keyRow('#facc15','Caution','80–89°F')}${keyRow('#f97316','Extreme Caution','90–102°F')}${keyRow('#dc2626','Danger','103–124°F')}${keyRow('#7f1d1d','Extreme Danger','125°F+')}`;
   if (state.tempDisplayMode === 'windchill') return `${keyRow('#2b1a78','Extreme cold','Below 0°F')}${keyRow('#4338ca','Very cold','0–14°F')}${keyRow('#2563eb','Cold','15–31°F')}${keyRow('#38bdf8','Chilly','32–50°F')}`;
@@ -391,6 +398,7 @@ function tempKeyHtml() {
 }
 function legendHtml(type) {
   return {
+    goes: goesKeyHtml(),
     radar: radarKeyHtml('NOAA/NWS MRMS reflectivity'),
     pastRadar: radarKeyHtml('RainViewer past radar playback'),
     hrrr: radarKeyHtml('HRRR simulated reflectivity'),
@@ -411,7 +419,7 @@ function renderLegends() {
   if (document.body.classList.contains('capture-hide-key')) { box.innerHTML = ''; return; }
   const active = [...legendTypes].filter(type => isLayerOn(type));
   if (!active.length) { box.innerHTML = document.body.classList.contains('capture-mode') ? '' : 'Turn on a layer to view its legend.'; return; }
-  const titles = { radar: 'Radar Reflectivity', pastRadar: 'Past Radar', hrrr: 'HRRR Future Radar', qpf: 'WPC QPF Forecast', rainfall: 'Rainfall Totals / QPE', spc: 'SPC Outlook', wpc: 'WPC Excessive Rainfall', alerts: 'NWS Alerts', temp: state.tempDisplayMode === 'heat' ? 'Heat Index' : state.tempDisplayMode === 'windchill' ? 'Wind Chill' : 'Temperature', wind: 'Wind Barbs', airQuality: 'Air Quality', surface: 'Surface Map' };
+  const titles = { radar: 'Radar Reflectivity', pastRadar: 'Past Radar', hrrr: 'HRRR Future Radar', qpf: 'WPC QPF Forecast', rainfall: 'Rainfall Totals / QPE', spc: 'SPC Outlook', wpc: 'WPC Excessive Rainfall', alerts: 'NWS Alerts', temp: state.tempDisplayMode === 'heat' ? 'Heat Index' : state.tempDisplayMode === 'windchill' ? 'Wind Chill' : 'Temperature', wind: 'Wind Barbs', airQuality: 'Air Quality', surface: 'Surface Map', goes: 'GOES-19 Satellite' };
   box.innerHTML = active.map(type => `<div class="legend-section export-key-section" data-key-type="${type}"><div class="legend-section-title export-key-title">${titles[type] || type}</div><div class="export-key-items">${legendHtml(type)}</div></div>`).join('');
 }
 
@@ -436,48 +444,15 @@ function riskLabelFromDn(dn, source) {
   return '';
 }
 
-// Plain-English explanations for SPC categorical risk levels.
-// General wording only — no specific hazard claims without actual hazard-probability data.
-function spcRiskExplanation(labelOrDn) {
-  const s = String(labelOrDn || '').toLowerCase();
-  const n = Number(labelOrDn);
-  const disclaimer = 'Specific hazard types (wind, hail, tornadoes) vary by storm mode and location — check the SPC forecast discussion at spc.noaa.gov for details. This card reflects categorical outlook risk only, not a warning or watch.';
-  if (s.includes('high') || n === 8)     return `HIGH (Level 5 of 5): A major severe weather outbreak is expected. This is a rare designation used only when high confidence exists in a widespread, significant event. ${disclaimer}`;
-  if (s.includes('moderate') || n === 6) return `MODERATE (Level 4 of 5): Widespread severe thunderstorms are likely across the outlook area. ${disclaimer}`;
-  if (s.includes('enhanced') || n === 5) return `ENHANCED (Level 3 of 5): Numerous severe thunderstorms are possible. An above-normal risk with well-organized storm potential. ${disclaimer}`;
-  if (s.includes('slight') || n === 4)   return `SLIGHT (Level 2 of 5): Scattered severe thunderstorms are possible. ${disclaimer}`;
-  if (s.includes('marginal') || n === 3) return `MARGINAL (Level 1 of 5): Isolated severe thunderstorms are possible. Hazards are limited in coverage or intensity. ${disclaimer}`;
-  if (s.includes('thunder') || n === 2)  return `GENERAL THUNDER: Non-severe thunderstorms are the primary threat. May include lightning, gusty winds, and locally heavy rain. ${disclaimer}`;
-  return '';
-}
-// WPC Excessive Rainfall Outlook explanations — focused on flash flooding probability.
-function wpcRiskExplanation(labelOrDn) {
-  const s = String(labelOrDn || '').toLowerCase();
-  const n = Number(labelOrDn);
-  if (s.includes('high') || n === 4)     return 'HIGH excessive rainfall risk (≥70% probability): Life-threatening flash flooding is likely. This is a very rare WPC designation for extreme rainfall events. Not a warning or watch — check NWS local offices for official warnings.';
-  if (s.includes('moderate') || n === 3) return 'MODERATE excessive rainfall risk (≥40% probability): Flash flooding is a significant concern. Locally heavy rainfall is likely to produce flooding in susceptible areas.';
-  if (s.includes('slight') || n === 2)   return 'SLIGHT excessive rainfall risk (≥15% probability): Flash flooding is possible, particularly in poor-drainage areas, urban zones, or where soils are already saturated.';
-  if (s.includes('marginal') || n === 1) return 'MARGINAL excessive rainfall risk (≥5% probability): Isolated flash flooding is possible from brief, intense convective rainfall.';
-  return '';
-}
-
 function hazardPanel(source, properties = {}, extra = {}) {
   // Case-insensitive lookup because ArcGIS/SPC/WPC return UPPERCASE keys
   const product = firstValueCI(properties, ['event','headline','LABEL2','label2','label','LABEL','product','outlook','VALID','valid','phenomena','name','title'], `${source} Hazard`);
   const riskRaw = firstValueCI(properties, ['LABEL2','label2','outlook','label','LABEL','risk','category','CATEGORY'], '');
-  const dnVal   = ciProp(properties,'dn') ?? ciProp(properties,'DN') ?? ciProp(properties,'gridcode') ?? ciProp(properties,'GRIDCODE');
-  const risk    = riskRaw || riskLabelFromDn(dnVal, source);
+  const risk = riskRaw || riskLabelFromDn(ciProp(properties,'dn') ?? ciProp(properties,'DN') ?? ciProp(properties,'gridcode') ?? ciProp(properties,'GRIDCODE'), source);
   const rows = [];
   if (extra.layerName) rows.push(['Layer', extra.layerName]);
   if (extra.dayLabel)  rows.push(['Forecast Day', extra.dayLabel]);
-  // Always show Risk / Category — even when it equals the product title
-  const displayRisk = risk || product;
-  if (displayRisk) rows.push(['Risk / Category', displayRisk]);
-  // Add plain-English "What this means" for SPC and WPC outlooks
-  const isSpc = String(source).toLowerCase().includes('spc');
-  const isWpc = String(source).toLowerCase().includes('wpc');
-  if (isSpc) { const exp = spcRiskExplanation(displayRisk || dnVal); if (exp) rows.push(['What this means', exp]); }
-  else if (isWpc) { const exp = wpcRiskExplanation(displayRisk || dnVal); if (exp) rows.push(['What this means', exp]); }
+  if (risk && risk !== product) rows.push(['Risk / Category', risk]);
   ['severity','urgency','certainty'].forEach(k => { const v = ciProp(properties, k); if (v) rows.push([k[0].toUpperCase() + k.slice(1), String(v)]); });
   const area    = firstValueCI(properties, ['areaDesc','area','location','states'], '');
   if (area) rows.push(['Area', area]);
@@ -495,7 +470,8 @@ function hazardPanel(source, properties = {}, extra = {}) {
   const html = rows.map(([l,v]) => `<div class="hazard-detail-row"><span>${sanitizeForPanel(l)}:</span> ${sanitizeForPanel(v)}</div>`).join('') || 'No detailed properties were returned for this polygon.';
   // Compact version for PNG export
   const cParts = [];
-  if (displayRisk) cParts.push(`<strong>${sanitizeForPanel(displayRisk)}</strong>`);
+  const riskLabel = risk || product;
+  if (riskLabel) cParts.push(`<strong>${sanitizeForPanel(riskLabel)}</strong>`);
   if (valid)   cParts.push(`Valid: ${sanitizeForPanel(valid)}`);
   if (expires) cParts.push(`Expires: ${sanitizeForPanel(expires)}`);
   if (headline && headline !== product && headline.length < 120) cParts.push(sanitizeForPanel(headline));
@@ -654,15 +630,7 @@ async function toggleWpc() {
 function setLayerOpacity(type) {
   const value = Number($(`${type}Opacity`)?.value || 0.65);
   if (type === 'radar') { if (state.radarLayer) state.radarLayer.setOpacity(value); if (state.pastRadarLayer) state.pastRadarLayer.setOpacity(value); }
-  if (type === 'qpf' && state.qpfLayer) {
-    // QPF is now a GeoJSON layer — must use setStyle, not setOpacity
-    state.qpfLayer.setStyle(f => {
-      const v = extractQpfValue({ attributes: f.properties, properties: f.properties });
-      const s = qpfStyle(v);
-      if (!s) return { fillOpacity: 0, weight: 0 };
-      return { fillColor: s.fill, color: s.stroke, fillOpacity: value, weight: 1, opacity: 0.9 };
-    });
-  }
+  if (type === 'qpf' && state.qpfLayer) state.qpfLayer.setOpacity(value);
   if (type === 'spc' && state.spcLayer) state.spcLayer.setStyle({ fillOpacity: value, opacity: 0.98 });
   if (type === 'wpc' && state.wpcLayer) state.wpcLayer.eachLayer(layer => layer.setStyle && layer.setStyle({ fillOpacity: value, opacity: 0.98 }));
   if (type === 'county' && state.countyLayer) state.countyLayer.setStyle(countyStyle());
@@ -953,104 +921,27 @@ function runPastRadarPoint(latlng) {
 const qpfDayLayerIds = { 1: 1, 2: 2, 3: 3 }; // 1=24hr Day1, 2=24hr Day2, 3=24hr Day3
 const qpfDayNames   = { 1: 'QPF 24-Hour Day 1', 2: 'QPF 24-Hour Day 2', 3: 'QPF 24-Hour Day 3' };
 function setQpfChecks(day) { setCheck('qpfDay1Check', day === 1); setCheck('qpfDay2Check', day === 2); setCheck('qpfDay3Check', day === 3); }
-
-// Color scale matches qpfKeyHtml() exactly so map and legend are always in sync
-function qpfStyle(inchesVal) {
-  const v = asNumber(inchesVal);
-  if (v === null || v < 0.01) return null; // no fill for no-data or 0
-  let fill, stroke;
-  if (v >= 2.0)  { fill = '#7209b7'; stroke = '#5c0899'; } // Very heavy
-  else if (v >= 1.0) { fill = '#2d6a4f'; stroke = '#1e4d38'; } // Heavy
-  else if (v >= 0.25){ fill = '#52b788'; stroke = '#3d9e6f'; } // Moderate
-  else if (v >= 0.10){ fill = '#95d5b2'; stroke = '#74c29a'; } // Light
-  else               { fill = '#d8f3dc'; stroke = '#b5dcba'; } // Very light
-  return { fill, stroke };
-}
-
-async function _loadQpfGeoJson() {
-  const layerId  = qpfDayLayerIds[state.qpfDay] || 1;
-  const dayName  = qpfDayNames[state.qpfDay] || `QPF Day ${state.qpfDay}`;
-  const opacity  = Number($('qpfOpacity')?.value || 0.65);
-  let features   = [];
-  let usedLayer  = layerId;
-  try {
-    const data = await fetchArcGisGeoJson(qpfServiceUrl, layerId);
-    features = (data.features || []).filter(f => f.geometry);
-  } catch (_) {}
-  // If the day-specific layer is empty or fails, try the 72-hr combined layer
-  if (!features.length && layerId !== 9) {
-    try {
-      const data = await fetchArcGisGeoJson(qpfServiceUrl, 9);
-      features = (data.features || []).filter(f => f.geometry);
-      usedLayer = 9;
-    } catch (_) {}
-  }
-  if (!features.length) {
-    updatePanel('Rainfall / QPF', `WPC ${dayName} loaded but no polygon data is available for this period.<br>Try again later or select a different day.`);
-    return;
-  }
-  state.qpfLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
-    style: f => {
-      const val = extractQpfValue({ attributes: f.properties, properties: f.properties });
-      const s   = qpfStyle(val);
-      if (!s) return { fillOpacity: 0, weight: 0, color: 'transparent' };
-      return { color: s.stroke, weight: 1, opacity: 0.9, fillColor: s.fill, fillOpacity: opacity };
-    },
-    onEachFeature: (feature, layer) => {
-      const val   = extractQpfValue({ attributes: feature.properties, properties: feature.properties });
-      const text  = formatInches(val);
-      const dn    = usedLayer;
-      const lName = qpfNames[dn] || dayName;
-      layer.bindTooltip(`${dayName}: ${text}`, { sticky: true, direction: 'top' });
-      layer.on('click', e => {
-        lastPolygonClickTime = Date.now();
-        if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
-        clearProbeMarkers();
-        resetDataStack();
-        addMarkerToGroup(state.markers.qpf, e.latlng, text, 'qpf');
-        const compact = `${dayName}: <strong>${text}</strong>`;
-        const fallNote = usedLayer !== layerId ? `<br><em>Showing combined QPF layer (${sanitizeForPanel(qpfNames[9] || 'Layer 9')}) — selected day had no data.</em>` : '';
-        setStackForce('qpf', 'QPF Forecast Point',
-          `Selected: <strong>${sanitizeForPanel(dayName)}</strong><br>Product: <strong>${sanitizeForPanel(lName)}</strong><br>Forecast precipitation: <strong>${text}</strong>${fallNote}<br>Location: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`,
-          compact);
-      });
-    }
-  }).addTo(map);
-}
-
-async function setQpfDay(day) {
+function setQpfDay(day) {
   state.qpfDay = Number(day) || 1;
   setQpfChecks(state.qpfDay);
   $('qpfDayToggles')?.classList.remove('hidden');
   if (!state.qpfLayer) return;
-  removeLayerSafe(state.qpfLayer); state.qpfLayer = null;
-  if (state.markers.qpf) state.markers.qpf.clearLayers();
-  updatePanel('Rainfall / QPF', `Loading WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay}…`);
-  await _loadQpfGeoJson();
-  updateLegend('qpf');
-  updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} is on.<br>Click/tap a colored polygon to write data to the DATA card.`);
+  removeLayerSafe(state.qpfLayer);
+  state.qpfLayer = createQpfLayer().addTo(map);
+  updatePanel('Rainfall / QPF', `WPC QPF ${qpfDayNames[state.qpfDay] || 'Day ' + state.qpfDay} layer is on.`);
 }
-
-async function toggleQpf() {
+function createQpfLayer() { return L.esri.dynamicMapLayer({ url: qpfServiceUrl, layers: [qpfDayLayerIds[state.qpfDay] || 9], opacity: Number($('qpfOpacity')?.value || 0.65) }); }
+function toggleQpf() {
   if (state.qpfLayer) {
     removeLayerSafe(state.qpfLayer); state.qpfLayer = null; setCheck('qpfCheck', false); clearLegend('qpf');
     $('qpfDayToggles')?.classList.add('hidden');
-    if (state.markers.qpf) state.markers.qpf.clearLayers();
     updatePanel('Rainfall / QPF', 'QPF layer turned off.'); return;
   }
-  try {
-    $('qpfDayToggles')?.classList.remove('hidden');
-    setQpfChecks(state.qpfDay);
-    updatePanel('Rainfall / QPF', `Loading WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay}…`);
-    await _loadQpfGeoJson();
-    if (!state.qpfLayer) return; // load failed with no features
-    setCheck('qpfCheck', true); updateLegend('qpf');
-    updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} is on.<br>Click/tap a colored polygon to write data to the DATA card.`);
-  } catch (error) {
-    console.error(error); removeLayerSafe(state.qpfLayer); state.qpfLayer = null;
-    setCheck('qpfCheck', false); $('qpfDayToggles')?.classList.add('hidden');
-    updatePanel('Rainfall / QPF', 'Could not load WPC QPF layer.');
-  }
+  $('qpfDayToggles')?.classList.remove('hidden');
+  setQpfChecks(state.qpfDay);
+  state.qpfLayer = createQpfLayer().addTo(map);
+  setCheck('qpfCheck', true); updateLegend('qpf');
+  updatePanel('Rainfall / QPF', `WPC ${qpfDayNames[state.qpfDay] || 'QPF Day ' + state.qpfDay} layer is on.<br>Click/tap to write point data to the DATA card.`);
 }
 const qpfLayerOrder = [9, 8, 1, 2, 3, 10, 11, 7, 4, 5];
 const qpfNames = { 1: 'QPF 24 Hour Day 1', 2: 'QPF 24 Hour Day 2', 3: 'QPF 24 Hour Day 3', 4: 'QPF 48 Hour Day 4-5', 5: 'QPF 48 Hour Day 6-7', 7: 'QPF 6 Hours Day 1', 8: 'QPF 48 Hour Day 1-2', 9: 'QPF 72 Hour Day 1-3', 10: 'QPF 120 Hour Day 1-5', 11: 'QPF 168 Hour Day 1-7' };
@@ -1277,138 +1168,84 @@ async function toggleCountyLines() {
   if (state.countyLayer) { removeLayerSafe(state.countyLayer); state.countyLayer = null; setCheck('countyCheck', false); clearLegend('county'); updatePanel('County Lines', 'County line layer turned off.'); return; }
   try {
     updatePanel('County Lines', 'Loading Texas county boundaries...'); const data = await loadTexasCountyGeoJson();
-    state.countyLayer = L.geoJSON(data, {
-      // L.canvas() renderer prevents SVG-transform/html2canvas mismatch
-      // that makes county lines appear at wrong positions in exported PNGs.
-      renderer: L.canvas(),
-      style: countyStyle,
-      onEachFeature: (feature, layer) => {
-        const name = countyName(feature);
-        layer.bindTooltip(`${sanitizeForPanel(name)} County`, { sticky: true, direction: 'top' });
-        layer.on('click', e => { if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); resetDataStack(); setStack('county', 'County Boundary', `${sanitizeForPanel(name)} County<br>Layer: Texas county boundary lines`); });
-      }
-    }).addTo(map);
+    state.countyLayer = L.geoJSON(data, { style: countyStyle, onEachFeature: (feature, layer) => { const name = countyName(feature); layer.bindTooltip(`${sanitizeForPanel(name)} County`, { sticky: true, direction: 'top' }); layer.on('click', e => { if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); resetDataStack(); setStack('county', 'County Boundary', `${sanitizeForPanel(name)} County<br>Layer: Texas county boundary lines`); }); } }).addTo(map);
     state.countyLayer.bringToFront?.(); setCheck('countyCheck', true); updatePanel('County Lines', `Texas county boundary layer turned on.<br>Counties loaded: ${data.features.length}.`);
   } catch (error) { console.error(error); setCheck('countyCheck', false); updatePanel('County Lines', 'Could not load Texas county lines.'); }
 }
 
 function setSurfaceChecks(day) { setCheck('surfaceDay1Check', day === 1); setCheck('surfaceDay2Check', day === 2); setCheck('surfaceDay3Check', day === 3); }
-
-// Cache discovered day→layerIds mapping from service metadata
-let _surfaceLayerGroups = null;
-
-async function discoverSurfaceLayerGroups() {
-  if (_surfaceLayerGroups !== null) return _surfaceLayerGroups;
-  try {
-    const meta = await fetch(`${surfaceMapServiceUrl}?f=json`).then(r => { if (!r.ok) throw new Error(); return r.json(); });
-    const layers = meta.layers || [];
-    const childrenOf = {};
-    for (const l of layers) { const pid = l.parentLayerId ?? -1; if (!childrenOf[pid]) childrenOf[pid] = []; childrenOf[pid].push(l); }
-    function leafIds(parentId) { const out = []; for (const l of (childrenOf[parentId] || [])) { if (l.type === 'Group Layer') out.push(...leafIds(l.id)); else out.push(l.id); } return out; }
-    const groups = { 1: [], 2: [], 3: [] };
-    let matched = false;
-    for (const layer of layers) {
-      if (layer.type !== 'Group Layer') continue;
-      const n = String(layer.name || '').toLowerCase().replace(/[_\-]/g, ' ');
-      let day = 0;
-      if (/\bday\s*1\b|\btoday\b|\bperiod\s*1\b/.test(n))     day = 1;
-      else if (/\bday\s*2\b|\btomorrow\b|\bperiod\s*2\b/.test(n)) day = 2;
-      else if (/\bday\s*3\b|\bperiod\s*3\b/.test(n))              day = 3;
-      if (!day) continue;
-      const ids = leafIds(layer.id);
-      if (ids.length) { groups[day] = ids; matched = true; }
-    }
-    _surfaceLayerGroups = matched ? groups : surfaceLayerSets;
-  } catch (_) { _surfaceLayerGroups = surfaceLayerSets; }
-  return _surfaceLayerGroups;
+function createSurfaceLayer(day = state.surfaceDay) {
+  // Do NOT specify 'layers' — let the service show its own default visible layers.
+  // Hardcoded layer IDs that no longer match the current service return blank tiles.
+  return L.esri.dynamicMapLayer({ url: surfaceMapServiceUrl, opacity: Number($('surfaceOpacity')?.value || 0.78) });
 }
-
-function createSurfaceLayer(layerIds) {
-  const opts = { url: surfaceMapServiceUrl, opacity: Number($('surfaceOpacity')?.value || 0.78) };
-  if (layerIds && layerIds.length) opts.layers = layerIds;
-  return L.esri.dynamicMapLayer(opts);
-}
-
-async function setSurfaceDay(day) {
+function setSurfaceDay(day) {
   state.surfaceDay = Number(day) || 1;
   setSurfaceChecks(state.surfaceDay);
   $('surfaceSubToggles')?.classList.remove('hidden');
-  if (!state.surfaceLayer) return;
-  const groups = _surfaceLayerGroups || await discoverSurfaceLayerGroups();
-  const dayIds = groups[state.surfaceDay] || [];
-  map.removeLayer(state.surfaceLayer);
-  state.surfaceLayer = createSurfaceLayer(dayIds).addTo(map);
-  updateLegend('surface');
-  updatePanel('Surface Map', `WPC Day ${state.surfaceDay} surface map is on.`);
+  if (state.surfaceLayer) {
+    map.removeLayer(state.surfaceLayer);
+    state.surfaceLayer = createSurfaceLayer(state.surfaceDay).addTo(map);
+    updateLegend('surface');
+    updatePanel('Surface Map', `WPC Day ${state.surfaceDay} surface map is on.`);
+  }
 }
-
-async function toggleSurfaceMap() {
+function toggleSurfaceMap() {
   $('surfaceSubToggles')?.classList.remove('hidden');
   if (state.surfaceLayer) {
-    removeLayerSafe(state.surfaceLayer); state.surfaceLayer = null;
-    setCheck('surfaceCheck', false); clearLegend('surface');
-    updatePanel('Surface Map', 'Surface map layer turned off. Day 1 / Day 2 / Day 3 options remain for next time.'); return;
+    removeLayerSafe(state.surfaceLayer);
+    state.surfaceLayer = null;
+    setCheck('surfaceCheck', false);
+    clearLegend('surface');
+    updatePanel('Surface Map', 'Surface map layer turned off. Day 1 / Day 2 / Day 3 options remain available for the next time you turn it on.');
+    return;
   }
   if (![1, 2, 3].includes(Number(state.surfaceDay))) state.surfaceDay = 1;
   setSurfaceChecks(state.surfaceDay);
-  updatePanel('Surface Map', 'Loading WPC National Forecast Chart…');
-  const groups = await discoverSurfaceLayerGroups();
-  const dayIds = groups[state.surfaceDay] || [];
-  state.surfaceLayer = createSurfaceLayer(dayIds).addTo(map);
-  setCheck('surfaceCheck', true); updateLegend('surface');
-  const note = dayIds.length ? `Day ${state.surfaceDay} — ${dayIds.length} sub-layers` : 'using service defaults';
-  updatePanel('Surface Map', `WPC National Forecast Chart is on (${note}).<br>Click/tap visible features (fronts, highs, lows, weather areas) to write details to the DATA card.`);
+  state.surfaceLayer = createSurfaceLayer(state.surfaceDay).addTo(map);
+  setCheck('surfaceCheck', true);
+  updateLegend('surface');
+  updatePanel('Surface Map', `WPC National Forecast Chart is on.<br>(Day ${state.surfaceDay} selected.)<br>Click/tap visible features to write details to the DATA card.`);
 }
 async function identifySurfaceAt(latlng) {
   const size = map.getSize(); const b = map.getBounds();
-  const baseParams = {
-    f: 'json', geometry: `${latlng.lng},${latlng.lat}`,
-    geometryType: 'esriGeometryPoint', sr: '4326',
-    tolerance: '14',
-    mapExtent: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+  // Use 'all' layers and a larger tolerance so lines/point features are identifiable.
+  const params = new URLSearchParams({
+    f:            'json',
+    geometry:     `${latlng.lng},${latlng.lat}`,
+    geometryType: 'esriGeometryPoint',
+    sr:           '4326',
+    layers:       'all',
+    tolerance:    '14',
+    mapExtent:    `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
     imageDisplay: `${size.x},${size.y},96`,
-    returnGeometry: 'false', outFields: '*'
-  };
-  // Try selected-day layers first, then fall back to 'all'
-  const groups = _surfaceLayerGroups || surfaceLayerSets;
-  const dayIds = groups[state.surfaceDay] || [];
-  if (dayIds.length) {
-    try {
-      const params = new URLSearchParams({ ...baseParams, layers: `visible:${dayIds.join(',')}` });
-      const data = await fetch(`${surfaceMapServiceUrl}/identify?${params}`).then(r => { if (!r.ok) throw new Error(); return r.json(); });
-      if ((data.results || []).length) return { results: data.results, usedFallback: false };
-    } catch (_) {}
-  }
-  // Fallback: all layers
-  try {
-    const params = new URLSearchParams({ ...baseParams, layers: 'all' });
-    const data = await fetch(`${surfaceMapServiceUrl}/identify?${params}`).then(r => { if (!r.ok) throw new Error('Surface identify failed'); return r.json(); });
-    return { results: data.results || [], usedFallback: true };
-  } catch (_) { return { results: [], usedFallback: false }; }
+    returnGeometry: 'false',
+    outFields:    '*'
+  });
+  const data = await fetch(`${surfaceMapServiceUrl}/identify?${params}`).then(r => { if (!r.ok) throw new Error('Surface identify failed'); return r.json(); });
+  return data.results || [];
 }
 async function runSurfacePoint(latlng) {
-  if (!state.surfaceLayer) return false;
-  // setStackForce — surface map clicks always populate DATA card regardless of data-card sub-checkbox
-  const { results, usedFallback } = await identifySurfaceAt(latlng);
+  if (!state.surfaceLayer || !dataEnabled('surface')) return false;
+  const results = await identifySurfaceAt(latlng);
   if (!results.length) {
-    setStackForce('surface', 'Surface Map Point',
-      `Day ${state.surfaceDay} selected.<br>No WPC surface feature found at this point.<br>Try clicking directly on a visible front line, high/low symbol, or hatched weather area.<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
+    setStack('surface', 'Surface Map Point',
+      `Day ${state.surfaceDay} selected.<br>No WPC surface feature found at this point.<br>Try clicking directly on a visible front line, high, or low.<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
     return true;
   }
   const rows = results.slice(0, 10).map(result => {
-    const attrs    = result.attributes || {};
-    const label    = firstValueCI(attrs, ['name','Name','LABEL','label','featureType','FeatureType','type','TYPE','value','VALUE'], result.layerName || 'Surface feature');
+    const attrs = result.attributes || {};
+    const label  = firstValueCI(attrs, ['name','Name','LABEL','label','featureType','FeatureType','type','TYPE','value','VALUE'], result.layerName || 'Surface feature');
     const validStr = firstValueCI(attrs, ['VALID','valid','validTime','expire','EXPIRE'], '');
     const validNote = validStr ? ` — ${sanitizeForPanel(formatDateValue(validStr))}` : '';
     return `<div class="hazard-detail-row"><span>${sanitizeForPanel(result.layerName || 'Layer')}:</span> ${sanitizeForPanel(label)}${validNote}</div>`;
   }).join('');
-  const fallbackNote = usedFallback ? `<br><em>Day ${state.surfaceDay} layers returned no result — showing all-layer fallback.</em>` : '';
   const compact = results.slice(0, 3).map(r => {
     const a = r.attributes || {};
     return sanitizeForPanel(`${r.layerName || ''}: ${firstValueCI(a, ['name','LABEL','label','type','TYPE'], r.layerName || 'Feature')}`);
   }).join('<br>');
-  setStackForce('surface', 'Surface Map Point',
-    `WPC Day ${state.surfaceDay} National Forecast Chart${fallbackNote}<br>${rows}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
+  setStack('surface', 'Surface Map Point',
+    `WPC Day ${state.surfaceDay} National Forecast Chart<br>${rows}<br>Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
     compact || `Day ${state.surfaceDay} surface feature`);
   return true;
 }
@@ -1664,7 +1501,775 @@ document.addEventListener('click', event => {
   menu.classList.add('hidden');
 });
 
+// =============================================================================
+// RBRTW ADVANCED LAYER REGISTRY
+// Centralized config for all extended weather / model / satellite products.
+//
+// Status values:
+//   'active'      — Working layer with a live public browser-ready source.
+//   'experimental'— May work but URL stability is not guaranteed; test before relying on it.
+//   'placeholder' — No stable public browser-ready tile/WMS exists yet.
+//                   Requires server-side GRIB2 processing before display.
+//   'disabled'    — Legally restricted or no public source at all.
+// =============================================================================
+
+// ----- GOES-19 / NESDIS CDN Constants -----
+// Official NOAA NESDIS CDN for GOES-East (GOES-19) imagery.
+// URL pattern: https://cdn.star.nesdis.noaa.gov/GOES19/ABI/{SECTOR}/{PRODUCT}/latest.jpg
+// CONUS sector approximate geographic bounds (Leaflet [[south,west],[north,east]]):
+const GOES_CDN_BASE  = 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI';
+const GOES_CONUS_BOUNDS = [[13.7, -134.9], [57.1, -52.7]];
+const GOES_FD_BOUNDS    = [[-81,  -155  ], [81,    5   ]]; // Full Disk (approx)
+const GOES_TX_BOUNDS    = [[22.0, -106.0], [37.5, -87.0]]; // TX / S. Plains crop
+
+// GOES-19 sector definitions
+const GOES_SECTORS = {
+  CONUS: { label: 'CONUS',              cdnPath: 'CONUS', bounds: GOES_CONUS_BOUNDS },
+  FD:    { label: 'Full Disk',          cdnPath: 'FD',    bounds: GOES_FD_BOUNDS    },
+  GOMEX: { label: 'Gulf of Mexico',     cdnPath: 'CONUS', bounds: [[16,-102],[33,-77]]  },
+  TXSP:  { label: 'Texas / S. Plains', cdnPath: 'CONUS', bounds: GOES_TX_BOUNDS     },
+};
+
+// GOES-19 product definitions
+// Note: Not all products are available at all sectors. CONUS and FD are most reliable.
+// Status 'experimental' means the URL likely works but NOAA CDN naming may change.
+const GOES_PRODUCTS = {
+  GEOCOLOR:        { label: 'GeoColor',              status: 'active'       },
+  '02':            { label: 'Visible (Band 2)',       status: 'active'       },
+  '13':            { label: 'Clean IR (Band 13)',     status: 'active'       },
+  '09':            { label: 'Water Vapor (Band 9)',   status: 'active'       },
+  '07':            { label: 'Shortwave IR (Band 7)',  status: 'active'       },
+  DCP:             { label: 'Day Cloud Phase',        status: 'experimental' },
+  NtMicro:         { label: 'Nighttime Microphysics', status: 'experimental' },
+  AirMass:         { label: 'Air Mass RGB',           status: 'experimental' },
+  Dust:            { label: 'Dust RGB',               status: 'experimental' },
+  FireTemperature: { label: 'Fire Temperature RGB',   status: 'experimental' },
+  Sandwich:        { label: 'Sandwich RGB',           status: 'experimental' },
+};
+
+// Build GOES CDN image URL.
+// NOAA NESDIS CDN serves latest imagery per sector/product.
+// "latest.jpg" is confirmed available for CONUS GeoColor and major bands.
+// For experimental products, the URL may differ by resolution suffix.
+function buildGoesUrl(sectorKey, productKey) {
+  const sec = GOES_SECTORS[sectorKey] || GOES_SECTORS.CONUS;
+  return `${GOES_CDN_BASE}/${sec.cdnPath}/${productKey}/latest.jpg`;
+}
+
+// ===== GOES State =====
+// These are ADDITIONS to the existing `state` object.
+state.goesLayer        = null;
+state.goesProduct      = 'GEOCOLOR';
+state.goesSector       = 'CONUS';
+state.goesRefreshTimer = null;
+state.goesLastLoaded   = null;
+
+// ----- GOES Toggle -----
+async function toggleGoesLayer() {
+  if (state.goesLayer) {
+    removeLayerSafe(state.goesLayer);
+    state.goesLayer = null;
+    if (state.goesRefreshTimer) { clearInterval(state.goesRefreshTimer); state.goesRefreshTimer = null; }
+    setCheck('goesCheck', false);
+    clearLegend('goes');
+    $('goesSectorRow')?.classList.add('hidden');
+    $('goesProductRow')?.classList.add('hidden');
+    $('goesTimestampRow')?.classList.add('hidden');
+    updatePanel('GOES Satellite', 'GOES-19 satellite layer turned off.');
+    return;
+  }
+  $('goesSectorRow')?.classList.remove('hidden');
+  $('goesProductRow')?.classList.remove('hidden');
+  $('goesTimestampRow')?.classList.remove('hidden');
+  await _loadGoesOverlay();
+  if (!state.goesLayer) return;
+  setCheck('goesCheck', true);
+  updateLegend('goes');
+  // Auto-refresh every 5 minutes (GOES-19 updates every 1-5 minutes)
+  state.goesRefreshTimer = setInterval(() => { if (state.goesLayer) _loadGoesOverlay(); }, 5 * 60 * 1000);
+}
+
+async function _loadGoesOverlay() {
+  const url    = buildGoesUrl(state.goesSector, state.goesProduct);
+  const sector = GOES_SECTORS[state.goesSector] || GOES_SECTORS.CONUS;
+  const bounds = sector.bounds;
+  const prod   = GOES_PRODUCTS[state.goesProduct];
+  const label  = prod ? prod.label : state.goesProduct;
+  const opacity = Number($('goesOpacity')?.value || 0.85);
+
+  updatePanel('GOES Satellite', `Loading GOES-19 ${sanitizeForPanel(label)} (${sanitizeForPanel(sector.label)})…`);
+
+  // Remove old overlay (keep timer running)
+  if (state.goesLayer) { removeLayerSafe(state.goesLayer); state.goesLayer = null; }
+
+  // Create new image overlay with cross-origin enabled
+  const overlay = L.imageOverlay(url, bounds, { opacity, crossOrigin: true, className: 'goes-overlay' });
+
+  // Attach load/error handlers before adding to map
+  const loadPromise = new Promise((resolve, reject) => {
+    overlay.once('load',  () => resolve('ok'));
+    overlay.once('error', () => reject(new Error('GOES image failed to load')));
+    setTimeout(() => reject(new Error('GOES load timeout')), 12000);
+  });
+
+  overlay.addTo(map);
+  try {
+    await loadPromise;
+    state.goesLayer   = overlay;
+    state.goesLastLoaded = new Date();
+    _updateGoesTimestamp();
+    updatePanel('GOES Satellite',
+      `GOES-19 <strong>${sanitizeForPanel(label)}</strong><br>Sector: ${sanitizeForPanel(sector.label)}<br>` +
+      `Loaded: ${state.goesLastLoaded.toLocaleTimeString()}<br>Auto-refreshes every 5 min.<br>` +
+      `Source: NOAA NESDIS cdn.star.nesdis.noaa.gov`);
+  } catch (e) {
+    removeLayerSafe(overlay);
+    state.goesLayer = null;
+    updatePanel('GOES Satellite',
+      `Could not load GOES-19 ${sanitizeForPanel(label)}.<br>` +
+      `NOAA NESDIS CDN may not serve a "latest" image for this product/sector combination.<br>` +
+      `<small>URL tried: ${sanitizeForPanel(url)}</small><br>` +
+      `Try a different product (GeoColor, Visible, Clean IR, Water Vapor are most reliable).`);
+    setCheck('goesCheck', false);
+    if (state.goesRefreshTimer) { clearInterval(state.goesRefreshTimer); state.goesRefreshTimer = null; }
+    $('goesSectorRow')?.classList.add('hidden');
+    $('goesProductRow')?.classList.add('hidden');
+    $('goesTimestampRow')?.classList.add('hidden');
+  }
+}
+
+function setGoesProduct(key) {
+  state.goesProduct = key;
+  const allBtns = document.querySelectorAll('.goes-product-btn');
+  allBtns.forEach(b => b.classList.toggle('active-prod', b.dataset.prod === key));
+  if (state.goesLayer) _loadGoesOverlay();
+}
+
+function setGoesSector(key) {
+  state.goesSector = key;
+  const sel = $('goesSectorSel');
+  if (sel) sel.value = key;
+  if (state.goesLayer) _loadGoesOverlay();
+}
+
+function setGoesOpacity() {
+  const v = Number($('goesOpacity')?.value || 0.85);
+  if (state.goesLayer) state.goesLayer.setOpacity(v);
+}
+
+function _updateGoesTimestamp() {
+  const el = $('goesTimestampLabel');
+  if (!el) return;
+  if (state.goesLastLoaded) {
+    const mins = Math.floor((Date.now() - state.goesLastLoaded) / 60000);
+    el.textContent = mins < 1 ? 'Just updated' : `Updated ${mins} min ago`;
+  } else {
+    el.textContent = '—';
+  }
+}
+// Keep timestamp label fresh
+setInterval(_updateGoesTimestamp, 30000);
+
+// ----- LAYER REGISTRY -----
+// The complete config for all advanced / extended products.
+// 'active': implemented below. 'experimental': URL may work, test required.
+// 'placeholder': no public browser tile — see notes for GRIB2/server-side work.
+// 'disabled': no public legal source.
+const LAYER_REGISTRY = {
+
+  radar: {
+    label: 'Radar (Extended)',
+    layers: [
+      // ACTIVE — the core radar / QPE layers are managed by existing toggleRadar() etc.
+      // These registry entries document the existing layers for completeness.
+      {
+        id: 'mrmsCompositeRefl', label: 'MRMS Composite Reflectivity (Live)',
+        status: 'active', managedBy: 'toggleRadar',
+        sourceType: 'wms', url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows',
+        notes: 'Managed by existing toggleRadar(). WMS layer: conus_bref_qcd.'
+      },
+      {
+        id: 'mrmsEchoTops', label: 'MRMS Echo Tops (18 dBZ)',
+        status: 'experimental', sourceType: 'wms',
+        url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/ows',
+        wmsLayer: 'conus_tops_18dbz',
+        opacityDefault: 0.7,
+        clickable: false,
+        notes: 'Layer name "conus_tops_18dbz" — verify via GetCapabilities. May not exist at this endpoint.',
+        // TODO: Confirm layer name from https://opengeo.ncep.noaa.gov/geoserver/ows?service=wms&version=1.3.0&request=GetCapabilities
+      },
+      {
+        id: 'mrmsCC', label: 'Correlation Coefficient (CC) — Dual-Pol',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://mrms.ncep.noaa.gov/data/2D/CorrelationCoefficient/',
+        notes: 'MRMS CC is available as GRIB2 from mrms.ncep.noaa.gov. No public WMS/tile available. Requires server-side rendering before browser display.',
+        dualPolExplanation: 'CC measures how similar the radar signals are in horizontal and vertical polarizations. Values near 1.0 indicate uniform precipitation (rain/snow). Lower values (<0.95) indicate mixed-phase, large hail, non-meteorological targets (birds, insects), or clutter. Useful for identifying hail cores and debris.',
+      },
+      {
+        id: 'mrmsZDR', label: 'Differential Reflectivity (ZDR) — Dual-Pol',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://mrms.ncep.noaa.gov/data/2D/DifferentialReflectivity/',
+        notes: 'MRMS ZDR GRIB2 from mrms.ncep.noaa.gov. No public WMS/tile. Requires server-side rendering.',
+        dualPolExplanation: 'ZDR measures the ratio of reflected power in horizontal vs vertical. High ZDR (>3 dB) = large oblate drops (heavy rain). Near-zero ZDR = tumbling hailstones or dry snow. Negative ZDR can indicate very large hail.',
+      },
+      {
+        id: 'mrmsKDP', label: 'Specific Differential Phase (KDP) — Dual-Pol',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://mrms.ncep.noaa.gov/data/2D/SpecificDifferentialPhase/',
+        notes: 'MRMS KDP GRIB2 only. Requires server-side rendering.',
+        dualPolExplanation: 'KDP is the rate of change of differential phase along the beam. High KDP indicates heavy liquid precipitation. Useful for rain rate estimation. Minimally affected by hail or partial beam blockage.',
+      },
+      {
+        id: 'mrmsHydro', label: 'Hydrometeor Classification — Dual-Pol',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://mrms.ncep.noaa.gov/data/2D/HybridHydrometeorClassification/',
+        notes: 'MRMS Hydrometeor Classification GRIB2 only. Requires server-side rendering.',
+        dualPolExplanation: 'HCA combines ZH, ZDR, CC, and KDP to classify precipitation type: rain, heavy rain, hail, snow, ice crystals, mixed-phase, biological targets, etc. Useful for understanding storm structure at a glance.',
+      },
+      {
+        id: 'mrmsVelocity', label: 'Radial Velocity (MRMS / NEXRAD)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://mrms.ncep.noaa.gov/data/2D/MergedAzShear0to2kmAGL/',
+        notes: 'NEXRAD/MRMS velocity is available via the NWS Level-II archive and MRMS AzShear products but no stable public WMS tile exists for live single-site velocity. Consider Iowa State IEM RadarScope-style approach.',
+        dualPolExplanation: 'Radial velocity shows motion toward (negative/green) or away (positive/red) from the radar. Used to identify rotation, wind shear, and mesocyclones.',
+      },
+    ]
+  },
+
+  satelliteRgb: {
+    label: 'Satellite RGB / GOES-19',
+    layers: [
+      {
+        id: 'goesGeoColor',        label: 'GeoColor (CONUS)',         productKey: 'GEOCOLOR',        status: 'active',       sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesVisible',         label: 'Visible Band 2',           productKey: '02',              status: 'active',       sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesCleanIR',         label: 'Clean IR (Band 13)',       productKey: '13',              status: 'active',       sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesWaterVapor',      label: 'Water Vapor (Band 9)',     productKey: '09',              status: 'active',       sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesShortIR',         label: 'Shortwave IR (Band 7)',    productKey: '07',              status: 'active',       sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesDCP',             label: 'Day Cloud Phase',          productKey: 'DCP',             status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesNtMicro',         label: 'Nighttime Microphysics',  productKey: 'NtMicro',         status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesAirMass',         label: 'Air Mass RGB',             productKey: 'AirMass',         status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesDust',            label: 'Dust RGB',                 productKey: 'Dust',            status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesFireTemp',        label: 'Fire Temperature RGB',     productKey: 'FireTemperature', status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+      { id: 'goesSandwich',        label: 'Sandwich RGB',             productKey: 'Sandwich',        status: 'experimental', sectorKey: 'CONUS', managedBy: 'toggleGoesLayer' },
+    ]
+  },
+
+  goesSectors: {
+    label: 'GOES-19 Sectors',
+    layers: [
+      { id: 'goesCONUS',    label: 'CONUS Sector',            sectorKey: 'CONUS', status: 'active',       managedBy: 'setGoesSector' },
+      { id: 'goesFD',       label: 'Full Disk',                sectorKey: 'FD',    status: 'active',       managedBy: 'setGoesSector' },
+      { id: 'goesGOMEX',   label: 'Gulf of Mexico (crop)',    sectorKey: 'GOMEX', status: 'experimental', managedBy: 'setGoesSector',
+        notes: 'Uses CONUS sector image cropped to Gulf region — not a true Gulf-sector product.' },
+      { id: 'goesTXSP',    label: 'Texas / Southern Plains (crop)', sectorKey: 'TXSP', status: 'experimental', managedBy: 'setGoesSector',
+        notes: 'Uses CONUS sector image cropped to TX/Southern Plains — not a native mesoscale sector.' },
+      { id: 'goesMeso1',   label: 'Mesoscale Sector M1',      status: 'placeholder', sourceType: 'grib2-placeholder',
+        notes: 'GOES mesoscale sectors move dynamically and do not have stable public URLs. See NOAA NESDIS viewer at www.star.nesdis.noaa.gov/GOES/' },
+      { id: 'goesMeso2',   label: 'Mesoscale Sector M2',      status: 'placeholder', sourceType: 'grib2-placeholder',
+        notes: 'GOES mesoscale sectors move dynamically. No stable public image URL.' },
+    ]
+  },
+
+  upperAir: {
+    label: 'Upper-Air Vorticity',
+    layers: [
+      {
+        id: 'vort500mb', label: '500 mb Vorticity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'GFS 500 mb vorticity is available as GRIB2 from NOMADS. No public browser WMS/tile exists. Requires server-side GRIB2 decoding (e.g., Python cfgrib + flask) to serve as tiles.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'vort700mb', label: '700 mb Vorticity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'Same as 500 mb — GRIB2 from NOMADS, no browser WMS. Requires server-side processing.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'vort850mb', label: '850 mb Vorticity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'GRIB2 from NOMADS. Requires server-side processing.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  shortRangeModels: {
+    label: 'Short Range Models',
+    layers: [
+      // HRRR — the existing hrrrLayer is managed by toggleHrrr()
+      {
+        id: 'hrrrSimRefl', label: 'HRRR Simulated Reflectivity (Existing)',
+        status: 'active', managedBy: 'toggleHrrr',
+        notes: 'Managed by the existing HRRR toggle. Local image overlays from /data/model/hrrr/.'
+      },
+      {
+        id: 'rapCompositeRefl', label: 'RAP Composite Reflectivity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2 from NOMADS. No public browser WMS tile. Requires server-side GRIB2 rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapSfcTemp', label: 'RAP Surface Temperature',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering. No public WMS.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapDewpoint', label: 'RAP Dew Point',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapWind', label: 'RAP 10m Wind',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapCAPE', label: 'RAP CAPE',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapCIN', label: 'RAP CIN',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapVort500', label: 'RAP 500 mb Vorticity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rapPrecip', label: 'RAP Precipitation',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_rap.pl',
+        notes: 'RAP GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rrfsMPASRefl', label: 'RRFS-MPAS Simulated Reflectivity',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://noaa-rrfs-pds.s3.amazonaws.com/',
+        notes: 'GSL RRFS-MPAS output available on NOAA S3 as GRIB2. No public WMS/tile. Requires server-side GRIB2 rendering. See: https://noaa-rrfs-pds.s3.amazonaws.com/',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rrfsMPASCAPE', label: 'RRFS-MPAS CAPE',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://noaa-rrfs-pds.s3.amazonaws.com/',
+        notes: 'GSL RRFS-MPAS GRIB2 on NOAA S3. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'rrfsMPASPrecip', label: 'RRFS-MPAS Precipitation',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://noaa-rrfs-pds.s3.amazonaws.com/',
+        notes: 'GSL RRFS-MPAS GRIB2 on NOAA S3. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  globalModels: {
+    label: 'Global Models',
+    layers: [
+      {
+        id: 'gfsMSLP', label: 'GFS MSLP',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'GFS GRIB2 from NOMADS. No public browser tile/WMS for raw MSLP. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gfs500Hgt', label: 'GFS 500 mb Height',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'GFS GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gfsCAPE', label: 'GFS CAPE',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl',
+        notes: 'GFS GRIB2. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gemGDPS', label: 'GEM / GDPS (Environment Canada)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/',
+        notes: 'Environment Canada GEM GDPS GRIB2 is publicly available at dd.weather.gc.ca. No browser-ready WMS/tile for raw model fields. Requires server-side GRIB2 processing.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'iconGlobal', label: 'ICON Global (DWD)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://opendata.dwd.de/weather/nwp/icon/grib/',
+        notes: 'DWD ICON GRIB2 is publicly available at opendata.dwd.de. No public browser WMS/tile for raw ICON fields. Requires server-side GRIB2 rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'aigfs', label: 'AIGFS (Experimental AI-guided GFS)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'AIGFS is an experimental NOAA product. As of mid-2025 no public browser tile/WMS API is confirmed. Check NOMADS for GRIB2 availability.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'aigefs', label: 'AIGEFS (Experimental AI-guided GEFS)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'AIGEFS is an experimental NOAA ensemble product. No public browser tile/WMS confirmed. GRIB2 from NOMADS when available.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'hgefs', label: 'HGEFS (Hurricane GEFS)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'HGEFS is available as GRIB2 from NOMADS during active hurricane seasons. No public browser tile/WMS.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  ensembles: {
+    label: 'Ensembles',
+    layers: [
+      {
+        id: 'gefsMean', label: 'GEFS Mean (various fields)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atm_0p25a.pl',
+        notes: 'GEFS GRIB2 from NOMADS. No public browser tile/WMS for individual fields. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gefsSpread', label: 'GEFS Spread',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atm_0p25a.pl',
+        notes: 'GEFS spread requires post-processing of all 30+ members. No browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'ecmwfEns', label: 'ECMWF Ensemble (ENS)',
+        status: 'disabled',
+        notes: 'ECMWF ENS data requires a paid ECMWF license. Public access is available through the ECMWF Open Data initiative (limited products, 18-hour delay). See: https://www.ecmwf.int/en/forecasts/datasets/open-data. No browser tile/WMS for raw ENS fields.',
+        url: 'https://data.ecmwf.int/forecasts/'
+      },
+      {
+        id: 'gepsCan', label: 'GEPS / GEM-EPS (Environment Canada)',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://dd.weather.gc.ca/ensemble/geps/grib2/',
+        notes: 'Environment Canada GEPS GRIB2 is publicly available at dd.weather.gc.ca. No public browser tile. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'hrefEnsRefl', label: 'HREF Ensemble Reflectivity Probability',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'HREF (High-Resolution Ensemble Framework) is available as GRIB2 from NOMADS. No public browser WMS/tile for reflectivity probability fields. Requires server-side processing.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'hrefProb1in', label: 'HREF Prob. of 1 in/hr Rainfall',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'HREF rainfall probability GRIB2. No public browser tile. Requires server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'hrefProb2in', label: 'HREF Prob. of 2 in/hr Rainfall',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'HREF rainfall probability GRIB2. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'hrefUHTracks', label: 'HREF Updraft Helicity Tracks',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'HREF UH tracks require ensemble member post-processing. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'refsEns', label: 'REFS Ensemble Products',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'REFS (Rapid Ensemble Forecast System) — GRIB2 only from NOMADS. No public browser tile/WMS.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  nwsForecastGrids: {
+    label: 'NWS Forecast Grids (NDFD / NBM)',
+    layers: [
+      {
+        id: 'ndfdTemp', label: 'NDFD Temperature',
+        status: 'placeholder', sourceType: 'arcgis-placeholder',
+        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/',
+        notes: 'NDFD grid products may be available via NWS MapServer raster services. Check https://mapservices.weather.noaa.gov/raster/rest/services/ for confirmed NDFD service URLs. Currently placeholder pending URL verification.',
+      },
+      {
+        id: 'ndfdPoP', label: 'NDFD Probability of Precipitation (PoP)',
+        status: 'placeholder', sourceType: 'arcgis-placeholder',
+        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/',
+        notes: 'NDFD PoP grid. No confirmed public ArcGIS/WMS URL. Requires verification or server-side GRIB2 rendering from https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/'
+      },
+      {
+        id: 'ndfdQPF', label: 'NDFD QPF',
+        status: 'placeholder', sourceType: 'arcgis-placeholder',
+        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/',
+        notes: 'NDFD QPF grid. No confirmed public tile. See NDFD GRIB2 at https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/'
+      },
+      {
+        id: 'ndfdWind', label: 'NDFD Wind Speed',
+        status: 'placeholder', sourceType: 'arcgis-placeholder',
+        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/',
+        notes: 'NDFD wind grid. No confirmed public tile/WMS.'
+      },
+      {
+        id: 'ndfdSkyCover', label: 'NDFD Sky Cover',
+        status: 'placeholder', sourceType: 'arcgis-placeholder',
+        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/',
+        notes: 'NDFD sky cover. No confirmed public tile/WMS.'
+      },
+      {
+        id: 'nbmTemp', label: 'NBM Temperature',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/',
+        notes: 'National Blend of Models GRIB2 available on NOMADS. No public browser tile/WMS. Requires server-side GRIB2 rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'nbmQPF', label: 'NBM QPF',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/',
+        notes: 'NBM GRIB2. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'nbmPoP', label: 'NBM Probability of Precipitation',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/',
+        notes: 'NBM GRIB2. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'nbmWind', label: 'NBM Wind / Wind Gust',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/',
+        notes: 'NBM GRIB2. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'nbmSnow', label: 'NBM Snow / Ice',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/',
+        notes: 'NBM GRIB2. No public browser tile.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  tempAnomalies: {
+    label: 'Temperature Anomalies',
+    layers: [
+      {
+        id: 'gfs2mAnom', label: 'GFS 2m Temp Anomaly',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'Temperature anomalies require subtracting a climatology baseline from model output. No public browser WMS/tile provides this for GFS. Requires CPC/ERA5 climatology + server-side rendering.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gfs850Anom', label: 'GFS 850 mb Temp Anomaly',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'Same as above — needs climatology + server-side processing. No public browser tile.',
+        supportsForecastHours: true
+      },
+      {
+        id: 'gfs500HAnom', label: 'GFS 500 mb Height Anomaly',
+        status: 'placeholder', sourceType: 'grib2-placeholder',
+        url: 'https://nomads.ncep.noaa.gov/',
+        notes: 'Requires CPC/ERA5 climatology baseline + server-side rendering. No public browser tile.',
+        supportsForecastHours: true
+      },
+    ]
+  },
+
+  experimental: {
+    label: 'Experimental / Future Sources',
+    layers: [
+      {
+        id: 'goesGibsGeoColor', label: 'GOES GeoColor via NASA GIBS (tile-based)',
+        status: 'experimental', sourceType: 'wmts',
+        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best',
+        notes: 'NASA GIBS may provide GOES-East products as WMTS tiles. Layer name TBD — check https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities for layer names. Date parameter must match current UTC date.',
+        // TODO: implement as L.tileLayer(`${gibsBase}/GOES_East_ABI_GeoColor/default/{date}/250m/{z}/{y}/{x}.jpg`)
+      },
+      {
+        id: 'climoTempAnom', label: 'CPC Daily Temperature Anomaly',
+        status: 'placeholder', sourceType: 'image',
+        url: 'https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/cdus/tmax_tmin_mean_obs/',
+        notes: 'CPC provides daily temperature anomaly images but not as map overlay tiles with known geographic bounds. Would require coordinate registration from CPC metadata.',
+      },
+    ]
+  }
+};
+
+// ===== Advanced Panel Builder =====
+// Generates the advanced layers UI from LAYER_REGISTRY.
+// Called once on page load.
+function initAdvancedLayersPanel() {
+  const container = $('advancedLayersBody');
+  if (!container) return;
+
+  // GOES satellite section (custom UI — more complex than registry entries)
+  container.innerHTML = _buildGoesSection() + _buildRegistrySections();
+}
+
+function _buildGoesSection() {
+  const productOptions = Object.entries(GOES_PRODUCTS).map(([key, p]) => {
+    const tag = p.status === 'experimental' ? ' ⚠️' : '';
+    return `<option value="${key}">${sanitizeForPanel(p.label)}${tag}</option>`;
+  }).join('');
+  const sectorOptions = Object.entries(GOES_SECTORS).map(([key, s]) =>
+    `<option value="${key}">${sanitizeForPanel(s.label)}</option>`
+  ).join('');
+  return `
+<div class="adv-section">
+  <div class="adv-section-header" onclick="toggleAdvSection('goesSatSection')">
+    <span>🛰 GOES-19 Satellite</span><span class="adv-chevron">⌃</span>
+  </div>
+  <div class="adv-section-body" id="goesSatSection">
+    <label class="adv-layer-row">
+      <input id="goesCheck" type="checkbox" onchange="toggleGoesLayer()"/>
+      <span class="dot pink"></span>
+      GOES-19 Imagery
+    </label>
+    <input class="opacity-slider" id="goesOpacity" type="range" min="0" max="1" step="0.05" value="0.85" oninput="setGoesOpacity()"/>
+
+    <div id="goesSectorRow" class="adv-sub-row hidden">
+      <label class="adv-sublabel">Sector</label>
+      <select id="goesSectorSel" class="adv-select" onchange="setGoesSector(this.value)">
+        ${sectorOptions}
+      </select>
+    </div>
+    <div id="goesProductRow" class="adv-sub-row hidden">
+      <label class="adv-sublabel">Product</label>
+      <select id="goesProductSel" class="adv-select" onchange="setGoesProduct(this.value)">
+        ${productOptions}
+      </select>
+    </div>
+    <div id="goesTimestampRow" class="adv-sub-row hidden">
+      <label class="adv-sublabel">Last update</label>
+      <span class="adv-timestamp" id="goesTimestampLabel">—</span>
+    </div>
+    <div class="adv-note">
+      Source: NOAA NESDIS CDN. Images auto-refresh every 5 min.
+      GeoColor, Visible, Clean IR, Water Vapor, and Shortwave IR are most reliable.
+      Products marked ⚠️ are experimental — URL availability may vary by sector.
+    </div>
+  </div>
+</div>`;
+}
+
+function _buildRegistrySections() {
+  const sectionsToShow = [
+    'radar', 'goesSectors', 'upperAir', 'shortRangeModels',
+    'globalModels', 'ensembles', 'nwsForecastGrids', 'tempAnomalies', 'experimental'
+  ];
+  return sectionsToShow.map(catKey => {
+    const cat = LAYER_REGISTRY[catKey];
+    if (!cat) return '';
+    const rows = cat.layers.map(layer => _buildRegistryRow(layer)).join('');
+    return `
+<div class="adv-section">
+  <div class="adv-section-header" onclick="toggleAdvSection('advSec_${catKey}')">
+    <span>${sanitizeForPanel(cat.label)}</span><span class="adv-chevron">⌃</span>
+  </div>
+  <div class="adv-section-body collapsed" id="advSec_${catKey}">
+    ${rows}
+  </div>
+</div>`;
+  }).join('');
+}
+
+function _buildRegistryRow(layer) {
+  const statusBadge = {
+    active:       '<span class="adv-badge active">ACTIVE</span>',
+    experimental: '<span class="adv-badge experimental">⚠️ EXPERIMENTAL</span>',
+    placeholder:  '<span class="adv-badge placeholder">📋 PLACEHOLDER</span>',
+    disabled:     '<span class="adv-badge disabled">🔒 DISABLED</span>',
+  }[layer.status] || '';
+
+  const isActive = layer.status === 'active' || layer.status === 'experimental';
+  const disabledAttr = isActive ? '' : 'disabled';
+  const dim = isActive ? '' : ' style="opacity:0.52"';
+
+  let infoHtml = '';
+  if (layer.notes) {
+    infoHtml = `<div class="adv-row-note">${sanitizeForPanel(layer.notes)}</div>`;
+    if (layer.url) {
+      infoHtml += `<div class="adv-row-note"><a class="adv-link" href="${sanitizeForPanel(layer.url)}" target="_blank" rel="noopener">📎 Official Source</a></div>`;
+    }
+  }
+  if (layer.dualPolExplanation) {
+    infoHtml += `<div class="adv-row-note adv-dualpol">${sanitizeForPanel(layer.dualPolExplanation)}</div>`;
+  }
+
+  return `<div class="adv-layer-entry"${dim}>
+  <div class="adv-layer-main">
+    <input type="checkbox" ${disabledAttr}/>
+    <span class="adv-layer-label">${sanitizeForPanel(layer.label)}</span>
+    ${statusBadge}
+  </div>
+  ${infoHtml}
+</div>`;
+}
+
+function toggleAdvSection(id) {
+  const el = $(id);
+  if (el) el.classList.toggle('collapsed');
+}
+
+// ----- GOES Legend -----
+function goesKeyHtml() {
+  const prod = GOES_PRODUCTS[state.goesProduct];
+  const prodLabel = prod ? prod.label : state.goesProduct;
+  const sector = GOES_SECTORS[state.goesSector] || GOES_SECTORS.CONUS;
+  return `<div class="mapkey-note">GOES-19 ${sanitizeForPanel(prodLabel)}</div>
+  <div class="mapkey-note">Sector: ${sanitizeForPanel(sector.label)}</div>
+  <div class="mapkey-note">Source: NOAA NESDIS cdn.star.nesdis.noaa.gov</div>
+  <div class="mapkey-note">Auto-refresh: 5 min</div>`;
+}
+
+// Register GOES in legend system (hook into existing legendHtml)
+const _origLegendHtml = typeof legendHtml === 'function' ? legendHtml : null;
+// Override is applied after all functions are defined (see end of file).
+
+
+// ===== Initialize Advanced Panel =====
 setBasemap('standard');
 initRbrtwMarker();
 loadNwsPointData();
 renderLegends();
+initAdvancedLayersPanel();
+
