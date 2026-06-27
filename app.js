@@ -1576,9 +1576,10 @@ async function toggleRegistryLayer(layerId) {
   const bounds = layerDef.bounds || BACKEND_CONUS_BOUNDS;
   updatePanel(layerDef.label, `Loading ${sanitizeForPanel(layerDef.label)}…`);
 
+  // crossOrigin intentionally omitted — see note in _loadGoesOverlay() above.
+  // R2's public dev URL does not send CORS headers by default either.
   const overlay = L.imageOverlay(dataUrl, bounds, {
     opacity: 0.85,
-    crossOrigin: true,
     className: 'registry-overlay',
   });
 
@@ -1688,8 +1689,14 @@ async function _loadGoesOverlay() {
   // Remove old overlay (keep timer running)
   if (state.goesLayer) { removeLayerSafe(state.goesLayer); state.goesLayer = null; }
 
-  // Create new image overlay with cross-origin enabled
-  const overlay = L.imageOverlay(url, bounds, { opacity, crossOrigin: true, className: 'goes-overlay' });
+  // NOTE: crossOrigin is intentionally NOT set here. NOAA's NESDIS CDN does
+  // not send Access-Control-Allow-Origin headers, so requesting the image
+  // with crossOrigin='anonymous' causes the browser to reject the load
+  // entirely (this was why GOES layers always failed). Without crossOrigin
+  // the image displays normally on the live map; the only tradeoff is that
+  // this specific layer may not render in "Save as Photo" PNG exports,
+  // since un-tainted canvas export requires CORS-cleared images.
+  const overlay = L.imageOverlay(url, bounds, { opacity, className: 'goes-overlay' });
 
   // Attach load/error handlers before adding to map
   const loadPromise = new Promise((resolve, reject) => {
@@ -2349,8 +2356,8 @@ function _buildRegistryRow(layer) {
   const rowId = `advRow_${layer.id}`;
   return `<div class="adv-layer-entry">
   <div class="adv-row-header" onclick="toggleAdvRowDetail('${rowId}')">
-    <input type="checkbox" ${disabledAttr} ${cbExtra} onclick="event.stopPropagation()"/>
     <span class="adv-layer-label">${sanitizeForPanel(layer.label)}</span>
+    <input type="checkbox" ${disabledAttr} ${cbExtra} onclick="event.stopPropagation()"/>
     ${icon}
     <span class="adv-row-arrow">▸</span>
   </div>
