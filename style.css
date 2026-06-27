@@ -51,10 +51,25 @@ html, body {
 
 .hidden { display: none !important; }
 
-.layers-card {
+/* left-stack: wraps layers-card and adv-layers-card so they stack
+   vertically and never overlap, regardless of either's expanded height.
+   This single container handles all positioning/responsiveness — the two
+   cards inside it are position:static and just flow in document order. */
+.left-stack {
+  position: absolute;
   top: 78px;
   left: 10px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+.layers-card {
+  position: static;
+  max-height: none;
 }
 
 .data-card {
@@ -400,7 +415,7 @@ input[type="checkbox"] {
 .leaflet-tooltip-pane { z-index: 650; }
 .leaflet-control-zoom { margin-bottom: 58px !important; }
 
-.capture-mode .layers-card,
+.capture-mode .left-stack,
 .capture-mode .radar-timeline,
 .capture-mode .hrrr-timeline,
 .capture-mode .home-btn,
@@ -433,8 +448,9 @@ input[type="checkbox"] {
   .app-header { height: 52px; padding: 0 12px; }
   .app-header h1 { font-size: 17px; }
   .save-photo-btn { padding: 7px 9px; font-size: 12px; }
-  .layers-card { top: 64px !important; left: 8px !important; width: min(252px, calc(100vw - 16px)) !important; max-height: 78vh !important; }
-  .layers-card .card-body { max-height: calc(78vh - 36px) !important; overflow-y: auto !important; }
+  .left-stack { top: 64px !important; left: 8px !important; max-height: calc(100vh - 78px) !important; }
+  .layers-card { width: min(252px, calc(100vw - 16px)) !important; max-height: 50vh !important; }
+  .layers-card .card-body { max-height: calc(50vh - 36px) !important; overflow-y: auto !important; }
   .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; left: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; display: block !important; }
   .data-card .card-body { max-height: calc(34vh - 36px) !important; overflow-y: auto !important; }
   .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; width: auto !important; max-height: 154px !important; }
@@ -710,3 +726,187 @@ input[type="checkbox"] {
     max-height: 88px !important;
   }
 }
+
+/* ====================================================================
+   ADVANCED LAYERS PANEL
+   Styles for the LAYER_REGISTRY-generated advanced layers panel.
+   All existing styles are preserved above this comment.
+   ==================================================================== */
+
+/* Advanced layers card — positioned by the .left-stack wrapper, not itself */
+.adv-layers-card {
+  position: static;
+  max-height: none;
+}
+
+/* Card body for advanced panel */
+.adv-layers-card .card-body {
+  max-height: calc(100vh - 136px);
+  overflow-y: auto;
+  padding: 0 0 6px;
+}
+
+/* Each major category section */
+.adv-section {
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.adv-section:last-child { border-bottom: none; }
+
+.adv-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #f5b301;
+  cursor: pointer;
+  background: rgba(255,255,255,0.03);
+  text-transform: uppercase;
+  user-select: none;
+}
+.adv-section-header:hover { background: rgba(255,255,255,0.07); }
+.adv-chevron { font-size: 14px; color: rgba(255,255,255,0.60); transition: transform 0.18s; }
+.adv-section-body { padding: 4px 10px 8px; }
+.adv-section-body.collapsed { display: none; }
+
+/* Individual registry layer row — compact, collapsed by default */
+.adv-layer-entry {
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.adv-layer-entry:last-child { border-bottom: none; }
+
+.adv-row-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 2px;
+  cursor: pointer;
+  user-select: none;
+}
+.adv-row-header:hover { background: rgba(255,255,255,0.04); }
+
+.adv-row-header input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.adv-layer-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+/* Single warning icon — shown only for non-active layers */
+.adv-row-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  cursor: help;
+  opacity: 0.85;
+}
+
+/* Expand/collapse arrow */
+.adv-row-arrow {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+/* Detail text — hidden until the row is expanded */
+.adv-row-detail {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.60);
+  line-height: 1.35;
+  padding: 0 2px 8px 28px;
+}
+.adv-row-detail.collapsed { display: none; }
+
+.adv-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 800;
+}
+.adv-link:hover { text-decoration: underline; }
+
+/* GOES sub-controls (sector, product, timestamp) */
+.adv-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0 0;
+  padding: 3px 0;
+  font-size: 11.5px;
+}
+.adv-sublabel {
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  font-weight: 800;
+  flex: 0 0 64px;
+  white-space: nowrap;
+}
+.adv-select {
+  flex: 1;
+  background: rgba(255,255,255,0.09);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.adv-select:hover, .adv-select:focus { border-color: #1c88ff; }
+.adv-select option { background: #07111f; color: #ffffff; }
+
+.adv-timestamp {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255,255,255,0.68);
+  font-style: italic;
+}
+
+/* General note box inside a section */
+.adv-note {
+  margin: 6px 0 2px;
+  padding: 5px 8px;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid rgba(245,179,1,0.42);
+  border-radius: 3px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.35;
+}
+
+/* GOES overlay transparency */
+.goes-overlay { image-rendering: auto; }
+
+/* Active product button style (if product quick-select buttons are used) */
+.goes-product-btn.active-prod {
+  background: #1c88ff;
+  color: #ffffff;
+}
+
+/* Advanced card positioning — stacks dynamically based on layers card height.
+   On desktop the layers card starts at 78px. The advanced card uses a
+   relative offset controlled by a CSS custom property. */
+@media (max-width: 760px) {
+  .adv-layers-card {
+    width: min(252px, calc(100vw - 16px)) !important;
+    max-height: 50vh !important;
+  }
+  .adv-layers-card .card-body {
+    max-height: calc(50vh - 36px) !important;
+  }
+}
+
+/* (left-stack wrapper above already hides both cards during PNG export) */
+
+/* Stack color for GOES data card sections */
+.stack-data-goes { --stack-color:#ff4fd8; --stack-glow:rgba(255,79,216,0.36); }
+
