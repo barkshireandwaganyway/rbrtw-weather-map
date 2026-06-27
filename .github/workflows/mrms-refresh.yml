@@ -1,0 +1,57 @@
+name: MRMS Dual-Pol Refresh
+
+# Runs every 15 minutes.
+# MRMS updates every 2 minutes; 15-min cadence balances freshness vs
+# GitHub Actions free-tier usage. Adjust the cron if you need faster updates.
+# Public repos have unlimited Actions minutes; private repos have 2,000/month.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:           # also allows manual trigger from GitHub UI
+
+concurrency:
+  group: mrms-refresh          # prevent overlapping runs
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Render MRMS products
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # eccodes is the C library cfgrib needs to read GRIB2 files
+      - name: Install eccodes system library
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libeccodes-dev libeccodes-tools
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Render and upload MRMS products
+        run: python scripts/render_mrms.py
+        env:
+          R2_ENDPOINT:   ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          R2_BUCKET:     ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+
+      # Optional: post a summary to the Actions log
+      - name: Summary
+        if: always()
+        run: |
+          echo "## MRMS Refresh $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "Products: CC, ZDR, Composite Reflectivity, Echo Tops" >> $GITHUB_STEP_SUMMARY
