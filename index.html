@@ -21,6 +21,7 @@
 </header>
 <div id="map">
 </div>
+<div class="left-stack" id="leftStack">
 <section class="control-card layers-card">
 <div class="card-header" onclick="toggleCard('layersBody')">
 <span>
@@ -284,6 +285,26 @@
 </div>
 </div>
 </section>
+
+<!-- ===== ADVANCED LAYERS CARD =====
+     Sits in the same left-stack wrapper as layers-card so the two never
+     overlap — the wrapper stacks them vertically and handles all
+     positioning/responsiveness in one place (see .left-stack in style.css). -->
+<section class="control-card adv-layers-card">
+  <div class="card-header" onclick="toggleCard('advLayersBody')">
+    <span>ADVANCED LAYERS</span>
+    <span>⌃</span>
+  </div>
+  <div class="card-body" id="advLayersBody">
+    <div id="advancedLayersBody">
+      <div style="color:rgba(255,255,255,0.55);font-size:12px;padding:4px 0;">
+        Loading advanced layer registry…
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
 <section class="control-card data-card">
 <div class="card-header" onclick="toggleCard('dataBody')">
 <span>
@@ -394,23 +415,6 @@
     Satellite
    </button>
 </div>
-
-<!-- ===== ADVANCED LAYERS CARD =====
-     Must appear BEFORE <script src="app.js"> so #advancedLayersBody
-     is in the DOM when initAdvancedLayersPanel() runs at end of app.js. -->
-<section class="control-card adv-layers-card">
-  <div class="card-header" onclick="toggleCard('advLayersBody')">
-    <span>ADVANCED LAYERS</span>
-    <span>⌃</span>
-  </div>
-  <div class="card-body" id="advLayersBody">
-    <div id="advancedLayersBody">
-      <div style="color:rgba(255,255,255,0.55);font-size:12px;padding:4px 0;">
-        Loading advanced layer registry…
-      </div>
-    </div>
-  </div>
-</section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
