@@ -1,0 +1,990 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  background: #07111f;
+}
+
+#map {
+  position: absolute;
+  inset: 58px 0 0 0;
+  z-index: 1;
+}
+
+.app-header {
+  height: 58px;
+  background: linear-gradient(90deg, #07111f, #12345a, #800d5c);
+  /* yellow border removed */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px;
+  position: relative;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(18px, 2.2vw, 26px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.control-card {
+  position: absolute;
+  z-index: 900;
+  width: clamp(190px, 17vw, 245px);
+  background: rgba(7, 17, 31, 0.98) !important;
+  color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.42);
+  backdrop-filter: blur(5px);
+  box-sizing: border-box;
+}
+
+.hidden { display: none !important; }
+
+/* left-stack: wraps layers-card and adv-layers-card so they stack
+   vertically and never overlap, regardless of either's expanded height.
+   This single container handles all positioning/responsiveness — the two
+   cards inside it are position:static and just flow in document order. */
+.left-stack {
+  position: absolute;
+  top: 78px;
+  left: 10px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+.layers-card {
+  position: static;
+  max-height: none;
+}
+
+.data-card {
+  top: 78px;
+  right: 10px;
+  width: clamp(230px, 22vw, 300px);
+  max-height: calc(100vh - 98px);
+  z-index: 935 !important;
+}
+
+.legend-card {
+  right: 10px !important;
+  bottom: 10px !important;
+  width: 245px !important;
+  max-height: 230px;
+  background: rgba(7,17,31,0.94) !important;
+  z-index: 910;
+}
+
+.radar-timeline,
+.hrrr-timeline {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 118px;
+  width: min(640px, calc(100vw - 40px));
+  padding: 12px 14px;
+}
+
+.hrrr-timeline { bottom: 18px; }
+
+.card-header {
+  height: 36px;
+  background: rgba(10,31,52,0.98);
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.legend-card .card-header {
+  height: 28px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.legend-card .card-header span:first-child::after { content: " / MAP KEY"; }
+
+.card-body {
+  padding: 9px 12px 10px;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.card-body.collapsed { display: none !important; }
+.layers-card .card-body { /* no independent max-height/overflow — .left-stack wrapper is the single scroll container, so both cards can be open without scroll getting trapped in one */ }
+.data-card .card-body { max-height: calc(100vh - 140px); }
+.legend-card .card-body { max-height: 195px; padding: 7px 9px; }
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0 4px;
+  font-size: 14px;
+}
+
+input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #1c88ff;
+  flex: 0 0 auto;
+}
+
+.opacity-slider {
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.green { background: #35d04f; }
+.red { background: #ff3b3b; }
+.blue { background: #258dff; }
+.yellow { background: #f5c542; }
+.purple { background: #9254de; }
+.cyan { background: #15d5ff; }
+.orange { background: #ff8c00; }
+.lime { background: #00e400; }
+.pink { background: #ff4fd8; }
+.white { background: #ffffff; border: 1px solid #555555; }
+
+.card-body button,
+.tab-row button,
+.radar-controls button,
+.hrrr-controls button,
+.basemap-menu button {
+  border: none;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.09);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.card-body button,
+.tab-row button { padding: 8px 9px; }
+.card-body button { width: 100%; text-align: left; margin: 3px 0; }
+.card-body button:hover,
+.tab-row button:hover,
+.radar-controls button:hover,
+.hrrr-controls button:hover,
+.basemap-menu button:hover,
+.home-btn:hover,
+.basemap-btn:hover { background: #1c88ff; }
+
+.tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.tab-row button { flex: 1; text-align: center; }
+
+#weatherInfo {
+  border-top: 1px solid rgba(255,255,255,0.14);
+  padding-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.big-temp { font-size: clamp(32px, 4vw, 44px); font-weight: 900; margin: 6px 0; }
+
+.home-btn,
+.basemap-btn {
+  position: absolute;
+  z-index: 930;
+  bottom: 10px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 7px;
+  background: rgba(7,17,31,0.96);
+  color: #ffffff;
+  font-size: 21px;
+  cursor: pointer;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+}
+.home-btn { left: 10px; }
+.basemap-btn { left: 56px; }
+.pin-toggle-btn {
+  position: absolute;
+  z-index: 930;
+  bottom: 10px;
+  left: 102px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 7px;
+  background: rgba(7,17,31,0.96);
+  color: #ffffff;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+}
+.pin-toggle-btn:hover { background: #1c88ff; }
+.pin-toggle-btn.pin-hidden { opacity: 0.4; }
+
+/* Translucent "transparent bar" opacity slider for the RBRTW pin */
+.pin-opacity-bar {
+  position: absolute;
+  z-index: 930;
+  bottom: 10px;
+  left: 148px;
+  width: 90px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 7px;
+  background: rgba(7,17,31,0.55);
+  box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+}
+.pin-opacity-bar input[type="range"] {
+  width: 100%;
+  accent-color: #1c88ff;
+}
+
+.basemap-menu {
+  position: absolute;
+  z-index: 940;
+  left: 56px;
+  bottom: 56px;
+  width: 150px;
+  padding: 8px;
+  background: rgba(7,17,31,0.98);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.42);
+  backdrop-filter: blur(5px);
+}
+.basemap-menu button { display: block; width: 100%; text-align: left; padding: 9px 10px; margin: 4px 0; }
+
+.save-photo-btn {
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  font-weight: 900;
+  padding: 8px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.save-photo-btn:hover { background: #1c88ff; }
+.save-photo-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.divider { height: 1px; background: rgba(255,255,255,0.15); margin: 8px 0; }
+.scroll-hint {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.data-toggle-sub {
+  margin: -2px 0 4px 28px;
+  padding: 2px 7px 5px;
+  border-left: 2px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.035);
+}
+.data-toggle-sub label { padding: 3px 0 !important; font-size: 11px !important; color: rgba(255,255,255,0.78); }
+.data-toggle-sub input[type="checkbox"] { width: 13px; height: 13px; }
+.data-toggle-sub:has(input:not(:checked)) label { color: rgba(255,255,255,0.46); }
+
+.sub-toggle-box {
+  margin: 0 0 8px 24px;
+  padding: 5px 8px;
+  border-left: 2px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.04);
+}
+.sub-toggle-box label { padding: 4px 0; font-size: 12px; }
+
+.photo-options-box {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.045);
+}
+.photo-options-title { color: #f5b301; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.photo-options-box label { font-size: 12px; padding: 4px 0; }
+.photo-options-box small { display: block; color: rgba(255,255,255,0.68); font-size: 10px; line-height: 1.25; margin-top: 5px; }
+
+.radar-top-row,
+.radar-controls,
+.hrrr-top-row,
+.hrrr-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+#radarFrameLabel,
+#hrrrFrameLabel { padding: 4px 8px; border-radius: 5px; font-weight: 900; }
+#radarFrameLabel { background: #0bb84f; }
+#hrrrFrameLabel { background: #1c88ff; }
+#radarFrameSlider,
+#hrrrFrameSlider { width: 100%; margin: 12px 0; }
+.radar-controls button,
+.hrrr-controls button { width: auto; text-align: center; padding: 8px 12px; }
+#radarLoopText,
+#hrrrLoopText { font-size: 12px; opacity: 0.85; }
+
+.hazard-tooltip {
+  background: rgba(7,17,31,0.96);
+  color: #ffffff;
+  border: 1px solid #00ffff;
+  border-radius: 7px;
+  font-weight: 900;
+  padding: 6px 8px;
+  box-shadow: 0 0 12px rgba(0,255,255,0.7);
+}
+/* Pinned SPC/WPC label — stays on the map after clicking until clicked again.
+   Distinguished from the hover tooltip with a pin icon + warmer border so
+   it's clear this one is "locked" rather than just following the mouse. */
+.locked-hazard-label {
+  border: 1px solid #f5b301;
+  box-shadow: 0 0 12px rgba(245,179,1,0.65);
+}
+.locked-hazard-label::before {
+  content: "📌 ";
+}
+.hazard-detail-row { margin: 0 0 7px; line-height: 1.35; }
+.hazard-detail-row span { font-weight: 900; color: #f5b301; }
+
+.legend-section {
+  border-top: 1px solid rgba(255,255,255,0.14);
+  padding: 5px 0 !important;
+  background: transparent !important;
+}
+.legend-section:first-child { border-top: none; padding-top: 0; }
+.legend-section-title { font-size: 10px !important; font-weight: 900; color: #f5b301 !important; letter-spacing: 0.04em; margin: 0 0 4px !important; text-transform: uppercase; }
+.mapkey-row {
+  display: grid;
+  grid-template-columns: 16px minmax(112px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+  font-size: 10.5px;
+  line-height: 1.18;
+}
+.mapkey-swatch { width: 15px; height: 10px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.45); }
+.mapkey-line { width: 18px; height: 0; border-top: 4px solid #ffffff; border-radius: 3px; }
+.mapkey-label { color: #ffffff; font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
+.mapkey-value { color: rgba(255,255,255,0.78); font-size: 9.5px; text-align: right; white-space: nowrap; }
+.mapkey-note { margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.70); font-size: 9.5px; line-height: 1.2; }
+
+.data-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.data-row span:first-child { color: #f5b301; font-weight: 900; }
+.data-row span:last-child { text-align: right; }
+.data-section-title { margin: 10px 0 5px; color: #f5b301; font-weight: 900; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.stack-data-card-title { font-size: 14px; font-weight: 900; color: #f5b301; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px; }
+.stack-data-card-note { font-size: 11px; color: rgba(255,255,255,0.72); margin-bottom: 8px; line-height: 1.25; }
+.stack-data-section {
+  margin: 8px 0;
+  padding: 8px;
+  border: 2px solid var(--stack-color, #f5b301);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(7,17,31,0.965), rgba(10,24,42,0.955));
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px var(--stack-glow, rgba(245,179,1,0.34)), 0 4px 16px rgba(0,0,0,0.30);
+}
+.stack-data-title { font-size: 12px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.stack-data-subtitle { font-size: 11px; font-weight: 900; color: #f5b301; margin-bottom: 5px; line-height: 1.25; }
+.stack-data-body { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,0.94); }
+.stack-data-radar,.stack-data-pastRadar { --stack-color:#44ff44; --stack-glow:rgba(68,255,68,0.34); }
+.stack-data-alerts { --stack-color:#ff4b4b; --stack-glow:rgba(255,75,75,0.50); }
+.stack-data-spc { --stack-color:#f5c542; --stack-glow:rgba(245,197,66,0.36); }
+.stack-data-wpc { --stack-color:#9254de; --stack-glow:rgba(146,84,222,0.38); }
+.stack-data-qpf { --stack-color:#258dff; --stack-glow:rgba(37,141,255,0.36); }
+.stack-data-rainfall { --stack-color:#22c55e; --stack-glow:rgba(34,197,94,0.36); }
+.stack-data-airQuality { --stack-color:#00e400; --stack-glow:rgba(0,228,0,0.34); }
+.stack-data-surface { --stack-color:#ff4fd8; --stack-glow:rgba(255,79,216,0.36); }
+.stack-data-hrrr,.stack-data-wind { --stack-color:#15d5ff; --stack-glow:rgba(21,213,255,0.34); }
+.stack-data-temp { --stack-color:#ff8c00; --stack-glow:rgba(255,140,0,0.34); }
+.stack-data-county { --stack-color:#ffffff; --stack-glow:rgba(255,255,255,0.25); }
+
+.temp-div-icon,
+.wind-div-icon,
+.qpf-probe-icon,
+.rain-probe-icon,
+.airq-probe-icon,
+.radar-probe-icon { background: transparent; border: none; pointer-events: none; }
+.temp-badge { min-width: 38px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #08111f; font-weight: 900; font-size: 13px; border: 2px solid rgba(255,255,255,0.95); box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+.temp-hot { background: #ffb000; color: #111111; }
+.temp-warm { background: #f5c542; color: #111111; }
+.temp-mild { background: #7bd88f; color: #06111f; }
+.temp-cool { background: #66d9ff; color: #06111f; }
+.temp-cold { background: #4f8cff; color: #ffffff; }
+.temp-extreme-heat { background:#7f0000; color:#ffffff; }
+.temp-danger-heat { background:#ff0000; color:#ffffff; }
+.temp-caution-heat { background:#ff8c00; color:#111111; }
+.temp-windchill { background:#6d5dfc; color:#ffffff; }
+.temp-extreme-cold { background:#2b1a78; color:#ffffff; }
+
+.wind-barb { width: 36px; height: 36px; position: relative; opacity: var(--wind-opacity, 0.55); }
+.wind-barb::before { content:""; position:absolute; left:17px; top:4px; width:3px; height:28px; background:rgba(5,25,40,0.95); border-radius:3px; box-shadow:0 0 4px rgba(255,255,255,0.7); }
+.wind-barb::after { content:""; position:absolute; left:17px; top:4px; width:13px; height:3px; background:rgba(5,25,40,0.95); transform:rotate(35deg); transform-origin:left center; border-radius:3px; box-shadow:0 0 4px rgba(255,255,255,0.7); }
+.wind-label { background:rgba(7,17,31,0.88); color:#ffffff; border-radius:4px; padding:1px 4px; font-size:10px; font-weight:900; text-align:center; margin-top:-5px; }
+
+.qpf-plus,.qpe-plus,.rain-plus { width:24px; height:24px; margin:0 auto 2px; border-radius:50%; background:rgba(7,17,31,0.96); border:2px solid #ffffff; color:#ffffff; font-size:22px; line-height:20px; text-align:center; font-weight:900; box-shadow:0 0 10px rgba(255,255,255,0.75); }
+.qpf-value,.qpe-value,.rain-value,.airq-value,.radar-value { background:rgba(7,17,31,0.96); color:#ffffff; border:1px solid rgba(255,255,255,0.65); border-radius:5px; padding:2px 5px; text-align:center; font-size:12px; font-weight:900; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.45); }
+.qpf-value { border-color:rgba(245,179,1,0.9); }
+.qpe-value,.rain-value { border-color:rgba(34,197,94,0.9); }
+.airq-dot,.radar-dot { width:28px; height:28px; margin:0 auto 2px; border-radius:50%; color:#06111f; border:2px solid #ffffff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; box-shadow:0 0 10px rgba(255,255,255,0.75),0 2px 8px rgba(0,0,0,0.5); }
+.radar-dot { color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.9); }
+.airq-value { min-width:86px; max-width:132px; white-space:normal !important; line-height:1.05; }
+
+.leaflet-popup-pane { display: none !important; }
+.leaflet-tooltip-pane { z-index: 650; }
+.leaflet-control-zoom { margin-bottom: 58px !important; }
+
+.capture-mode .left-stack,
+.capture-mode .radar-timeline,
+.capture-mode .hrrr-timeline,
+.capture-mode .home-btn,
+.capture-mode .basemap-btn,
+.capture-mode .basemap-menu,
+.capture-mode .leaflet-control-zoom,
+.capture-mode .save-photo-btn,
+.capture-mode .leaflet-popup-pane,
+.capture-mode .leaflet-tooltip-pane { display: none !important; }
+.capture-mode .data-card { display: none !important; }
+.capture-mode.capture-include-data .data-card { display: block !important; position: absolute !important; left: 12px !important; right: 12px !important; top: 72px !important; bottom: auto !important; width: auto !important; max-height: 45vh !important; background: rgba(7,17,31,0.985) !important; border: 1px solid rgba(255,255,255,0.28) !important; box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important; }
+.capture-mode.capture-include-data .data-card .card-body { max-height: calc(45vh - 34px) !important; overflow-y: auto !important; overflow-x: hidden !important; }
+.capture-mode.capture-include-data .tab-row { display:none !important; }
+.capture-mode.capture-hide-key .legend-card { display:none !important; }
+.capture-mode:not(.capture-hide-key) .legend-card { display:block !important; position:absolute !important; left:12px !important; right:12px !important; bottom:10px !important; top:auto !important; width:auto !important; max-height:26vh !important; background:rgba(7,17,31,0.985) !important; border:1px solid rgba(255,255,255,0.28) !important; box-shadow:0 6px 24px rgba(0,0,0,0.55) !important; overflow:hidden !important; }
+.capture-mode:not(.capture-hide-key) .legend-card .card-body { max-height:calc(26vh - 28px) !important; overflow-y:auto !important; overflow-x:hidden !important; padding:6px 8px 8px !important; }
+.capture-mode:not(.capture-hide-key) #legendContent { display:flex !important; flex-direction:row !important; flex-wrap:wrap !important; align-items:flex-start !important; gap:7px !important; width:100% !important; background:transparent !important; }
+.capture-mode:not(.capture-hide-key) .export-key-section { flex:1 1 240px !important; min-width:185px !important; padding:5px 7px !important; margin:0 !important; border-top:0 !important; border-left:3px solid rgba(245,179,1,0.86) !important; border-radius:5px !important; background:rgba(255,255,255,0.05) !important; overflow:hidden !important; }
+.capture-mode:not(.capture-hide-key) .export-key-title { font-size:9.5px !important; line-height:1 !important; margin:0 0 4px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .export-key-items { display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:4px 7px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-row { display:inline-flex !important; align-items:center !important; gap:3px !important; width:auto !important; margin:0 !important; padding:0 !important; font-size:8.5px !important; line-height:1 !important; white-space:nowrap !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-swatch { width:10px !important; height:8px !important; flex:0 0 10px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-line { width:13px !important; flex:0 0 13px !important; border-top-width:3px !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-label { max-width:120px !important; font-size:8.5px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-value { max-width:80px !important; font-size:8px !important; text-align:left !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.capture-mode:not(.capture-hide-key) .mapkey-note { display:none !important; }
+
+@media (max-width: 760px) {
+  #map { inset: 52px 0 0 0; }
+  .app-header { height: 52px; padding: 0 12px; }
+  .app-header h1 { font-size: 17px; }
+  .save-photo-btn { padding: 7px 9px; font-size: 12px; }
+  .left-stack { top: 64px !important; left: 8px !important; max-height: calc(100vh - 78px) !important; }
+  .layers-card { width: min(252px, calc(100vw - 16px)) !important; }
+  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; left: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; display: block !important; }
+  .data-card .card-body { max-height: calc(34vh - 36px) !important; overflow-y: auto !important; }
+  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; width: auto !important; max-height: 154px !important; }
+  .legend-card .card-body { max-height: 120px !important; }
+  .home-btn { bottom: 8px !important; left: 8px !important; }
+  .basemap-btn { left: 54px !important; bottom: 8px !important; }
+  .pin-toggle-btn { left: 100px !important; bottom: 8px !important; }
+  .pin-opacity-bar { left: 146px !important; bottom: 8px !important; width: 70px !important; }
+  .basemap-menu { left: 54px !important; bottom: 54px !important; }
+  .radar-timeline,.hrrr-timeline { left: 8px !important; right: 8px !important; transform: none !important; bottom: 70px !important; width: auto !important; }
+  .leaflet-control-zoom { margin-bottom: 62px !important; }
+  .mapkey-row { grid-template-columns: 15px minmax(92px,1fr) auto; font-size: 10px; }
+  .mapkey-value { font-size: 9px; }
+}
+
+@media (max-width: 520px) {
+  .layers-card { width: 220px !important; }
+  .data-card { top: 128px !important; right: 8px !important; bottom: auto !important; width: min(300px, calc(100vw - 24px)) !important; max-height: 34vh !important; }
+  .data-card .card-body { max-height: calc(34vh - 36px) !important; }
+  .legend-card { left: 100px !important; right: 8px !important; bottom: 8px !important; max-height: 150px !important; }
+  .legend-card .card-body { max-height: 116px !important; }
+  .radar-top-row,.radar-controls,.hrrr-top-row,.hrrr-controls { flex-wrap: wrap; font-size: 13px; }
+}
+
+/* Export DATA card: compact overrides so priority info fits without overflow */
+.capture-mode.capture-use-export-data .export-data-card .big-temp {
+  font-size: 16px !important;
+  margin: 1px 0 !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .data-section-title {
+  font-size: 8.5px !important;
+  margin: 2px 0 1px !important;
+  letter-spacing: 0 !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .data-row {
+  padding: 1px 0 !important;
+  font-size: 9.5px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-section {
+  max-height: none !important;
+  overflow: visible !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .hazard-detail-row {
+  margin: 0 0 2px !important;
+  font-size: 9.5px !important;
+  line-height: 1.2 !important;
+}
+
+/* Targeted fix: reliable DATA card content in PNG export without breaking the working map-key export. */
+.export-data-card {
+  display: none;
+}
+.capture-mode.capture-use-export-data .data-card {
+  display: none !important;
+}
+.capture-mode.capture-use-export-data .export-data-card {
+  display: block !important;
+  position: absolute !important;
+  z-index: 998 !important;
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+.export-data-header {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: rgba(10,31,52,0.98);
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.export-data-body {
+  max-height: calc(45vh - 30px);
+  overflow: hidden;
+  padding: 9px 12px 10px;
+  font-size: 12px;
+  line-height: 1.30;
+  box-sizing: border-box;
+}
+.capture-mode.capture-use-export-data .export-data-card .tab-row {
+  display: none !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-sections {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-section {
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  max-height: 162px !important;
+  overflow: hidden !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-title {
+  font-size: 13px !important;
+  margin-bottom: 2px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-card-note {
+  font-size: 10px !important;
+  margin-bottom: 6px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-title {
+  font-size: 10.5px !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-subtitle {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+.capture-mode.capture-use-export-data .export-data-card .stack-data-body {
+  font-size: 10px !important;
+  line-height: 1.18 !important;
+}
+@media (max-width: 760px) {
+  .capture-mode.capture-use-export-data .export-data-card {
+    top: 60px !important;
+    left: 8px !important;
+    right: 8px !important;
+    max-height: 44vh !important;
+  }
+  .export-data-body {
+    max-height: calc(44vh - 30px) !important;
+  }
+}
+
+/* Final targeted repair: make exported DATA card impossible to hide behind capture-mode rules. */
+.export-data-card[data-export-card="true"] {
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+.export-data-card[data-export-card="true"] .export-data-body {
+  max-height: calc(45vh - 30px) !important;
+  overflow: hidden !important;
+}
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+  display: block !important;
+}
+.radar-value {
+  min-width: 84px;
+}
+@media (max-width: 760px) {
+  .export-data-card[data-export-card="true"] {
+    top: 60px !important;
+    left: 8px !important;
+    right: 8px !important;
+    max-height: 44vh !important;
+  }
+}
+
+/* Universal PNG export layout repair: keep DATA and MAP KEY compact for every layer/export type. */
+.capture-mode.capture-use-export-data .export-data-card,
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  top: auto !important;
+  left: 18px !important;
+  right: auto !important;
+  bottom: 92px !important;
+  width: min(420px, calc(100vw - 36px)) !important;
+  max-height: 28vh !important;
+  overflow: hidden !important;
+  background: rgba(7, 17, 31, 0.988) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.30) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.58) !important;
+  box-sizing: border-box !important;
+}
+
+.capture-mode.capture-use-export-data .export-data-card .export-data-body,
+.capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] .export-data-body {
+  max-height: calc(28vh - 30px) !important;
+  overflow: hidden !important;
+  padding: 8px 10px 9px !important;
+  font-size: 11px !important;
+  line-height: 1.24 !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card {
+  display: block !important;
+  position: fixed !important;
+  left: auto !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  top: auto !important;
+  width: min(540px, calc(100vw - 36px)) !important;
+  max-height: 132px !important;
+  background: rgba(7,17,31,0.985) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode:not(.capture-hide-key) .legend-card .card-body {
+  max-height: 98px !important;
+  overflow: hidden !important;
+  padding: 6px 8px 8px !important;
+}
+
+.capture-mode:not(.capture-hide-key) #legendContent {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.capture-mode:not(.capture-hide-key) .export-key-section {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  border-top: 0 !important;
+  border-left: 3px solid rgba(245,179,1,0.86) !important;
+  border-radius: 5px !important;
+  background: rgba(255,255,255,0.05) !important;
+  overflow: hidden !important;
+}
+
+.capture-mode:not(.capture-hide-key) .export-key-items {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 3px 7px !important;
+}
+
+@media (max-width: 760px) {
+  .capture-mode.capture-use-export-data .export-data-card,
+  .capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] {
+    left: 8px !important;
+    right: auto !important;
+    bottom: 138px !important;
+    width: min(360px, calc(100vw - 16px)) !important;
+    max-height: 26vh !important;
+  }
+  .capture-mode.capture-use-export-data .export-data-card .export-data-body,
+  .capture-mode.capture-use-export-data .export-data-card[data-export-card="true"] .export-data-body {
+    max-height: calc(26vh - 30px) !important;
+  }
+  .capture-mode:not(.capture-hide-key) .legend-card {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-height: 120px !important;
+  }
+  .capture-mode:not(.capture-hide-key) .legend-card .card-body {
+    max-height: 88px !important;
+  }
+}
+
+/* ====================================================================
+   ADVANCED LAYERS PANEL
+   Styles for the LAYER_REGISTRY-generated advanced layers panel.
+   All existing styles are preserved above this comment.
+   ==================================================================== */
+
+/* Advanced layers card — positioned by the .left-stack wrapper, not itself */
+.adv-layers-card {
+  position: static;
+  max-height: none;
+}
+
+/* Card body for advanced panel — no independent scroll, see note above */
+.adv-layers-card .card-body {
+  padding: 0 0 6px;
+}
+
+/* Each major category section */
+.adv-section {
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.adv-section:last-child { border-bottom: none; }
+
+.adv-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #f5b301;
+  cursor: pointer;
+  background: rgba(255,255,255,0.03);
+  text-transform: uppercase;
+  user-select: none;
+}
+.adv-section-header:hover { background: rgba(255,255,255,0.07); }
+.adv-chevron { font-size: 14px; color: rgba(255,255,255,0.60); transition: transform 0.18s; }
+.adv-section-body { padding: 4px 10px 8px; }
+.adv-section-body.collapsed { display: none; }
+
+/* Individual registry layer row — compact, collapsed by default */
+.adv-layer-entry {
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.adv-layer-entry:last-child { border-bottom: none; }
+
+.adv-row-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 2px;
+  cursor: pointer;
+  user-select: none;
+}
+.adv-row-header:hover { background: rgba(255,255,255,0.04); }
+
+.adv-row-header input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.adv-layer-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+/* Single warning icon — shown only for non-active layers */
+.adv-row-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  cursor: help;
+  opacity: 0.85;
+}
+
+/* Expand/collapse arrow */
+.adv-row-arrow {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+/* Detail text — hidden until the row is expanded */
+.adv-row-detail {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.60);
+  line-height: 1.35;
+  padding: 0 2px 8px 28px;
+}
+.adv-row-detail.collapsed { display: none; }
+
+.adv-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 800;
+}
+.adv-link:hover { text-decoration: underline; }
+
+/* GOES sub-controls (sector, product, timestamp) */
+.adv-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0 0;
+  padding: 3px 0;
+  font-size: 11.5px;
+}
+.adv-sublabel {
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  font-weight: 800;
+  flex: 0 0 64px;
+  white-space: nowrap;
+}
+.adv-select {
+  flex: 1;
+  background: rgba(255,255,255,0.09);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.adv-select:hover, .adv-select:focus { border-color: #1c88ff; }
+.adv-select option { background: #07111f; color: #ffffff; }
+
+.adv-timestamp {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255,255,255,0.68);
+  font-style: italic;
+}
+
+/* General note box inside a section */
+.adv-note {
+  margin: 6px 0 2px;
+  padding: 5px 8px;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid rgba(245,179,1,0.42);
+  border-radius: 3px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.35;
+}
+
+/* GOES overlay transparency */
+.goes-overlay { image-rendering: auto; }
+
+/* Active product button style (if product quick-select buttons are used) */
+.goes-product-btn.active-prod {
+  background: #1c88ff;
+  color: #ffffff;
+}
+
+/* Advanced card positioning — stacks dynamically based on layers card height.
+   On desktop the layers card starts at 78px. The advanced card uses a
+   relative offset controlled by a CSS custom property. */
+@media (max-width: 760px) {
+  .adv-layers-card {
+    width: min(252px, calc(100vw - 16px)) !important;
+  }
+}
+
+/* (left-stack wrapper above already hides both cards during PNG export) */
+
+/* Stack color for GOES data card sections */
+.stack-data-goes { --stack-color:#ff4fd8; --stack-glow:rgba(255,79,216,0.36); }
+
+
+/* County line color picker — 4 swatches */
+.county-color-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+.county-color-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 700;
+  margin-right: 2px;
+}
+.county-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.30);
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+}
+.county-color-swatch:hover { border-color: rgba(255,255,255,0.60); }
+.county-color-swatch.active-swatch {
+  border-color: #1c88ff;
+  box-shadow: 0 0 0 2px rgba(28,136,255,0.45);
+}
+
+/* Dark basemap was too dark (near-black with low-contrast labels).
+   Brighten only the dark basemap's own tiles — overlays (radar, QPE, etc.)
+   are unaffected since they're separate <img> elements without this class. */
+.dark-basemap-tile {
+  filter: brightness(1.55) contrast(0.92) saturate(0.9);
+}
