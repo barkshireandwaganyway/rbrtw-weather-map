@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>
+   RBRTW Weather Map
+  </title>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+<link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+<header class="app-header">
+<h1>
+    RBRTW Weather Map
+   </h1>
+<button class="save-photo-btn" id="savePhotoBtn" onclick="saveMapPhoto()" type="button">
+    Save as Photo
+   </button>
+</header>
+<div id="map">
+</div>
+<div class="left-stack" id="leftStack">
+<section class="control-card layers-card">
+<div class="card-header" onclick="toggleCard('layersBody')">
+<span>
+     LAYERS
+    </span>
+<span>
+     ⌃
+    </span>
+</div>
+<div class="card-body" id="layersBody">
+<label>
+<input id="radarCheck" onchange="toggleRadar()" type="checkbox"/>
+<span class="dot green">
+</span>
+     Radar
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataRadarCheck" type="checkbox"/>
+      Radar data card click/tap
+     </label>
+</div>
+<label>
+<input id="pastRadarCheck" onchange="togglePastRadar()" type="checkbox"/>
+<span class="dot green">
+</span>
+     Past Radar Playback
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input id="dataPastRadarCheck" type="checkbox"/>
+      Past radar data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="radarOpacity" max="1" min="0" oninput="setLayerOpacity('radar')" step="0.05" type="range" value="0.7"/>
+<label>
+<input id="alertsCheck" onchange="toggleAlerts()" type="checkbox"/>
+<span class="dot red">
+</span>
+     NWS Alerts / Statements
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataAlertsCheck" type="checkbox"/>
+      Alerts data card click/tap
+     </label>
+</div>
+<label>
+<input id="qpfCheck" onchange="toggleQpf()" type="checkbox"/>
+<span class="dot blue">
+</span>
+     Rainfall / QPF
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataQpfCheck" type="checkbox"/>
+      QPF data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="qpfOpacity" max="1" min="0" oninput="setLayerOpacity('qpf')" step="0.05" type="range" value="0.65"/>
+<div class="sub-toggle-box hidden" id="qpfDayToggles">
+<label><input checked="" id="qpfDay1Check" onchange="setQpfDay(1)" type="checkbox"/> Day 1 (24-hr)</label>
+<label><input id="qpfDay2Check" onchange="setQpfDay(2)" type="checkbox"/> Day 2 (24-hr)</label>
+<label><input id="qpfDay3Check" onchange="setQpfDay(3)" type="checkbox"/> Day 3 (24-hr)</label>
+</div>
+<label>
+<input id="spcCheck" onchange="toggleSpc()" type="checkbox"/>
+<span class="dot yellow">
+</span>
+     SPC Outlook
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataSpcCheck" type="checkbox"/>
+      SPC data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="spcOpacity" max="1" min="0" oninput="setLayerOpacity('spc')" step="0.05" type="range" value="0.35"/>
+<div class="sub-toggle-box hidden" id="spcDayToggles">
+<label><input checked="" id="spcDay1Check" onchange="setSpcDay(1)" type="checkbox"/> Day 1 Categorical</label>
+<label><input id="spcDay2Check" onchange="setSpcDay(2)" type="checkbox"/> Day 2 Categorical</label>
+<label><input id="spcDay3Check" onchange="setSpcDay(3)" type="checkbox"/> Day 3 Any Thunder</label>
+</div>
+<label>
+<input id="wpcCheck" onchange="toggleWpc()" type="checkbox"/>
+<span class="dot purple">
+</span>
+     WPC Outlook
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataWpcCheck" type="checkbox"/>
+      WPC data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="wpcOpacity" max="1" min="0" oninput="setLayerOpacity('wpc')" step="0.05" type="range" value="0.6"/>
+<div class="sub-toggle-box hidden" id="wpcDayToggles">
+<label><input checked="" id="wpcDay1Check" onchange="setWpcDay(1)" type="checkbox"/> Day 1 ERO</label>
+<label><input id="wpcDay2Check" onchange="setWpcDay(2)" type="checkbox"/> Day 2 ERO</label>
+<label><input id="wpcDay3Check" onchange="setWpcDay(3)" type="checkbox"/> Day 3 ERO</label>
+</div>
+<label>
+<input id="hrrrCheck" onchange="toggleHrrr()" type="checkbox"/>
+<span class="dot cyan">
+</span>
+     HRRR Future Radar
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input id="dataHrrrCheck" type="checkbox"/>
+      HRRR data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="hrrrOpacity" max="1" min="0" oninput="setLayerOpacity('hrrr')" step="0.05" type="range" value="0.72"/>
+<label>
+<input id="countyCheck" onchange="toggleCountyLines()" type="checkbox"/>
+<span class="dot white">
+</span>
+     County Lines
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input id="dataCountyCheck" type="checkbox"/>
+      County data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="countyOpacity" max="1" min="0" oninput="setLayerOpacity('county')" step="0.05" type="range" value="0.25"/>
+<div class="county-color-row">
+<span class="county-color-label">Line color:</span>
+<button class="county-color-swatch active-swatch" data-color="white" onclick="setCountyColor('white')" style="background:#ffffff" title="White"></button>
+<button class="county-color-swatch" data-color="black" onclick="setCountyColor('black')" style="background:#111111" title="Black"></button>
+<button class="county-color-swatch" data-color="yellow" onclick="setCountyColor('yellow')" style="background:#ffd400" title="Yellow"></button>
+<button class="county-color-swatch" data-color="cyan" onclick="setCountyColor('cyan')" style="background:#22d3ee" title="Cyan"></button>
+</div>
+<div class="divider">
+</div>
+<label>
+<input id="tempCheck" onchange="toggleTemperatures()" type="checkbox"/>
+<span class="dot orange">
+</span>
+     Temperatures
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataTempCheck" type="checkbox"/>
+      Temperature station data card
+     </label>
+</div>
+<div class="sub-toggle-box hidden" id="tempSubToggles">
+<label>
+<input checked="" id="tempModeTempCheck" onchange="setTempMode('temp')" type="checkbox"/>
+      Temp
+     </label>
+<label>
+<input id="tempModeHeatCheck" onchange="setTempMode('heat')" type="checkbox"/>
+      Heat Index
+     </label>
+<label>
+<input id="tempModeWindCheck" onchange="setTempMode('windchill')" type="checkbox"/>
+      Wind Chill
+     </label>
+</div>
+<label>
+<input id="windCheck" onchange="toggleWindLayer()" type="checkbox"/>
+<span class="dot cyan">
+</span>
+     Wind Barbs
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataWindCheck" type="checkbox"/>
+      Wind station data card
+     </label>
+</div>
+<input class="opacity-slider" id="windOpacity" max="1" min="0.05" oninput="setLayerOpacity('wind')" step="0.05" type="range" value="0.55"/>
+<label>
+<input id="rain72Check" onchange="toggleRainfall72()" type="checkbox"/>
+<span class="dot blue">
+</span>
+     Rainfall Totals / QPE
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataRainfallCheck" type="checkbox"/>
+      QPE data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="rainfallOpacity" max="1" min="0" oninput="setLayerOpacity('rainfall')" step="0.05" type="range" value="0.68"/>
+<div class="sub-toggle-box hidden" id="rainfallSubToggles">
+<label>
+<input checked="" id="rain24Check" onchange="setRainfallPeriod('24')" type="checkbox"/>
+      Past 24 hr Total
+     </label>
+<label>
+<input id="rain48Check" onchange="setRainfallPeriod('48')" type="checkbox"/>
+      Past 48 hr Total
+     </label>
+<label>
+<input id="rain72SubCheck" onchange="setRainfallPeriod('72')" type="checkbox"/>
+      Past 72 hr Total
+     </label>
+</div>
+<label>
+<input id="airQualityCheck" onchange="toggleAirQuality()" type="checkbox"/>
+<span class="dot lime">
+</span>
+     Air Quality
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input checked="" id="dataAirQualityCheck" type="checkbox"/>
+      Air Quality data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="airQualityOpacity" max="1" min="0" oninput="setLayerOpacity('airQuality')" step="0.05" type="range" value="0.62"/>
+<label>
+<input id="surfaceCheck" onchange="toggleSurfaceMap()" type="checkbox"/>
+<span class="dot pink">
+</span>
+     Surface Map
+    </label>
+<div class="data-toggle-sub">
+<label>
+<input id="dataSurfaceCheck" type="checkbox"/>
+      Surface map data card click/tap
+     </label>
+</div>
+<input class="opacity-slider" id="surfaceOpacity" max="1" min="0" oninput="setLayerOpacity('surface')" step="0.05" type="range" value="0.78"/>
+<div class="sub-toggle-box" id="surfaceSubToggles">
+<label>
+<input checked="" id="surfaceDay1Check" onchange="setSurfaceDay(1)" type="checkbox"/>
+      Day 1
+     </label>
+<label>
+<input id="surfaceDay2Check" onchange="setSurfaceDay(2)" type="checkbox"/>
+      Day 2
+     </label>
+<label>
+<input id="surfaceDay3Check" onchange="setSurfaceDay(3)" type="checkbox"/>
+      Day 3
+     </label>
+</div>
+<div class="divider">
+</div>
+<button onclick="refreshActiveLayers()">
+     Refresh Active Layers
+    </button>
+<div class="scroll-hint">
+     Scroll
+    </div>
+<div class="divider">
+</div>
+<div class="photo-options-box">
+<div class="photo-options-title">
+      PHOTO OPTIONS
+     </div>
+<label>
+<input checked="" id="photoIncludeKeyCheck" type="checkbox"/>
+      Include map key in PNG
+     </label>
+<label>
+<input checked="" id="photoIncludeDataCheck" type="checkbox"/>
+      Include data card in PNG
+     </label>
+<small>
+      PNG keys are limited to Radar, QPF, Rainfall QPE, Temperature, Air Quality, SPC, WPC, and Surface Map.
+     </small>
+</div>
+</div>
+</section>
+
+<!-- ===== ADVANCED LAYERS CARD =====
+     Sits in the same left-stack wrapper as layers-card so the two never
+     overlap — the wrapper stacks them vertically and handles all
+     positioning/responsiveness in one place (see .left-stack in style.css). -->
+<section class="control-card adv-layers-card">
+  <div class="card-header" onclick="toggleCard('advLayersBody')">
+    <span>ADVANCED LAYERS</span>
+    <span>⌃</span>
+  </div>
+  <div class="card-body" id="advLayersBody">
+    <div id="advancedLayersBody">
+      <div style="color:rgba(255,255,255,0.55);font-size:12px;padding:4px 0;">
+        Loading advanced layer registry…
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<section class="control-card data-card">
+<div class="card-header" onclick="toggleCard('dataBody')">
+<span>
+     DATA
+    </span>
+<span>
+     ⌃
+    </span>
+</div>
+<div class="card-body" id="dataBody">
+<div class="tab-row">
+<button onclick="loadCurrentConditions()">
+      Current
+     </button>
+<button onclick="loadForecast()">
+      Forecast
+     </button>
+<button onclick="loadHourlyForecast()">
+      Hourly
+     </button>
+</div>
+<div id="weatherInfo">
+<p id="status">
+      Loading RBRTW AREA data...
+     </p>
+</div>
+</div>
+</section>
+<section class="control-card radar-timeline hidden" id="radarTimeline">
+<div class="radar-top-row">
+<strong>
+     Radar Playback
+    </strong>
+<span id="radarFrameLabel">
+     Latest
+    </span>
+</div>
+<input id="radarFrameSlider" max="0" min="0" oninput="setRadarFrameFromSlider()" step="1" type="range" value="0"/>
+<div class="radar-controls">
+<button onclick="previousRadarFrame()">
+     ◀
+    </button>
+<button id="radarPlayBtn" onclick="toggleRadarAnimation()">
+     Play
+    </button>
+<button onclick="nextRadarFrame()">
+     ▶
+    </button>
+<span id="radarLoopText">
+     Timeline ready
+    </span>
+</div>
+</section>
+<section class="control-card hrrr-timeline hidden" id="hrrrTimeline">
+<div class="hrrr-top-row">
+<strong>
+     HRRR Future Radar
+    </strong>
+<span id="hrrrFrameLabel">
+     F01
+    </span>
+</div>
+<input id="hrrrFrameSlider" max="0" min="0" oninput="setHrrrFrameFromSlider()" step="1" type="range" value="0"/>
+<div class="hrrr-controls">
+<button onclick="previousHrrrFrame()">
+     ◀
+    </button>
+<button id="hrrrPlayBtn" onclick="toggleHrrrAnimation()">
+     Play
+    </button>
+<button onclick="nextHrrrFrame()">
+     ▶
+    </button>
+<span id="hrrrLoopText">
+     Loop ready
+    </span>
+</div>
+</section>
+<section class="control-card legend-card">
+<div class="card-header" onclick="toggleCard('legendBody')">
+<span>
+     LEGEND
+    </span>
+<span>
+     ⌃
+    </span>
+</div>
+<div class="card-body" id="legendBody">
+<div id="legendContent">
+     Turn on a layer to view its legend.
+    </div>
+</div>
+</section>
+<button class="home-btn" onclick="focusArea()" title="Home">
+   ⌂
+  </button>
+<button class="basemap-btn" onclick="toggleBasemapMenu()" title="Basemap / Map style">
+   ▦
+  </button>
+<button class="pin-toggle-btn" id="rbrtwPinToggleBtn" onclick="toggleRbrtwPin()" title="Show/hide RBRTW pin (drag the pin on the map to move it)">
+   📍
+  </button>
+<div class="pin-opacity-bar" title="RBRTW pin opacity">
+<input id="rbrtwOpacitySlider" max="1" min="0.1" oninput="setRbrtwOpacity(this.value)" step="0.1" type="range" value="1"/>
+</div>
+<div class="basemap-menu hidden" id="basemapMenu">
+<button onclick="setBasemap('standard')">
+    Standard
+   </button>
+<button onclick="setBasemap('dark')">
+    Dark
+   </button>
+<button onclick="setBasemap('satellite')">
+    Satellite
+   </button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+<script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">
+</script>
+<script src="app.js">
+</script>
+</body>
+</html>
